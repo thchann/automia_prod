@@ -8,9 +8,9 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       <DashboardHeader />
-      <div className="flex flex-1 min-h-0 mt-[54px]">
+      <div className="flex flex-1 min-h-0 mt-[54px] pb-2 pr-2">
         <DashboardSidebar />
-        <main className="flex-1 overflow-y-auto scrollbar-thin border-l border-t border-border rounded-tl-lg">
+        <main className="flex-1 overflow-y-auto scrollbar-thin border border-border rounded-lg bg-card">
           <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-col gap-8">
             <GetStartedBanner />
             <StatsSection />
