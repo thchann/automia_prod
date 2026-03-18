@@ -52,7 +52,7 @@ export function DashboardSidebar() {
   const [activeItem, setActiveItem] = useState("Home");
 
   return (
-    <aside className="w-[218px] min-w-[218px] bg-background flex flex-col h-screen border-r border-border">
+    <aside className="w-[218px] min-w-[218px] bg-background flex flex-col h-full">
       {/* Sidebar nav */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 pt-2 pb-3">
         {/* Home */}
