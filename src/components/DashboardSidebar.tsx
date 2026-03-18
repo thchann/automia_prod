@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export function DashboardSidebar() {
+  // Sidebar no longer has its own border-right; the main content has border-left instead
   const [activeItem, setActiveItem] = useState("Home");
 
   return (

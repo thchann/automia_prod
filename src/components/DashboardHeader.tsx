@@ -1,6 +1,6 @@
 export function DashboardHeader() {
   return (
-    <header className="h-[54px] flex items-center justify-between px-4 border-b border-border bg-background">
+    <header className="h-[54px] min-h-[54px] flex items-center justify-between px-3 bg-background fixed top-0 left-2 right-2 z-50">
       <div className="flex items-center gap-2">
         <span className="text-base font-semibold tracking-tight text-foreground">
           DevAPI <span className="font-normal text-muted-foreground">Platform</span>
