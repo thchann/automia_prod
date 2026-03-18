@@ -66,6 +66,7 @@ export default {
         "line-pink": "hsl(var(--line-pink))",
         "line-teal": "hsl(var(--line-teal))",
         "stat-label": "hsl(var(--stat-label))",
+        active: "hsl(var(--active-text))",
       },
       borderRadius: {
         lg: "var(--radius)",
