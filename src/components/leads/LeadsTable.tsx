@@ -43,16 +43,12 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     setSelected(next);
   };
 
-  const statusColor = (status: LeadStatus | undefined) => {
-    if (!status) return "text-muted-foreground";
-    switch (status.name) {
-      case "New": return "text-blue-500";
-      case "Contacted": return "text-amber-500";
-      case "Qualified": return "text-emerald-500";
-      case "Closed": return "text-muted-foreground";
-      default: return "text-foreground";
-    }
+  const statusStyle = (status: LeadStatus | undefined) => {
+    if (!status) return { bg: "bg-muted", text: "text-muted-foreground" };
+    const color = status.color || "#6B7280";
+    return { color };
   };
+
 
   // Stats
   const totalLeads = leads.length;
