@@ -31,12 +31,13 @@ const Index = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <DashboardHeader />
-      <div className="flex flex-1 min-h-0 mt-[54px] pb-2 pr-2">
+      <div className="mt-[54px] flex flex-1 min-h-0 pb-2 pr-2">
         <DashboardSidebar activeItem={activeItem} onActiveItemChange={setActiveItem} />
-        <main className="flex-1 overflow-y-auto scrollbar-none border border-border rounded-lg bg-card">
-          <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-col gap-8">
+        {/* Card fills remaining height; scrolling happens inside page content */}
+        <main className="flex flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-card">
+          <div className="mx-auto flex max-w-[1400px] flex-1 flex-col gap-8 px-6 py-4 min-h-0 overflow-hidden">
             {renderContent()}
           </div>
         </main>
