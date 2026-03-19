@@ -5,6 +5,8 @@ import { GetStartedBanner } from "@/components/GetStartedBanner";
 import { StatsSection } from "@/components/StatsSection";
 import { RecommendedModels } from "@/components/RecommendedModels";
 import { LeadsPage } from "@/components/leads/LeadsPage";
+import { CarsPage } from "@/components/cars/CarsPage";
+import { AutomationsPage } from "@/components/automations/AutomationsPage";
 
 const Index = () => {
   const [activeItem, setActiveItem] = useState("Home");
@@ -13,6 +15,10 @@ const Index = () => {
     switch (activeItem) {
       case "Leads":
         return <LeadsPage />;
+      case "Cars":
+        return <CarsPage />;
+      case "Automations":
+        return <AutomationsPage />;
       default:
         return (
           <>

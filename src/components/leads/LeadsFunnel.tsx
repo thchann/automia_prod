@@ -1,9 +1,14 @@
 import { useState, useRef } from "react";
-import { Plus, MoreVertical, GripVertical } from "lucide-react";
+import { Plus, MoreVertical, X } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+const COLOR_PALETTE = [
+  "#3B82F6", "#F59E0B", "#10B981", "#EF4444", "#8B5CF6",
+  "#EC4899", "#06B6D4", "#F97316", "#6B7280", "#14B8A6",
+];
 
 interface LeadsFunnelProps {
   leads: Lead[];
@@ -17,6 +22,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const dragOverColumnRef = useRef<string | null>(null);
 
@@ -59,27 +65,26 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
     setEditingColumnId(null);
   };
 
+  const updateColumnColor = (statusId: string, color: string) => {
+    onUpdateStatuses(
+      statuses.map((s) => s.id === statusId ? { ...s, color } : s)
+    );
+    setShowColorPicker(null);
+  };
+
   const addColumn = () => {
     const newStatus: LeadStatus = {
       id: `s_${Date.now()}`,
       name: "New Column",
       display_order: statuses.length,
-      color: null,
+      color: "#6B7280",
       is_default: false,
       created_at: new Date().toISOString(),
     };
     onUpdateStatuses([...statuses, newStatus]);
   };
 
-  const statusColor = (status: LeadStatus) => {
-    switch (status.name) {
-      case "New": return "text-blue-500 bg-blue-50 dark:bg-blue-500/10";
-      case "Contacted": return "text-amber-500 bg-amber-50 dark:bg-amber-500/10";
-      case "Qualified": return "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10";
-      case "Closed": return "text-muted-foreground bg-muted";
-      default: return "text-foreground bg-muted";
-    }
-  };
+  const getStatusColor = (status: LeadStatus) => status.color || "#6B7280";
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 h-full">
@@ -87,6 +92,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
         .sort((a, b) => a.display_order - b.display_order)
         .map((status) => {
           const columnLeads = getLeadsForStatus(status.id);
+          const color = getStatusColor(status);
           return (
             <div
               key={status.id}
@@ -97,14 +103,35 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
               {/* Column header */}
               <div className="flex items-center justify-between p-3 border-b border-border">
                 {editingColumnId === status.id ? (
-                  <Input
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={saveColumnName}
-                    onKeyDown={(e) => e.key === "Enter" && saveColumnName()}
-                    className="h-7 text-sm font-semibold"
-                    autoFocus
-                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <Input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={saveColumnName}
+                      onKeyDown={(e) => e.key === "Enter" && saveColumnName()}
+                      className="h-7 text-sm font-semibold flex-1"
+                      autoFocus
+                    />
+                    <div className="relative">
+                      <button
+                        className="h-6 w-6 rounded-full border-2 border-border shrink-0"
+                        style={{ backgroundColor: color }}
+                        onClick={() => setShowColorPicker(showColorPicker === status.id ? null : status.id)}
+                      />
+                      {showColorPicker === status.id && (
+                        <div className="absolute top-full left-0 mt-2 bg-popover border border-border rounded-lg shadow-lg p-2 z-50 grid grid-cols-5 gap-1.5 w-[140px]">
+                          {COLOR_PALETTE.map((c) => (
+                            <button
+                              key={c}
+                              className={`h-5 w-5 rounded-full border-2 ${c === color ? "border-foreground" : "border-transparent"}`}
+                              style={{ backgroundColor: c }}
+                              onClick={() => updateColumnColor(status.id, c)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground uppercase tracking-wide">
@@ -124,7 +151,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
               </div>
 
               {/* Cards */}
-              <div className="flex-1 overflow-y-auto scrollbar-none p-2 space-y-2">
+              <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 {columnLeads.map((lead) => {
                   const car = getCar(lead.car_id);
                   return (
@@ -149,7 +176,13 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                         </div>
                       )}
                       <div className="mt-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(status)}`}>
+                        <span
+                          className="text-xs px-3 py-1 rounded-full font-medium"
+                          style={{
+                            backgroundColor: `${color}15`,
+                            color: color,
+                          }}
+                        >
                           {status.name}
                         </span>
                       </div>

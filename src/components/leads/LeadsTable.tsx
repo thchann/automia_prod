@@ -43,16 +43,12 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     setSelected(next);
   };
 
-  const statusColor = (status: LeadStatus | undefined) => {
-    if (!status) return "text-muted-foreground";
-    switch (status.name) {
-      case "New": return "text-blue-500";
-      case "Contacted": return "text-amber-500";
-      case "Qualified": return "text-emerald-500";
-      case "Closed": return "text-muted-foreground";
-      default: return "text-foreground";
-    }
+  const statusStyle = (status: LeadStatus | undefined) => {
+    if (!status) return { bg: "bg-muted", text: "text-muted-foreground" };
+    const color = status.color || "#6B7280";
+    return { color };
   };
+
 
   // Stats
   const totalLeads = leads.length;
@@ -158,9 +154,18 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   <TableCell>{lead.phone || "—"}</TableCell>
                   <TableCell>{car ? `${car.year} ${car.brand} ${car.model}` : "—"}</TableCell>
                   <TableCell>
-                    <span className={`text-sm font-medium ${statusColor(status)}`}>
-                      {status?.name || "Unassigned"}
-                    </span>
+                    {(() => {
+                      const s = statusStyle(status);
+                      const color = (s as any).color || "#6B7280";
+                      return (
+                        <span
+                          className="text-xs px-3 py-1 rounded-full font-medium"
+                          style={{ backgroundColor: `${color}15`, color }}
+                        >
+                          {status?.name || "Unassigned"}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="capitalize">{lead.source}</TableCell>
                   <TableCell>{format(new Date(lead.created_at), "dd MMM yyyy")}</TableCell>
