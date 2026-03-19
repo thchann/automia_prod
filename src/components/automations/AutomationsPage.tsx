@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Automation {
   id: string;
@@ -32,9 +34,13 @@ export function AutomationsPage() {
     <div className="flex h-full flex-col box-border text-[rgb(220,220,220)]">
       {/* Header – title and primary action on one row */}
       <header className="flex items-center justify-between border-b-2 border-[rgba(0,0,0,0.08)] px-6 py-3 text-[20px] font-semibold leading-8">
-        <span>Automations</span>
+        <span className="text-black">Automations</span>
 
-        <Button size="sm" className="px-4" onClick={handleAddAutomation}>
+        <Button
+          size="sm"
+          className="px-4 border border-[rgba(0,0,0,0.12)] bg-white text-black hover:bg-[#ff8a3c] hover:text-white focus-visible:bg-[#ff8a3c] focus-visible:text-white"
+          onClick={handleAddAutomation}
+        >
           Start building
         </Button>
       </header>
@@ -90,11 +96,49 @@ export function AutomationsPage() {
         </div>
 
         {/* Right panel – details/content area, fills remaining width */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto border border-dashed border-[rgba(0,0,0,0.2)]">
-          {/* Outer debug border above matches overall scrollable area */}
-          <div className="flex-1 border border-dashed border-[rgba(0,0,255,0.4)] px-16 pt-6 pb-0">
-            {/* Inner content area – padding roughly matches OpenAI spacing */}
-            {/* Intentionally empty for now – automation detail/editor will go here */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-16 pt-6 pb-0">
+          {/* Section title (\"ASSISTANT\") */}
+          <div className="mb-2 text-[12px] font-semibold leading-7 tracking-[0.05em] text-[rgb(175,175,175)] uppercase">
+            Assistant
+          </div>
+
+          {/* Header row: Name + Edit button */}
+          <div className="flex w-full items-center justify-between text-[20px] font-bold leading-6 text-black">
+            <span>Name</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border border-[rgba(0,0,0,0.12)] bg-white text-black hover:bg-[#ff8a3c] hover:text-white focus-visible:bg-[#ff8a3c] focus-visible:text-white"
+            >
+              Edit
+            </Button>
+          </div>
+
+          {/* Name field group */}
+          <div className="mt-5 w-full">
+            <div className="mb-2 text-[14px] font-semibold leading-5 text-black">
+              Name
+            </div>
+            <Input
+              placeholder="Enter a user friendly name"
+              className="h-8 w-full rounded-lg border border-[rgba(0,0,0,0.25)] bg-transparent px-3 py-1 text-[14px] leading-[18px] text-[rgb(220,220,220)] hover:border-[rgba(0,0,0,0.35)] focus-visible:border-[rgba(0,0,0,0.4)]"
+            />
+          </div>
+
+          {/* System instructions label row */}
+          <div className="mt-6 flex w-full items-center justify-between text-[14px] leading-5 text-black">
+            <span>System instructions</span>
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full border border-white/10">
+              ?
+            </Button>
+          </div>
+
+          {/* System instructions textarea */}
+          <div className="mt-2 w-full">
+            <Textarea
+              placeholder="You are a helpful assistant..."
+              className="min-h-[112px] w-full rounded-lg border border-[rgba(0,0,0,0.25)] bg-transparent px-3 py-2 text-[14px] leading-[18px] text-[rgb(220,220,220)] hover:border-[rgba(0,0,0,0.35)] focus-visible:border-[rgba(0,0,0,0.4)]"
+            />
           </div>
         </div>
       </div>

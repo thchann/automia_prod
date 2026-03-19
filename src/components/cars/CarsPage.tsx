@@ -36,12 +36,16 @@ export function CarsPage() {
   };
 
   return (
-    <CarsTable
-      cars={cars}
-      statuses={statuses}
-      onUpdateCar={handleUpdateCar}
-      onDeleteCar={handleDeleteCar}
-      onAddCar={handleAddCar}
-    />
+    <div className="flex h-full flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <CarsTable
+          cars={cars}
+          statuses={statuses}
+          onUpdateCar={handleUpdateCar}
+          onDeleteCar={handleDeleteCar}
+          onAddCar={handleAddCar}
+        />
+      </div>
+    </div>
   );
 }
