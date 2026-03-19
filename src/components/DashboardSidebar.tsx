@@ -2,6 +2,11 @@ import {
   Home, Users, Zap, Car, Bot, Settings
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface NavItem {
   label: string;
@@ -36,49 +41,70 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-export function DashboardSidebar() {
-  const [activeItem, setActiveItem] = useState("Home");
+interface DashboardSidebarProps {
+  activeItem: string;
+  onActiveItemChange: (item: string) => void;
+}
+
+export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+
+  const NavButton = ({ label, icon: Icon, isActive }: { label: string; icon: React.ElementType; isActive: boolean }) => {
+    const button = (
+      <button
+        onClick={() => onActiveItemChange(label)}
+        className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full rounded-md px-3 py-2 text-sm transition-colors ${
+          isActive
+            ? "bg-accent text-active font-medium"
+            : "text-sidebar-foreground hover:bg-surface-hover"
+        }`}
+        title={collapsed ? undefined : label}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span>{label}</span>}
+      </button>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return button;
+  };
 
   return (
     <aside className={`${collapsed ? "w-[52px] min-w-[52px]" : "w-[218px] min-w-[218px]"} bg-background flex flex-col h-full transition-all duration-200`}>
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 pt-2 pb-3">
+      <nav className="flex-1 overflow-y-auto scrollbar-none px-2 pt-2 pb-3">
         {/* Home */}
-        <button
-          onClick={() => setActiveItem("Home")}
-          className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full rounded-md px-3 py-2 text-sm font-medium transition-colors mb-1 ${
-            activeItem === "Home"
-              ? "bg-accent text-active"
-              : "text-sidebar-foreground hover:bg-surface-hover"
-          }`}
-          title="Home"
-        >
-          <Home className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Home</span>}
-        </button>
+        <div className="mb-1">
+          <NavButton label="Home" icon={Home} isActive={activeItem === "Home"} />
+        </div>
 
         {navGroups.map((group) => (
           <div key={group.title} className="mt-4">
-            {!collapsed && (
-              <h3 className="text-xs font-medium text-sidebar-muted px-3 pb-1">
-                {group.title}
-              </h3>
-            )}
+            {/* Always reserve space for the group title */}
+            <div className={`h-6 px-3 pb-1 ${collapsed ? "" : ""}`}>
+              {!collapsed && (
+                <h3 className="text-xs font-medium text-sidebar-muted leading-6">
+                  {group.title}
+                </h3>
+              )}
+            </div>
             <div className="space-y-0.5">
               {group.items.map((item) => (
-                <button
+                <NavButton
                   key={item.label}
-                  onClick={() => setActiveItem(item.label)}
-                  className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full rounded-md px-3 py-2 text-sm transition-colors ${
-                    activeItem === item.label
-                      ? "bg-accent text-active font-medium"
-                      : "text-sidebar-foreground hover:bg-surface-hover"
-                  }`}
-                  title={item.label}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </button>
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={activeItem === item.label}
+                />
               ))}
             </div>
           </div>

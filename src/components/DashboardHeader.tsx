@@ -24,7 +24,10 @@ export function DashboardHeader() {
       </div>
       <div className="flex items-center gap-3">
         <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Placeholder
+          Coming soon
+        </button>
+        <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Dashboard
         </button>
         <button className="text-sm font-medium border border-border rounded-full px-4 py-1.5 text-foreground hover:bg-surface-hover transition-colors">
           Start building
