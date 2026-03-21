@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 60% 97%;
+    --foreground: 0 0% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
+
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 48 30% 93%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 48 20% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 48 15% 88%;
+    --input: 48 15% 88%;
+    --ring: 211 100% 50%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 211 100% 50%;
+
+    /* Custom tokens */
+    --nav-bg: 0 0% 100%;
+    --nav-active: 211 100% 50%;
+    --nav-inactive: 0 0% 55%;
+    --stat-positive: 142 60% 40%;
+    --stat-negative: 0 72% 51%;
+    --sheet-handle: 0 0% 80%;
+    --badge-pending: 43 96% 56%;
+    --badge-buyer: 211 100% 50%;
+    --badge-seller: 142 60% 40%;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 93%;
+
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 93%;
+
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 93%;
+
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 93%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 211 100% 50%;
+
+    --nav-bg: 0 0% 10%;
+    --nav-active: 211 100% 50%;
+    --nav-inactive: 0 0% 50%;
+    --stat-positive: 142 60% 50%;
+    --stat-negative: 0 72% 55%;
+    --sheet-handle: 0 0% 35%;
+    --badge-pending: 43 96% 56%;
+    --badge-buyer: 211 100% 50%;
+    --badge-seller: 142 60% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Hide scrollbar globally */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+}
