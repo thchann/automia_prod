@@ -164,9 +164,14 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                       }`}
                       onClick={() => setEditLead(lead)}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="font-medium text-sm text-foreground">{lead.name || "Unnamed"}</div>
-                        <button className="text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm text-foreground">{lead.name || "Unnamed"}</div>
+                          <span className="inline-block mt-1 text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
+                            {lead.lead_type}
+                          </span>
+                        </div>
+                        <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" onClick={(e) => { e.stopPropagation(); }}>
                           <MoreVertical className="h-3.5 w-3.5" />
                         </button>
                       </div>

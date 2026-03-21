@@ -7,6 +7,12 @@ export interface LeadStatus {
   created_at: string;
 }
 
+export interface CarAttachment {
+  type: "image" | "document";
+  url: string;
+  filename?: string;
+}
+
 export interface Car {
   id: string;
   brand: string;
@@ -17,9 +23,9 @@ export interface Car {
   desired_price: number | null;
   car_type: string | null;
   listed_at: string | null;
-  owner_type: string;
-  status: string;
-  attachments: any[] | null;
+  owner_type: "owned" | "client" | "advisor";
+  status: "available" | "sold";
+  attachments: CarAttachment[] | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -37,6 +43,14 @@ export interface Lead {
   notes: string | null;
   created_at: string;
   updated_at: string | null;
+  desired_budget_min: number | null;
+  desired_budget_max: number | null;
+  desired_mileage_max: number | null;
+  desired_year_min: number | null;
+  desired_year_max: number | null;
+  desired_make: string | null;
+  desired_model: string | null;
+  desired_car_type: string | null;
   // joined
   status?: LeadStatus;
   car?: Car;
