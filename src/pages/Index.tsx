@@ -7,6 +7,7 @@ import { RecommendedModels } from "@/components/RecommendedModels";
 import { LeadsPage } from "@/components/leads/LeadsPage";
 import { CarsPage } from "@/components/cars/CarsPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
+import { SettingsPage } from "@/components/settings/SettingsPage";
 
 const Index = () => {
   const [activeItem, setActiveItem] = useState("Home");
@@ -19,6 +20,8 @@ const Index = () => {
         return <CarsPage />;
       case "Automations":
         return <AutomationsPage />;
+      case "Settings":
+        return <SettingsPage />;
       default:
         return (
           <>
