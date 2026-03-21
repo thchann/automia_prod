@@ -36,11 +36,10 @@ const Index = () => {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <DashboardHeader />
-      <div className="mt-[54px] flex flex-1 min-h-0 pb-2 pr-2">
+      <div className="mt-[54px] flex min-h-0 flex-1 pb-2 pr-2">
         <DashboardSidebar activeItem={activeItem} onActiveItemChange={setActiveItem} />
-        {/* Card fills remaining height; scrolling happens inside page content */}
-        <main className="flex flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-background">
-          <div className="mx-auto flex max-w-[1400px] flex-1 flex-col gap-8 px-6 py-4 min-h-0 overflow-hidden">
+        <main className="scrollbar-none flex-1 overflow-y-auto rounded-lg border border-border bg-card">
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-4">
             {renderContent()}
           </div>
         </main>
