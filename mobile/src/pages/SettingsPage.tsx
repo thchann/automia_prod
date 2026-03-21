@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Moon, Sun, User, Globe, LogOut } from "lucide-react";
+import { Moon, Sun, User, Globe, LogOut, Monitor } from "lucide-react";
 import EditProfileSheet from "@/components/EditProfileSheet";
 
 const SettingsPage = () => {
@@ -33,6 +33,18 @@ const SettingsPage = () => {
         <button className="w-full flex items-center gap-4 px-4 py-3.5 border-b border-border active:scale-[0.98] active:bg-muted/50 transition-all">
           <Globe size={18} className="text-muted-foreground" />
           <span className="text-sm font-medium">Website Link</span>
+        </button>
+        <button
+          type="button"
+          className="w-full flex items-center gap-4 px-4 py-3.5 border-b border-border active:scale-[0.98] active:bg-muted/50 transition-all text-left"
+          onClick={() => {
+            document.cookie =
+              "automia_desktop=1; path=/; max-age=31536000; SameSite=Lax";
+            window.location.href = "/";
+          }}
+        >
+          <Monitor size={18} className="text-muted-foreground" />
+          <span className="text-sm font-medium">View desktop site</span>
         </button>
         <button
           onClick={() => setDark(!dark)}

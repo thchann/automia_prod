@@ -30,4 +30,8 @@ npm run build:mobile
 
 ## Vercel
 
-The repo root includes `vercel.json`: install at root, build **desktop** (`desktop/dist`). In the Vercel project settings, set **Root Directory** to **`.`** (repository root), not `desktop`, so `npm install` sees the workspace `package.json`.
+The repo root includes `vercel.json`: install at root, run **`build:vercel`** (desktop + mobile copied into `desktop/dist/m`). Production output is still **`desktop/dist`**.
+
+In the Vercel project settings, set **Root Directory** to **`.`** (repository root).
+
+**Mobile vs desktop:** Visiting **`/`** on a **phone** redirects to **`/m`** (inline script in `desktop/index.html`). To stay on the desktop site from a phone, open **Settings → View desktop site** on the mobile app (sets a cookie for one year).
