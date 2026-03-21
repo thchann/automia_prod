@@ -31,27 +31,19 @@ export function AutomationsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col box-border text-[rgb(220,220,220)]">
-      {/* Header – title and primary action on one row */}
-      <header className="flex items-center justify-between border-b-2 border-[rgba(0,0,0,0.08)] px-6 py-3 text-[20px] font-semibold leading-8">
-        <span className="text-black">Automations</span>
+    <div className="flex h-full min-h-0 flex-col box-border text-foreground">
+      <header className="flex items-center justify-between border-b-2 border-border px-6 py-3 text-[20px] font-semibold leading-8">
+        <span className="text-foreground">Automations</span>
 
-        <Button
-          size="sm"
-          className="px-4 border border-[rgba(0,0,0,0.12)] bg-white text-black hover:bg-[#ff8a3c] hover:text-white focus-visible:bg-[#ff8a3c] focus-visible:text-white"
-          onClick={handleAddAutomation}
-        >
+        <Button size="sm" className="px-4" onClick={handleAddAutomation}>
           Start building
         </Button>
       </header>
 
-      {/* Body – full-height two-panel layout */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left panel – list container, capped width and scrollable */}
-        <div className="flex min-w-0 flex-[1_1_0] max-w-[550px] flex-col overflow-y-auto border-r border-[rgba(0,0,0,0.08)] p-4 gap-1">
-          {/* Date row, similar to OpenAI assistants list divider */}
+        <div className="flex min-w-0 flex-[1_1_0] max-w-[550px] flex-col overflow-y-auto border-r border-border p-4 gap-1">
           <div className="flex max-w-[1280px] items-center overflow-hidden px-3 py-3 text-[16px] leading-6">
-            <span className="text-[12px] font-semibold leading-4 text-[rgb(175,175,175)]">
+            <span className="text-xs font-semibold leading-4 text-muted-foreground">
               Today,&nbsp;
               {new Date().toLocaleDateString("en-US", {
                 day: "numeric",
@@ -60,31 +52,26 @@ export function AutomationsPage() {
             </span>
           </div>
 
-          {/* Automations list – structure closer to GPT (ul > li > button) */}
           <ul className="flex flex-col gap-1">
             {automations.map((auto) => (
               <li key={auto.id}>
                 <button
                   type="button"
-                  className="flex h-16 w-full max-w-[515px] cursor-pointer items-center overflow-hidden rounded-md border border-[rgba(0,0,0,0.08)] px-3 py-3 text-left text-[16px] leading-6 hover:bg-[rgba(0,0,0,0.02)]"
+                  className="flex h-16 w-full max-w-[515px] cursor-pointer items-center overflow-hidden rounded-md border border-border bg-card px-3 py-3 text-left text-[16px] leading-6 transition-colors hover:bg-muted/60"
                   aria-label={`${auto.name} at ${formatTime(auto.createdAt)}`}
                 >
                   <div className="flex h-10 w-full flex-1 items-start gap-3">
-                    {/* Name + metadata column */}
                     <div className="flex min-w-0 flex-1 flex-col">
-                      {/* Name row */}
-                      <div className="flex min-w-0 items-center gap-3 text-[13px] font-semibold leading-6 text-[rgb(0,0,0)]">
+                      <div className="flex min-w-0 items-center gap-3 text-[13px] font-semibold leading-6 text-foreground">
                         <span className="truncate">{auto.name}</span>
                       </div>
-                      {/* Metadata row (id or other info) */}
-                      <div className="mt-0.5 flex min-w-0 flex-1 items-center gap-3 text-[11px] font-normal leading-4 text-[rgb(143,143,143)]">
+                      <div className="mt-0.5 flex min-w-0 flex-1 items-center gap-3 text-[11px] font-normal leading-4 text-muted-foreground">
                         <span className="truncate">{auto.id}</span>
                       </div>
                     </div>
 
-                    {/* Time column */}
                     <div className="flex items-start">
-                      <span className="text-[12px] leading-4 text-[rgb(205,205,205)]">
+                      <span className="text-xs leading-4 text-muted-foreground">
                         {formatTime(auto.createdAt)}
                       </span>
                     </div>
@@ -95,49 +82,36 @@ export function AutomationsPage() {
           </ul>
         </div>
 
-        {/* Right panel – details/content area, fills remaining width */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-16 pt-6 pb-0">
-          {/* Section title (\"ASSISTANT\") */}
-          <div className="mb-2 text-[12px] font-semibold leading-7 tracking-[0.05em] text-[rgb(175,175,175)] uppercase">
+          <div className="mb-2 text-xs font-semibold leading-7 tracking-[0.05em] text-muted-foreground uppercase">
             Assistant
           </div>
 
-          {/* Header row: Name + Edit button */}
-          <div className="flex w-full items-center justify-between text-[20px] font-bold leading-6 text-black">
+          <div className="flex w-full items-center justify-between text-[20px] font-bold leading-6 text-foreground">
             <span>Name</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border border-[rgba(0,0,0,0.12)] bg-white text-black hover:bg-[#ff8a3c] hover:text-white focus-visible:bg-[#ff8a3c] focus-visible:text-white"
-            >
+            <Button size="sm" variant="outline">
               Edit
             </Button>
           </div>
 
-          {/* Name field group */}
           <div className="mt-5 w-full">
-            <div className="mb-2 text-[14px] font-semibold leading-5 text-black">
+            <div className="mb-2 text-sm font-semibold leading-5 text-foreground">
               Name
             </div>
-            <Input
-              placeholder="Enter a user friendly name"
-              className="h-8 w-full rounded-lg border border-[rgba(0,0,0,0.25)] bg-transparent px-3 py-1 text-[14px] leading-[18px] text-[rgb(220,220,220)] hover:border-[rgba(0,0,0,0.35)] focus-visible:border-[rgba(0,0,0,0.4)]"
-            />
+            <Input placeholder="Enter a user friendly name" className="h-8 w-full text-sm" />
           </div>
 
-          {/* System instructions label row */}
-          <div className="mt-6 flex w-full items-center justify-between text-[14px] leading-5 text-black">
+          <div className="mt-6 flex w-full items-center justify-between text-sm leading-5 text-foreground">
             <span>System instructions</span>
-            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full border border-white/10">
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full border border-border">
               ?
             </Button>
           </div>
 
-          {/* System instructions textarea */}
           <div className="mt-2 w-full">
             <Textarea
               placeholder="You are a helpful assistant..."
-              className="min-h-[112px] w-full rounded-lg border border-[rgba(0,0,0,0.25)] bg-transparent px-3 py-2 text-[14px] leading-[18px] text-[rgb(220,220,220)] hover:border-[rgba(0,0,0,0.35)] focus-visible:border-[rgba(0,0,0,0.4)]"
+              className="min-h-[112px] w-full text-sm"
             />
           </div>
         </div>
@@ -145,4 +119,3 @@ export function AutomationsPage() {
     </div>
   );
 }
-

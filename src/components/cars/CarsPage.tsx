@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { CarsTable } from "./CarsTable";
-import { mockCars, defaultStatuses } from "@/data/mockLeads";
-import { Car, LeadStatus } from "@/types/leads";
+import { mockCars } from "@/data/mockLeads";
+import { Car } from "@/types/leads";
 
 export function CarsPage() {
   const [cars, setCars] = useState<Car[]>(mockCars);
-  const [statuses] = useState<LeadStatus[]>(defaultStatuses);
 
   const handleUpdateCar = (updated: Car) => {
     setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -40,7 +39,6 @@ export function CarsPage() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <CarsTable
           cars={cars}
-          statuses={statuses}
           onUpdateCar={handleUpdateCar}
           onDeleteCar={handleDeleteCar}
           onAddCar={handleAddCar}

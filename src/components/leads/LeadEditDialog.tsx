@@ -28,14 +28,22 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
 
   if (!lead) return null;
 
+  const leadType = form.lead_type || "pending";
+
   const handleSave = () => {
-    onSave({ ...lead, ...form } as Lead);
+    onSave({
+      ...lead,
+      ...form,
+      updated_at: new Date().toISOString(),
+    } as Lead);
     onOpenChange(false);
   };
 
+  const numOrNull = (v: string) => (v === "" ? null : Number(v));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px]">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit lead details</DialogTitle>
         </DialogHeader>
@@ -60,12 +68,20 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               <Input value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} />
             </div>
           </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Platform sender ID</label>
+            <Input
+              value={form.platform_sender_id || ""}
+              onChange={(e) => setForm({ ...form, platform_sender_id: e.target.value })}
+              className="font-mono text-sm"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Lead Type</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={form.lead_type || "pending"}
+                value={leadType}
                 onChange={(e) => setForm({ ...form, lead_type: e.target.value as Lead["lead_type"] })}
               >
                 <option value="pending">Pending</option>
@@ -88,7 +104,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
             </div>
           </div>
           <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Interested Car</label>
+            <label className="text-sm text-muted-foreground mb-1 block">Linked car</label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.car_id || ""}
@@ -100,12 +116,88 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               ))}
             </select>
           </div>
+
+          {leadType === "buyer" && (
+            <div className="space-y-3 rounded-lg border border-border p-4">
+              <p className="text-sm font-medium text-foreground">Buyer criteria</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Budget min</label>
+                  <Input
+                    type="number"
+                    value={form.desired_budget_min ?? ""}
+                    onChange={(e) => setForm({ ...form, desired_budget_min: numOrNull(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Budget max</label>
+                  <Input
+                    type="number"
+                    value={form.desired_budget_max ?? ""}
+                    onChange={(e) => setForm({ ...form, desired_budget_max: numOrNull(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Mileage max</label>
+                  <Input
+                    type="number"
+                    value={form.desired_mileage_max ?? ""}
+                    onChange={(e) => setForm({ ...form, desired_mileage_max: numOrNull(e.target.value) as number | null })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Car type</label>
+                  <Input
+                    value={form.desired_car_type || ""}
+                    onChange={(e) => setForm({ ...form, desired_car_type: e.target.value || null })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Year min</label>
+                  <Input
+                    type="number"
+                    value={form.desired_year_min ?? ""}
+                    onChange={(e) => setForm({ ...form, desired_year_min: numOrNull(e.target.value) as number | null })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Year max</label>
+                  <Input
+                    type="number"
+                    value={form.desired_year_max ?? ""}
+                    onChange={(e) => setForm({ ...form, desired_year_max: numOrNull(e.target.value) as number | null })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Desired make</label>
+                  <Input
+                    value={form.desired_make || ""}
+                    onChange={(e) => setForm({ ...form, desired_make: e.target.value || null })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Desired model</label>
+                  <Input
+                    value={form.desired_model || ""}
+                    onChange={(e) => setForm({ ...form, desired_model: e.target.value || null })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-muted-foreground mb-1 block">Notes</label>
             <textarea
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.notes || ""}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) => setForm({ ...form, notes: e.target.value || null })}
             />
           </div>
         </div>

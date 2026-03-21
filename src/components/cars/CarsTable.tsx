@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, Info, X } from "lucide-react";
+import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, Image as ImageIcon, X } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Car, LeadStatus } from "@/types/leads";
+import { Car } from "@/types/leads";
 import { CarEditDialog } from "./CarEditDialog";
 
 interface CarsTableProps {
   cars: Car[];
-  statuses: LeadStatus[];
   onUpdateCar: (car: Car) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => void;
@@ -19,12 +18,30 @@ interface CarsTableProps {
 
 const PAGE_SIZE = 9;
 
-export function CarsTable({ cars, statuses, onUpdateCar, onDeleteCar, onAddCar }: CarsTableProps) {
+const tableCheckboxClassName =
+  "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
+
+function formatShortDate(s: string | null) {
+  if (!s) return "—";
+  try {
+    return format(new Date(s), "dd MMM yyyy");
+  } catch {
+    return "—";
+  }
+}
+
+function thumbnailUrl(car: Car): string | null {
+  const list = car.attachments;
+  if (!list?.length) return null;
+  const img = list.find((a) => a.type === "image") ?? list[0];
+  return img?.url ?? null;
+}
+
+export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editCar, setEditCar] = useState<Car | null>(null);
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
-  const [showSourcePopup, setShowSourcePopup] = useState<string | null>(null);
 
   const totalPages = Math.ceil(cars.length / PAGE_SIZE);
   const paged = cars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -40,32 +57,33 @@ export function CarsTable({ cars, statuses, onUpdateCar, onDeleteCar, onAddCar }
     setSelected(next);
   };
 
-  const statusStyle = (status: string) => {
+  const statusStyle = (status: Car["status"]) => {
     switch (status) {
       case "available": return "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400";
       case "sold": return "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
-      case "pending": return "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
-  const ownerStyle = (type: string) => {
+  const ownerStyle = (type: Car["owner_type"]) => {
     switch (type) {
       case "owned": return "bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400";
-      case "consignment": return "bg-purple-50 text-purple-500 dark:bg-purple-500/10 dark:text-purple-400";
+      case "client": return "bg-purple-50 text-purple-500 dark:bg-purple-500/10 dark:text-purple-400";
+      case "advisor": return "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
-  // Stats
   const totalCars = cars.length;
   const available = cars.filter(c => c.status === "available").length;
   const sold = cars.filter(c => c.status === "sold").length;
   const owned = cars.filter(c => c.owner_type === "owned").length;
 
+  const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
+  const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">All Cars</h1>
         <div className="flex items-center gap-2">
@@ -76,7 +94,6 @@ export function CarsTable({ cars, statuses, onUpdateCar, onDeleteCar, onAddCar }
         </div>
       </div>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "Total Cars", value: totalCars, color: "bg-blue-500" },
@@ -94,104 +111,103 @@ export function CarsTable({ cars, statuses, onUpdateCar, onDeleteCar, onAddCar }
         ))}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
-              <TableHead className="w-10">
+              <TableHead className="w-10 sticky left-0 z-10 bg-background">
                 <Checkbox
+                  className={tableCheckboxClassName}
                   checked={selected.size === paged.length && paged.length > 0}
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              <TableHead>Image</TableHead>
-              <TableHead>Model</TableHead>
-              <TableHead>Year</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Owner Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="min-w-[56px]">Image</TableHead>
+              <TableHead className="min-w-[100px]">Brand</TableHead>
+              <TableHead className="min-w-[100px]">Model</TableHead>
+              <TableHead className="min-w-[72px]">Year</TableHead>
+              <TableHead className="min-w-[88px]">Mileage</TableHead>
+              <TableHead className="min-w-[96px]">Price</TableHead>
+              <TableHead className="min-w-[100px]">Desired</TableHead>
+              <TableHead className="min-w-[88px]">Car type</TableHead>
+              <TableHead className="min-w-[100px]">Listed</TableHead>
+              <TableHead className="min-w-[100px]">Owner</TableHead>
+              <TableHead className="min-w-[96px]">Status</TableHead>
+              <TableHead className="min-w-[100px]">Added</TableHead>
+              <TableHead className="min-w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.map((car) => (
-              <TableRow
-                key={car.id}
-                className="cursor-pointer hover:bg-surface-hover"
-                onClick={() => setEditCar(car)}
-              >
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selected.has(car.id)}
-                    onCheckedChange={() => toggleOne(car.id)}
-                  />
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <button
-                    className="h-10 w-10 rounded-md border border-border bg-muted flex items-center justify-center hover:bg-surface-hover transition-colors"
-                    onClick={() => setShowImagePopup(car.id)}
+            {paged.map((car) => {
+              const thumb = thumbnailUrl(car);
+              return (
+                <TableRow
+                  key={car.id}
+                  className="group cursor-pointer hover:bg-surface-hover"
+                  onClick={() => setEditCar(car)}
+                >
+                  <TableCell
+                    className="sticky left-0 z-10 bg-background group-hover:bg-surface-hover"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </TableCell>
-                <TableCell className="font-medium">{car.brand} {car.model}</TableCell>
-                <TableCell>{car.year}</TableCell>
-                <TableCell>{car.price ? `$${car.price.toLocaleString()}` : "—"}</TableCell>
-                <TableCell>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${ownerStyle(car.owner_type)}`}>
-                    {car.owner_type}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${statusStyle(car.status)}`}>
-                    {car.status}
-                  </span>
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <button
-                    className="p-1 hover:text-foreground text-muted-foreground"
-                    onClick={() => setShowSourcePopup(car.id)}
-                  >
-                    <Info className="h-4 w-4" />
-                  </button>
-                  {showSourcePopup === car.id && (
-                    <div className="absolute z-50 bg-popover border border-border rounded-lg shadow-lg p-3 w-56 mt-1">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">Source Details</span>
-                        <button onClick={() => setShowSourcePopup(null)} className="text-muted-foreground hover:text-foreground">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <p>Owner type: {car.owner_type}</p>
-                        <p>Listed: {car.listed_at ? format(new Date(car.listed_at), "dd MMM yyyy") : "Not listed"}</p>
-                        <p>Added: {format(new Date(car.created_at), "dd MMM yyyy")}</p>
-                      </div>
+                    <Checkbox
+                      className={tableCheckboxClassName}
+                      checked={selected.has(car.id)}
+                      onCheckedChange={() => toggleOne(car.id)}
+                    />
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="h-10 w-10 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden hover:bg-surface-hover transition-colors"
+                      onClick={() => setShowImagePopup(car.id)}
+                    >
+                      {thumb ? (
+                        <img src={thumb} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </TableCell>
+                  <TableCell className="font-medium">{car.brand}</TableCell>
+                  <TableCell>{car.model}</TableCell>
+                  <TableCell>{car.year}</TableCell>
+                  <TableCell>{car.mileage != null ? car.mileage.toLocaleString() : "—"}</TableCell>
+                  <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString()}` : "—"}</TableCell>
+                  <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString()}` : "—"}</TableCell>
+                  <TableCell className="capitalize">{car.car_type || "—"}</TableCell>
+                  <TableCell>{formatShortDate(car.listed_at)}</TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${ownerStyle(car.owner_type)}`}>
+                      {car.owner_type}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${statusStyle(car.status)}`}>
+                      {car.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>{formatShortDate(car.created_at)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1">
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditCar(car)}>
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteCar(car.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
                     </div>
-                  )}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1">
-                    <button className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditCar(car)}>
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteCar(car.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                    <button className="p-1 hover:text-foreground text-muted-foreground">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, cars.length)} of {cars.length} entries</span>
         <div className="flex items-center gap-1">
@@ -215,31 +231,35 @@ export function CarsTable({ cars, statuses, onUpdateCar, onDeleteCar, onAddCar }
         </div>
       </div>
 
-      {/* Image popup */}
       {showImagePopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowImagePopup(null)}>
           <div className="bg-card rounded-lg border border-border p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <span className="font-medium text-foreground">Car Image</span>
-              <button onClick={() => setShowImagePopup(null)} className="text-muted-foreground hover:text-foreground">
+              <button type="button" onClick={() => setShowImagePopup(null)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="h-48 bg-muted rounded-lg flex items-center justify-center">
-              <ImageIcon className="h-12 w-12 text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">No image available</span>
+            <div className="h-48 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+              {popupUrl ? (
+                <img src={popupUrl} alt="" className="max-h-full max-w-full object-contain" />
+              ) : (
+                <>
+                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">No image available</span>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Selection bar */}
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
           <span className="text-sm font-medium">{selected.size} Selected</span>
           <Button variant="outline" size="sm">Duplicate</Button>
           <Button variant="destructive" size="sm">Delete</Button>
-          <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
+          <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
 

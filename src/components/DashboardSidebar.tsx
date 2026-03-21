@@ -53,7 +53,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
     const button = (
       <button
         onClick={() => onActiveItemChange(label)}
-        className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full rounded-md px-3 py-2 text-sm transition-colors ${
+        className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} w-full rounded-md px-3 py-2 text-sm ${
           isActive
             ? "bg-accent text-active font-medium"
             : "text-sidebar-foreground hover:bg-surface-hover"
@@ -80,7 +80,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
   };
 
   return (
-    <aside className={`${collapsed ? "w-[52px] min-w-[52px]" : "w-[218px] min-w-[218px]"} bg-background flex flex-col h-full transition-all duration-200`}>
+    <aside
+      className={`${collapsed ? "w-[52px] min-w-[52px]" : "w-[218px] min-w-[218px]"} bg-background flex flex-col h-full transition-[width,min-width] duration-200 ease-out`}
+    >
       <nav className="flex-1 overflow-y-auto scrollbar-none px-2 pt-2 pb-3">
         {/* Home */}
         <div className="mb-1">

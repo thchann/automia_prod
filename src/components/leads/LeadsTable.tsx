@@ -20,6 +20,62 @@ interface LeadsTableProps {
 
 const PAGE_SIZE = 9;
 
+const tableCheckboxClassName =
+  "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
+
+function formatShortDate(s: string | null) {
+  if (!s) return "—";
+  try {
+    return format(new Date(s), "dd MMM yyyy");
+  } catch {
+    return "—";
+  }
+}
+
+function truncateText(s: string | null, max: number) {
+  if (!s) return "—";
+  const t = s.trim();
+  if (!t) return "—";
+  return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
+
+function truncateId(id: string, max = 14) {
+  if (id.length <= max) return id;
+  return `${id.slice(0, max - 1)}…`;
+}
+
+function summarizeBuyerCriteria(lead: Lead): string {
+  if (lead.lead_type !== "buyer") return "—";
+  const parts: string[] = [];
+  const hasBudget =
+    lead.desired_budget_min != null || lead.desired_budget_max != null;
+  if (hasBudget) {
+    const min =
+      lead.desired_budget_min != null
+        ? `$${Number(lead.desired_budget_min).toLocaleString()}`
+        : "—";
+    const max =
+      lead.desired_budget_max != null
+        ? `$${Number(lead.desired_budget_max).toLocaleString()}`
+        : "—";
+    parts.push(`${min}–${max}`);
+  }
+  const makeModel = [lead.desired_make, lead.desired_model].filter(Boolean).join(" ");
+  if (makeModel) parts.push(makeModel);
+  if (lead.desired_car_type) parts.push(lead.desired_car_type);
+  const hasYears =
+    lead.desired_year_min != null || lead.desired_year_max != null;
+  if (hasYears) {
+    parts.push(
+      `Years ${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`
+    );
+  }
+  if (lead.desired_mileage_max != null) {
+    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} mi`);
+  }
+  return parts.length ? parts.join(" · ") : "—";
+}
+
 export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, onAddLead }: LeadsTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -49,8 +105,6 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     return { color };
   };
 
-
-  // Stats
   const totalLeads = leads.length;
   const newLeads = leads.filter(l => getStatus(l.status_id)?.name === "New").length;
   const contactedLeads = leads.filter(l => getStatus(l.status_id)?.name === "Contacted").length;
@@ -58,7 +112,6 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">All Leads</h1>
         <div className="flex items-center gap-2">
@@ -71,18 +124,21 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
             {showGenerateMenu && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
                 <button
+                  type="button"
                   className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
                   onClick={() => { onAddLead(); setShowGenerateMenu(false); }}
                 >
                   Manual entry
                 </button>
                 <button
+                  type="button"
                   className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
                   disabled
                 >
                   Import CSV
                 </button>
                 <button
+                  type="button"
                   className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
                   disabled
                 >
@@ -94,7 +150,6 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         </div>
       </div>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "Total Leads", value: totalLeads, color: "bg-blue-500" },
@@ -112,25 +167,30 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         ))}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
-              <TableHead className="w-10">
+              <TableHead className="w-10 sticky left-0 z-10 bg-background">
                 <Checkbox
+                  className={tableCheckboxClassName}
                   checked={selected.size === paged.length && paged.length > 0}
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Instagram</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Interested Car</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="min-w-[120px]">Name</TableHead>
+              <TableHead className="min-w-[100px]">Instagram</TableHead>
+              <TableHead className="min-w-[100px]">Phone</TableHead>
+              <TableHead className="min-w-[88px]">Lead type</TableHead>
+              <TableHead className="min-w-[160px]">Car</TableHead>
+              <TableHead className="min-w-[220px]">Buyer criteria</TableHead>
+              <TableHead className="min-w-[100px]">Status</TableHead>
+              <TableHead className="min-w-[88px]">Source</TableHead>
+              <TableHead className="min-w-[140px]">Notes</TableHead>
+              <TableHead className="min-w-[120px]">Sender ID</TableHead>
+              <TableHead className="min-w-[100px]">Created</TableHead>
+              <TableHead className="min-w-[100px]">Updated</TableHead>
+              <TableHead className="min-w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,11 +200,15 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
               return (
                 <TableRow
                   key={lead.id}
-                  className="cursor-pointer hover:bg-surface-hover"
+                  className="group cursor-pointer hover:bg-surface-hover"
                   onClick={() => setEditLead(lead)}
                 >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    className="sticky left-0 z-10 bg-background group-hover:bg-surface-hover"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
+                      className={tableCheckboxClassName}
                       checked={selected.has(lead.id)}
                       onCheckedChange={() => toggleOne(lead.id)}
                     />
@@ -152,11 +216,15 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                   <TableCell>{lead.instagram_handle || "—"}</TableCell>
                   <TableCell>{lead.phone || "—"}</TableCell>
+                  <TableCell className="capitalize">{lead.lead_type}</TableCell>
                   <TableCell>{car ? `${car.year} ${car.brand} ${car.model}` : "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                    {summarizeBuyerCriteria(lead)}
+                  </TableCell>
                   <TableCell>
                     {(() => {
                       const s = statusStyle(status);
-                      const color = (s as any).color || "#6B7280";
+                      const color = (s as { color?: string }).color || "#6B7280";
                       return (
                         <span
                           className="text-xs px-3 py-1 rounded-full font-medium"
@@ -168,16 +236,23 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                     })()}
                   </TableCell>
                   <TableCell className="capitalize">{lead.source}</TableCell>
-                  <TableCell>{format(new Date(lead.created_at), "dd MMM yyyy")}</TableCell>
+                  <TableCell className="text-sm max-w-[160px]" title={lead.notes ?? undefined}>
+                    {truncateText(lead.notes, 48)}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground" title={lead.platform_sender_id}>
+                    {truncateId(lead.platform_sender_id)}
+                  </TableCell>
+                  <TableCell>{formatShortDate(lead.created_at)}</TableCell>
+                  <TableCell>{formatShortDate(lead.updated_at)}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      <button className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditLead(lead)}>
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditLead(lead)}>
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteLead(lead.id)}>
+                      <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteLead(lead.id)}>
                         <Trash2 className="h-4 w-4" />
                       </button>
-                      <button className="p-1 hover:text-foreground text-muted-foreground">
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground">
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
                     </div>
@@ -189,7 +264,6 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, leads.length)} of {leads.length} entries</span>
         <div className="flex items-center gap-1">
@@ -213,14 +287,13 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         </div>
       </div>
 
-      {/* Selection bar */}
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
           <span className="text-sm font-medium">{selected.size} Selected</span>
           <Button variant="outline" size="sm">Duplicate</Button>
           <Button variant="outline" size="sm">Print</Button>
           <Button variant="destructive" size="sm">Delete</Button>
-          <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
+          <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
 

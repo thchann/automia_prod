@@ -27,6 +27,18 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
     onOpenChange(false);
   };
 
+  const listedAtInputValue = form.listed_at
+    ? (() => {
+        try {
+          const d = new Date(form.listed_at);
+          const pad = (n: number) => String(n).padStart(2, "0");
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } catch {
+          return "";
+        }
+      })()
+    : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[540px]">
@@ -47,21 +59,42 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Year</label>
-              <Input type="number" value={form.year || ""} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || 0 })} />
+              <Input type="number" value={form.year ?? ""} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value, 10) || 0 })} />
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Mileage</label>
-              <Input type="number" value={form.mileage || ""} onChange={(e) => setForm({ ...form, mileage: parseInt(e.target.value) || 0 })} />
+              <Input
+                type="number"
+                value={form.mileage ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm({ ...form, mileage: v === "" ? null : parseInt(v, 10) });
+                }}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Price</label>
-              <Input type="number" value={form.price || ""} onChange={(e) => setForm({ ...form, price: parseInt(e.target.value) || 0 })} />
+              <Input
+                type="number"
+                value={form.price ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm({ ...form, price: v === "" ? null : Number(v) });
+                }}
+              />
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Desired Price</label>
-              <Input type="number" value={form.desired_price || ""} onChange={(e) => setForm({ ...form, desired_price: parseInt(e.target.value) || null })} />
+              <Input
+                type="number"
+                value={form.desired_price ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm({ ...form, desired_price: v === "" ? null : Number(v) });
+                }}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -70,10 +103,11 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.owner_type || "owned"}
-                onChange={(e) => setForm({ ...form, owner_type: e.target.value })}
+                onChange={(e) => setForm({ ...form, owner_type: e.target.value as Car["owner_type"] })}
               >
                 <option value="owned">Owned</option>
-                <option value="consignment">Consignment</option>
+                <option value="client">Client</option>
+                <option value="advisor">Advisor</option>
               </select>
             </div>
             <div>
@@ -81,17 +115,29 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.status || "available"}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                onChange={(e) => setForm({ ...form, status: e.target.value as Car["status"] })}
               >
                 <option value="available">Available</option>
                 <option value="sold">Sold</option>
-                <option value="pending">Pending</option>
               </select>
             </div>
           </div>
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Car Type</label>
-            <Input value={form.car_type || ""} onChange={(e) => setForm({ ...form, car_type: e.target.value })} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Listed at</label>
+              <Input
+                type="datetime-local"
+                value={listedAtInputValue}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm({ ...form, listed_at: v ? new Date(v).toISOString() : null });
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Car Type</label>
+              <Input value={form.car_type || ""} onChange={(e) => setForm({ ...form, car_type: e.target.value || null })} />
+            </div>
           </div>
         </div>
         <DialogFooter>
