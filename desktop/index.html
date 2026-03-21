@@ -20,6 +20,22 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/Otto_Logo.png" />
+
+    <!-- Phones → mobile app at /m (unless user chose "View desktop site") -->
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (path.startsWith("/m")) return;
+        if (document.cookie.indexOf("automia_desktop=1") !== -1) return;
+        var ua = navigator.userAgent || "";
+        var mobile =
+          /Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        if (!mobile) return;
+        if (path === "/" || path === "") {
+          location.replace("/m" + location.search + location.hash);
+        }
+      })();
+    </script>
   </head>
 
   <body>

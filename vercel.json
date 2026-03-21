@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install",
-  "buildCommand": "npm run build:desktop",
-  "outputDirectory": "desktop/dist"
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "desktop/dist",
+  "rewrites": [
+    { "source": "/m", "destination": "/m/index.html" },
+    { "source": "/m/", "destination": "/m/index.html" },
+    { "source": "/m/:path*", "destination": "/m/index.html" }
+  ]
 }
