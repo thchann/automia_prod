@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import {
@@ -8,6 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
+import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { matchesFuzzy } from "@/lib/fuzzyMatch";
+import {
+  buildLeadSearchHaystackForColumns,
+  defaultLeadSearchColumns,
+  LEAD_SEARCH_COLUMN_IDS,
+  LEAD_SEARCH_COLUMN_LABELS,
+  summarizeBuyerCriteria,
+  type LeadSearchColumnId,
+} from "@/lib/tableSearchHaystack";
+import { cn } from "@/lib/utils";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -22,6 +33,11 @@ const PAGE_SIZE = 9;
 
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
+
+const stickyCheckboxHead =
+  "w-10 sticky left-0 z-10 border-r border-border bg-background shadow-sm";
+const stickyCheckboxCell =
+  "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
 
 function formatShortDate(s: string | null) {
   if (!s) return "—";
@@ -44,36 +60,11 @@ function truncateId(id: string, max = 14) {
   return `${id.slice(0, max - 1)}…`;
 }
 
-function summarizeBuyerCriteria(lead: Lead): string {
-  if (lead.lead_type !== "buyer") return "—";
-  const parts: string[] = [];
-  const hasBudget =
-    lead.desired_budget_min != null || lead.desired_budget_max != null;
-  if (hasBudget) {
-    const min =
-      lead.desired_budget_min != null
-        ? `$${Number(lead.desired_budget_min).toLocaleString()}`
-        : "—";
-    const max =
-      lead.desired_budget_max != null
-        ? `$${Number(lead.desired_budget_max).toLocaleString()}`
-        : "—";
-    parts.push(`${min}–${max}`);
-  }
-  const makeModel = [lead.desired_make, lead.desired_model].filter(Boolean).join(" ");
-  if (makeModel) parts.push(makeModel);
-  if (lead.desired_car_type) parts.push(lead.desired_car_type);
-  const hasYears =
-    lead.desired_year_min != null || lead.desired_year_max != null;
-  if (hasYears) {
-    parts.push(
-      `Years ${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`
-    );
-  }
-  if (lead.desired_mileage_max != null) {
-    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} mi`);
-  }
-  return parts.length ? parts.join(" · ") : "—";
+function allLeadColumnsSelected(s: Set<LeadSearchColumnId>) {
+  return (
+    s.size === LEAD_SEARCH_COLUMN_IDS.length &&
+    LEAD_SEARCH_COLUMN_IDS.every((id) => s.has(id))
+  );
 }
 
 export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, onAddLead }: LeadsTableProps) {
@@ -81,12 +72,48 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
   const [page, setPage] = useState(1);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
-
-  const totalPages = Math.ceil(leads.length / PAGE_SIZE);
-  const paged = leads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const [searchQuery, setSearchQuery] = useState("");
+  /** Which status values to keep when Status column is active; empty = any status. */
+  const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
+  const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
+    () => defaultLeadSearchColumns(),
+  );
+  const [statusSubOpen, setStatusSubOpen] = useState(false);
 
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
   const getCar = (id: string | null) => cars.find((c) => c.id === id);
+
+  const filteredLeads = useMemo(() => {
+    const q = searchQuery.trim();
+    const cols =
+      searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
+    return leads.filter((lead) => {
+      if (cols.has("status") && statusFilterIds.size > 0) {
+        const sid = lead.status_id;
+        if (!sid || !statusFilterIds.has(sid)) return false;
+      }
+      if (q) {
+        const st = statuses.find((s) => s.id === lead.status_id);
+        const statusName = st?.name ?? "";
+        const car = cars.find((c) => c.id === lead.car_id);
+        const hay = buildLeadSearchHaystackForColumns(
+          lead,
+          car,
+          statusName,
+          cols,
+        );
+        if (!matchesFuzzy(q, hay)) return false;
+      }
+      return true;
+    });
+  }, [leads, statusFilterIds, searchQuery, statuses, cars, searchColumns]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilterIds, searchColumns]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const paged = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const toggleAll = () => {
     if (selected.size === paged.length) setSelected(new Set());
@@ -99,19 +126,54 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     setSelected(next);
   };
 
+  const toggleStatusFilter = (statusId: string) => {
+    setStatusFilterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  };
+
+  const toggleLeadColumn = (id: LeadSearchColumnId) => {
+    setSearchColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size <= 1) return prev;
+        next.delete(id);
+        if (id === "status") setStatusSubOpen(false);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setStatusFilterIds(new Set());
+    setSearchQuery("");
+    setSearchColumns(defaultLeadSearchColumns());
+    setStatusSubOpen(false);
+  };
+
   const statusStyle = (status: LeadStatus | undefined) => {
     if (!status) return { bg: "bg-muted", text: "text-muted-foreground" };
     const color = status.color || "#6B7280";
     return { color };
   };
 
-  const totalLeads = leads.length;
-  const newLeads = leads.filter(l => getStatus(l.status_id)?.name === "New").length;
-  const contactedLeads = leads.filter(l => getStatus(l.status_id)?.name === "Contacted").length;
-  const qualifiedLeads = leads.filter(l => getStatus(l.status_id)?.name === "Qualified").length;
+  const totalLeads = filteredLeads.length;
+  const newLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "New").length;
+  const contactedLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "Contacted").length;
+  const qualifiedLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "Qualified").length;
+
+  const hasActiveFilters =
+    !allLeadColumnsSelected(searchColumns) ||
+    statusFilterIds.size > 0 ||
+    searchQuery.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">All Leads</h1>
         <div className="flex items-center gap-2">
@@ -167,11 +229,107 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         ))}
       </div>
 
-      <div className="rounded-lg border border-border overflow-x-auto">
+      <TableSearchToolbar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search leads (name, car, notes, status…)"
+        filterContent={(
+          <div className="space-y-1 p-3">
+            <p className="text-xs text-muted-foreground">
+              Toggle columns to include them in search.{" "}
+              <span className="font-medium text-foreground">Status</span> adds
+              value filters.
+            </p>
+            <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
+              {LEAD_SEARCH_COLUMN_IDS.map((colId) => {
+                const active = searchColumns.has(colId);
+                const isStatus = colId === "status";
+                return (
+                  <div key={colId} className="space-y-1">
+                    <div
+                      className={cn(
+                        "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
+                        active
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-transparent bg-muted/70 text-muted-foreground",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left font-medium"
+                        onClick={() => toggleLeadColumn(colId)}
+                      >
+                        {LEAD_SEARCH_COLUMN_LABELS[colId]}
+                        {!active ? (
+                          <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                            off
+                          </span>
+                        ) : null}
+                      </button>
+                      {isStatus && active ? (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded p-1 hover:bg-background/60"
+                          aria-expanded={statusSubOpen}
+                          aria-label="Status value filters"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setStatusSubOpen((o) => !o);
+                          }}
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              statusSubOpen && "rotate-180",
+                            )}
+                          />
+                        </button>
+                      ) : null}
+                    </div>
+                    {isStatus && active && statusSubOpen ? (
+                      <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
+                        <p className="text-[11px] text-muted-foreground">
+                          Match any checked status (none checked = any)
+                        </p>
+                        {statuses.map((s) => (
+                          <label
+                            key={s.id}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              className={tableCheckboxClassName}
+                              checked={statusFilterIds.has(s.id)}
+                              onCheckedChange={() => toggleStatusFilter(s.id)}
+                            />
+                            <span>{s.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={clearFilters}
+              >
+                Clear search &amp; filters
+              </Button>
+            ) : null}
+          </div>
+        )}
+      />
+
+      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-contain">
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
-              <TableHead className="w-10 sticky left-0 z-10 bg-background">
+              <TableHead className={stickyCheckboxHead}>
                 <Checkbox
                   className={tableCheckboxClassName}
                   checked={selected.size === paged.length && paged.length > 0}
@@ -204,7 +362,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   onClick={() => setEditLead(lead)}
                 >
                   <TableCell
-                    className="sticky left-0 z-10 bg-background group-hover:bg-surface-hover"
+                    className={stickyCheckboxCell}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -265,7 +423,11 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, leads.length)} of {leads.length} entries</span>
+        <span>
+          Showing {filteredLeads.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
+          -
+          {Math.min(page * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length} entries
+        </span>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
             <ChevronLeft className="h-4 w-4" /> Previous
@@ -281,7 +443,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
               {p}
             </Button>
           ))}
-          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
             Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
