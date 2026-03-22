@@ -27,11 +27,35 @@
         var path = location.pathname;
         if (path.startsWith("/m")) return;
         if (document.cookie.indexOf("automia_desktop=1") !== -1) return;
-        var ua = navigator.userAgent || "";
-        var mobile =
-          /Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-        if (!mobile) return;
-        if (path === "/" || path === "") {
+        if (path !== "/" && path !== "") return;
+
+        function isMobileUa(ua) {
+          return (
+            /iPhone|iPod|iPad/i.test(ua) ||
+            /Android.*Mobile|Android.*; wv\)/i.test(ua) ||
+            /; wv\)/i.test(ua) ||
+            /CriOS|FxiOS|EdgiOS/i.test(ua) ||
+            /SamsungBrowser|Opera Mini|Opera Mobi|OPiOS|KaiOS|webOS|BlackBerry|IEMobile/i.test(
+              ua,
+            ) ||
+            /Mobile Safari/i.test(ua)
+          );
+        }
+
+        function isMobileDevice() {
+          var ua = navigator.userAgent || "";
+          var uaData = navigator.userAgentData;
+          if (uaData && typeof uaData.mobile === "boolean") {
+            if (uaData.mobile === true) return true;
+            if (uaData.mobile === false) return false;
+          }
+          if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+            return true;
+          }
+          return isMobileUa(ua);
+        }
+
+        if (isMobileDevice()) {
           location.replace("/m" + location.search + location.hash);
         }
       })();

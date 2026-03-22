@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
-import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, Image as ImageIcon, X } from "lucide-react";
+import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, X } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -8,6 +8,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Car } from "@/types/leads";
 import { CarEditDialog } from "./CarEditDialog";
+import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { matchesFuzzy } from "@/lib/fuzzyMatch";
+import {
+  buildCarSearchHaystackForColumns,
+  CAR_SEARCH_COLUMN_IDS,
+  CAR_SEARCH_COLUMN_LABELS,
+  defaultCarSearchColumns,
+  type CarSearchColumnId,
+} from "@/lib/tableSearchHaystack";
+import { cn } from "@/lib/utils";
 
 interface CarsTableProps {
   cars: Car[];
@@ -20,6 +30,11 @@ const PAGE_SIZE = 9;
 
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
+
+const stickyCheckboxHead =
+  "w-10 sticky left-0 z-10 border-r border-border bg-background shadow-sm";
+const stickyCheckboxCell =
+  "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
 
 function formatShortDate(s: string | null) {
   if (!s) return "—";
@@ -37,14 +52,52 @@ function thumbnailUrl(car: Car): string | null {
   return img?.url ?? null;
 }
 
+function allCarColumnsSelected(s: Set<CarSearchColumnId>) {
+  return (
+    s.size === CAR_SEARCH_COLUMN_IDS.length &&
+    CAR_SEARCH_COLUMN_IDS.every((id) => s.has(id))
+  );
+}
+
 export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editCar, setEditCar] = useState<Car | null>(null);
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  /** When Status column is active: empty = any listing status; else restrict. */
+  const [statusFilter, setStatusFilter] = useState<Set<Car["status"]>>(() => new Set());
+  /** When Owner column is active: empty = any owner; else restrict. */
+  const [ownerFilter, setOwnerFilter] = useState<Set<Car["owner_type"]>>(() => new Set());
+  const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
+    () => defaultCarSearchColumns(),
+  );
+  const [statusSubOpen, setStatusSubOpen] = useState(false);
+  const [ownerSubOpen, setOwnerSubOpen] = useState(false);
 
-  const totalPages = Math.ceil(cars.length / PAGE_SIZE);
-  const paged = cars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filteredCars = useMemo(() => {
+    const q = searchQuery.trim();
+    const cols =
+      searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
+    return cars.filter((car) => {
+      if (cols.has("status") && statusFilter.size > 0 && !statusFilter.has(car.status))
+        return false;
+      if (cols.has("owner") && ownerFilter.size > 0 && !ownerFilter.has(car.owner_type))
+        return false;
+      if (q) {
+        const hay = buildCarSearchHaystackForColumns(car, cols);
+        if (!matchesFuzzy(q, hay)) return false;
+      }
+      return true;
+    });
+  }, [cars, statusFilter, ownerFilter, searchQuery, searchColumns]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, ownerFilter, searchColumns]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
+  const paged = filteredCars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const toggleAll = () => {
     if (selected.size === paged.length) setSelected(new Set());
@@ -55,6 +108,48 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
     const next = new Set(selected);
     if (next.has(id)) next.delete(id); else next.add(id);
     setSelected(next);
+  };
+
+  const toggleStatus = (s: Car["status"]) => {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  };
+
+  const toggleOwner = (o: Car["owner_type"]) => {
+    setOwnerFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(o)) next.delete(o);
+      else next.add(o);
+      return next;
+    });
+  };
+
+  const toggleCarColumn = (id: CarSearchColumnId) => {
+    setSearchColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size <= 1) return prev;
+        next.delete(id);
+        if (id === "status") setStatusSubOpen(false);
+        if (id === "owner") setOwnerSubOpen(false);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setStatusFilter(new Set());
+    setOwnerFilter(new Set());
+    setSearchQuery("");
+    setSearchColumns(defaultCarSearchColumns());
+    setStatusSubOpen(false);
+    setOwnerSubOpen(false);
   };
 
   const statusStyle = (status: Car["status"]) => {
@@ -74,16 +169,22 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
     }
   };
 
-  const totalCars = cars.length;
-  const available = cars.filter(c => c.status === "available").length;
-  const sold = cars.filter(c => c.status === "sold").length;
-  const owned = cars.filter(c => c.owner_type === "owned").length;
+  const totalCars = filteredCars.length;
+  const available = filteredCars.filter((c) => c.status === "available").length;
+  const sold = filteredCars.filter((c) => c.status === "sold").length;
+  const owned = filteredCars.filter((c) => c.owner_type === "owned").length;
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
 
+  const hasActiveFilters =
+    !allCarColumnsSelected(searchColumns) ||
+    statusFilter.size > 0 ||
+    ownerFilter.size > 0 ||
+    searchQuery.trim().length > 0;
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">All Cars</h1>
         <div className="flex items-center gap-2">
@@ -111,11 +212,148 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
         ))}
       </div>
 
-      <div className="rounded-lg border border-border overflow-x-auto">
+      <TableSearchToolbar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search cars (make, model, year, price…)"
+        filterContent={(
+          <div className="space-y-1 p-3">
+            <p className="text-xs text-muted-foreground">
+              Toggle columns for search scope.{" "}
+              <span className="font-medium text-foreground">Status</span> and{" "}
+              <span className="font-medium text-foreground">Owner</span> add
+              value filters.
+            </p>
+            <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
+              {CAR_SEARCH_COLUMN_IDS.map((colId) => {
+                const active = searchColumns.has(colId);
+                const isStatus = colId === "status";
+                const isOwner = colId === "owner";
+                return (
+                  <div key={colId} className="space-y-1">
+                    <div
+                      className={cn(
+                        "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
+                        active
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-transparent bg-muted/70 text-muted-foreground",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left font-medium capitalize"
+                        onClick={() => toggleCarColumn(colId)}
+                      >
+                        {CAR_SEARCH_COLUMN_LABELS[colId]}
+                        {!active ? (
+                          <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                            off
+                          </span>
+                        ) : null}
+                      </button>
+                      {isStatus && active ? (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded p-1 hover:bg-background/60"
+                          aria-expanded={statusSubOpen}
+                          aria-label="Listing status filters"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setStatusSubOpen((o) => !o);
+                          }}
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              statusSubOpen && "rotate-180",
+                            )}
+                          />
+                        </button>
+                      ) : null}
+                      {isOwner && active ? (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded p-1 hover:bg-background/60"
+                          aria-expanded={ownerSubOpen}
+                          aria-label="Owner filters"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setOwnerSubOpen((o) => !o);
+                          }}
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              ownerSubOpen && "rotate-180",
+                            )}
+                          />
+                        </button>
+                      ) : null}
+                    </div>
+                    {isStatus && active && statusSubOpen ? (
+                      <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
+                        <p className="text-[11px] text-muted-foreground">
+                          Match any checked (none = any)
+                        </p>
+                        {(["available", "sold"] as const).map((s) => (
+                          <label
+                            key={s}
+                            className="flex cursor-pointer items-center gap-2 text-sm capitalize"
+                          >
+                            <Checkbox
+                              className={tableCheckboxClassName}
+                              checked={statusFilter.has(s)}
+                              onCheckedChange={() => toggleStatus(s)}
+                            />
+                            <span>{s}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                    {isOwner && active && ownerSubOpen ? (
+                      <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
+                        <p className="text-[11px] text-muted-foreground">
+                          Match any checked (none = any)
+                        </p>
+                        {(["owned", "client", "advisor"] as const).map((o) => (
+                          <label
+                            key={o}
+                            className="flex cursor-pointer items-center gap-2 text-sm capitalize"
+                          >
+                            <Checkbox
+                              className={tableCheckboxClassName}
+                              checked={ownerFilter.has(o)}
+                              onCheckedChange={() => toggleOwner(o)}
+                            />
+                            <span>{o}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={clearFilters}
+              >
+                Clear search &amp; filters
+              </Button>
+            ) : null}
+          </div>
+        )}
+      />
+
+      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-contain">
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
-              <TableHead className="w-10 sticky left-0 z-10 bg-background">
+              <TableHead className={stickyCheckboxHead}>
                 <Checkbox
                   className={tableCheckboxClassName}
                   checked={selected.size === paged.length && paged.length > 0}
@@ -147,7 +385,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                   onClick={() => setEditCar(car)}
                 >
                   <TableCell
-                    className="sticky left-0 z-10 bg-background group-hover:bg-surface-hover"
+                    className={stickyCheckboxCell}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -209,7 +447,11 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, cars.length)} of {cars.length} entries</span>
+        <span>
+          Showing {filteredCars.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
+          -
+          {Math.min(page * PAGE_SIZE, filteredCars.length)} of {filteredCars.length} entries
+        </span>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
             <ChevronLeft className="h-4 w-4" /> Previous
@@ -225,7 +467,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
               {p}
             </Button>
           ))}
-          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
             Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
