@@ -236,9 +236,15 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         filterContent={(
           <div className="space-y-1 p-3">
             <p className="text-xs text-muted-foreground">
-              Toggle columns to include them in search.{" "}
+              Deselect a column to remove it from text search (only checked
+              fields are searched). Type in the bar to filter the list.{" "}
               <span className="font-medium text-foreground">Status</span> adds
-              value filters.
+              value filters when on. If{" "}
+              <span className="font-medium text-foreground">Name</span>,{" "}
+              <span className="font-medium text-foreground">Car</span>, or{" "}
+              <span className="font-medium text-foreground">Buyer criteria</span>{" "}
+              is off, search won’t use that field (e.g. year ranges live under Buyer
+              criteria for buyers).
             </p>
             <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
               {LEAD_SEARCH_COLUMN_IDS.map((colId) => {
