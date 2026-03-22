@@ -8,10 +8,8 @@ type TableSearchToolbarProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  /** Popover body (checkboxes, etc.). Omit to hide the filter control. */
   filterContent?: ReactNode;
   className?: string;
-  /** Extra classes for the filter popover panel (width, padding). */
   filterContentClassName?: string;
 };
 

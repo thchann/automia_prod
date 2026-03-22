@@ -219,10 +219,13 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
         filterContent={(
           <div className="space-y-1 p-3">
             <p className="text-xs text-muted-foreground">
-              Toggle columns for search scope.{" "}
+              Deselect a column to remove it from text search (only checked
+              fields are searched). Type in the bar to filter the list.{" "}
               <span className="font-medium text-foreground">Status</span> and{" "}
-              <span className="font-medium text-foreground">Owner</span> add
-              value filters.
+              <span className="font-medium text-foreground">Owner</span> can add
+              value filters when on. If{" "}
+              <span className="font-medium text-foreground">Year</span> (or
+              brand/model) is off, search won’t match on that field.
             </p>
             <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
               {CAR_SEARCH_COLUMN_IDS.map((colId) => {
