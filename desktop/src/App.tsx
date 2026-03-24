@@ -9,6 +9,8 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
+const routerBasename =
+  import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const App = () => (
   <LanguageProvider>
@@ -17,7 +19,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter basename={routerBasename}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="*" element={<NotFound />} />

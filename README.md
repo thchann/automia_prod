@@ -1,7 +1,7 @@
 # Automia monorepo
 
-- **`desktop/`** — main web app (Vercel deploys this by default; see root `vercel.json`).
-- **`mobile/`** — mobile web UI (run locally until routing is wired).
+- **`desktop/`** — desktop web app (served at `/desktop` in production).
+- **`mobile/`** — phone-first web app (served at `/` in production).
 
 ## Setup
 
@@ -30,19 +30,19 @@ npm run build:mobile
 
 ## Vercel
 
-The repo root includes `vercel.json`: install at root, run **`build:vercel`** (desktop + mobile copied into `desktop/dist/m`). Production output is still **`desktop/dist`**.
+The repo root includes `vercel.json`: install at root, run **`build:vercel`**. Production output is **`mobile/dist`**, with desktop bundled under `mobile/dist/desktop`.
 
 In the Vercel project settings, set **Root Directory** to **`.`** (repository root).
 
-**Mobile vs desktop:** Visiting **`/`** on a **phone** redirects to **`/m`** (inline script in `desktop/index.html`: Client Hints `userAgentData.mobile` when available, iPad “desktop UA” heuristic, then broad User-Agent fallback). To stay on the desktop site from a phone, open **Settings → View desktop site** on the mobile app (sets a cookie for one year).
+**Mobile vs desktop:** Visiting **`/`** opens the phone UI by default on phones. Desktop browsers are redirected to **`/desktop`** by an inline script in `mobile/index.html` (using Client Hints `userAgentData.mobile` when available, iPad “desktop UA” heuristic, then User-Agent fallback). On phone, using **Settings → View desktop site** sets `automia_desktop=1` for one year and routes to **`/desktop`**.
 
-### Manual checks (redirect)
+### Manual checks (routing)
 
-- Phone (default browser): open **`/`** → should land on **`/m`**.
-- Phone with **“Request desktop site”** / **Desktop mode**: **`/`** should stay on desktop (no forced `/m`).
-- After **View desktop site** on mobile: **`/`** stays desktop until the cookie expires or site data is cleared.
-- Laptop/desktop browser: **`/`** should not redirect to **`/m`**.
-- **Dev note:** `/m` is only served from a **production** build (`npm run build:vercel` + static preview); `npm run dev:desktop` alone may 404 on `/m` unless you also run **`npm run dev:mobile`** on port **8081** or use a preview of `desktop/dist`.
+- Phone (default browser): open **`/`** → should stay on phone UI.
+- Phone after **View desktop site** on mobile: **`/`** should route to **`/desktop`** until cookie expires or site data is cleared.
+- Laptop/desktop browser: open **`/`** → should redirect to **`/desktop`**.
+- Desktop direct link **`/desktop`** should stay on desktop UI and support refresh/deep links.
+- **Dev note:** in local dev, run both servers (`8080` desktop, `8081` mobile). Production-like routing is validated with `npm run build:vercel` and a static preview of `mobile/dist`.
 
 ### Leads / Cars table search
 

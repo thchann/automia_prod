@@ -68,7 +68,7 @@ const SettingsPage = () => {
           onClick={() => {
             document.cookie =
               "automia_desktop=1; path=/; max-age=31536000; SameSite=Lax";
-            window.location.href = "/";
+            window.location.href = "/desktop";
           }}
         >
           <Monitor size={18} className="text-muted-foreground" />
