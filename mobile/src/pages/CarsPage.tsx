@@ -181,22 +181,19 @@ const CarsPage = () => {
                   <p className="mb-1 text-xs text-muted-foreground">Status</p>
                 <div className="space-y-1">
                   {(["available", "sold"] as const).map((status) => (
-                    <label
+                    <button
+                      type="button"
                       key={status}
+                      onClick={() => toggleStatusFilter(status)}
                       className={cn(
-                        "flex items-center gap-2 rounded-md border px-2 py-2 text-sm capitalize transition-colors",
+                        "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
                         statusFilters.has(status)
                           ? "border-primary/40 bg-primary/10 text-foreground"
                           : "border-transparent bg-muted/70 text-muted-foreground",
                       )}
                     >
-                      <Checkbox
-                        className={tableCheckboxClassName}
-                        checked={statusFilters.has(status)}
-                        onCheckedChange={() => toggleStatusFilter(status)}
-                      />
                       <span>{status}</span>
-                    </label>
+                    </button>
                   ))}
                 </div>
                 </div>

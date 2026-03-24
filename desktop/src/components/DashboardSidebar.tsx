@@ -11,6 +11,7 @@ import {
 interface NavItem {
   label: string;
   icon: React.ElementType;
+  disabled?: boolean;
 }
 
 interface NavGroup {
@@ -30,7 +31,7 @@ const navGroups: NavGroup[] = [
     title: "Manage",
     items: [
       { label: "Cars", icon: Car },
-      { label: "AI assistant", icon: Bot },
+      { label: "AI assistant", icon: Bot, disabled: true },
     ],
   },
   {
@@ -53,13 +54,28 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
   const navButtonClass =
     "flex h-9 w-full shrink-0 items-center justify-start gap-3 rounded-md pl-3 pr-2 text-sm leading-none";
 
-  const NavButton = ({ label, icon: Icon, isActive }: { label: string; icon: React.ElementType; isActive: boolean }) => {
+  const NavButton = ({
+    label,
+    icon: Icon,
+    isActive,
+    disabled = false,
+  }: {
+    label: string;
+    icon: React.ElementType;
+    isActive: boolean;
+    disabled?: boolean;
+  }) => {
     const button = (
       <button
         type="button"
-        onClick={() => onActiveItemChange(label)}
+        onClick={() => {
+          if (!disabled) onActiveItemChange(label);
+        }}
+        disabled={disabled}
         className={`${navButtonClass} ${
-          isActive
+          disabled
+            ? "text-muted-foreground/60 cursor-not-allowed"
+            : isActive
             ? "bg-accent text-active font-medium"
             : "text-sidebar-foreground hover:bg-surface-hover"
         }`}
@@ -90,12 +106,11 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
     <aside
       className={`box-border ${collapsed ? "w-[52px] min-w-[52px]" : "w-[218px] min-w-[218px]"} bg-background flex flex-col h-full transition-[width,min-width] duration-200 ease-out`}
     >
-      <nav className="flex-1 overflow-y-auto scrollbar-none px-2 pt-2 pb-3">
+      <nav className="flex-1 overflow-y-auto overscroll-y-none scrollbar-none px-2 pt-2 pb-3">
         {/* Home */}
         <div className="mb-1">
           <NavButton label="Home" icon={Home} isActive={activeItem === "Home"} />
         </div>
-
         {navGroups.map((group) => (
           <div key={group.title} className="mt-4">
             {/* Same layout box in both states (opacity only) so section headers don’t change row metrics */}
@@ -114,6 +129,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
                   label={item.label}
                   icon={item.icon}
                   isActive={activeItem === item.label}
+                  disabled={item.disabled}
                 />
               ))}
             </div>

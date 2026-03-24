@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Car, Clock3, Sparkles, Users } from "lucide-react";
+import { Car, Clock3, Users } from "lucide-react";
 import { defaultStatuses, mockCars, mockLeads } from "@/data/mockLeads";
 import { Car as CarType, Lead } from "@/types/leads";
 import { CarEditDialog } from "@/components/cars/CarEditDialog";
@@ -8,13 +8,7 @@ import { cn } from "@/lib/utils";
 
 const HOME_OWNER_NAME = "Theodore Chan";
 
-const layerTabs = [
-  "Overview",
-  "Teams",
-  "Decisions",
-  "Workflow",
-  "Recent activity",
-];
+const layerTabs = ["Overview", "Recent activity"] as const;
 
 const featureCards = [
   {
@@ -67,6 +61,7 @@ export function HomeOverview() {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [editCar, setEditCar] = useState<CarType | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
+  const [activeView, setActiveView] = useState<(typeof layerTabs)[number]>("Overview");
   const today = now.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -99,13 +94,14 @@ export function HomeOverview() {
 
       <div className="rounded-xl border border-border bg-card px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
-          {layerTabs.map((tab, index) => (
+          {layerTabs.map((tab) => (
             <button
               key={tab}
               type="button"
+              onClick={() => setActiveView(tab)}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                index === 0
+                activeView === tab
                   ? "bg-primary/15 text-foreground"
                   : "bg-muted/60 text-muted-foreground hover:text-foreground",
               )}
@@ -116,23 +112,24 @@ export function HomeOverview() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        {featureCards.map((card) => (
-          <article key={card.title} className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 h-36 rounded-lg border border-border bg-gradient-to-b from-primary/10 to-primary/5" />
-            <p className="mb-2 text-lg font-semibold text-foreground">{card.title}</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{card.description}</p>
-            <div className="mt-4 inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              {card.chip}
-            </div>
-          </article>
-        ))}
-      </div>
+      {activeView === "Overview" ? (
+        <div className="grid gap-4 xl:grid-cols-3">
+          {featureCards.map((card) => (
+            <article key={card.title} className="rounded-xl border border-border bg-card p-4">
+              <div className="mb-3 h-36 rounded-lg border border-border bg-gradient-to-b from-primary/10 to-primary/5" />
+              <p className="mb-2 text-lg font-semibold text-foreground">{card.title}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{card.description}</p>
+              <div className="mt-4 inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {card.chip}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         <div>
           <p className="text-base font-semibold text-foreground">Recent activity</p>
-          <p className="text-xs text-muted-foreground">Top 10 most recent cars and leads</p>
         </div>
 
         <div className="space-y-2">
@@ -218,13 +215,6 @@ export function HomeOverview() {
           >
             See more
           </button>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-          Styling-first version complete. Data actions and routing hooks can be added next.
         </div>
       </div>
 

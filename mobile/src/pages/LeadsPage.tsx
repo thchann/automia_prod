@@ -193,22 +193,19 @@ const LeadsPage = () => {
                     <p className="mb-1 text-xs text-muted-foreground">Status</p>
                   <div className="space-y-1">
                     {mockStatuses.map((s) => (
-                      <label
+                      <button
+                        type="button"
                         key={s.id}
+                        onClick={() => toggleStatusFilter(s.id)}
                         className={cn(
-                          "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
+                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm transition-colors",
                           statusFilterIds.has(s.id)
                             ? "border-primary/40 bg-primary/10 text-foreground"
                             : "border-transparent bg-muted/70 text-muted-foreground",
                         )}
                       >
-                        <Checkbox
-                          className={tableCheckboxClassName}
-                          checked={statusFilterIds.has(s.id)}
-                          onCheckedChange={() => toggleStatusFilter(s.id)}
-                        />
                         <span>{s.name}</span>
-                      </label>
+                      </button>
                     ))}
                   </div>
                   </div>
@@ -216,22 +213,19 @@ const LeadsPage = () => {
                     <p className="mb-1 text-xs text-muted-foreground">Lead type</p>
                   <div className="space-y-1">
                     {(["buyer", "seller", "pending"] as const).map((type) => (
-                      <label
+                      <button
+                        type="button"
                         key={type}
+                        onClick={() => toggleLeadTypeFilter(type)}
                         className={cn(
-                          "flex items-center gap-2 rounded-md border px-2 py-2 text-sm capitalize transition-colors",
+                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
                           leadTypeFilters.has(type)
                             ? "border-primary/40 bg-primary/10 text-foreground"
                             : "border-transparent bg-muted/70 text-muted-foreground",
                         )}
                       >
-                        <Checkbox
-                          className={tableCheckboxClassName}
-                          checked={leadTypeFilters.has(type)}
-                          onCheckedChange={() => toggleLeadTypeFilter(type)}
-                        />
                         <span>{type}</span>
-                      </label>
+                      </button>
                     ))}
                   </div>
                   </div>
