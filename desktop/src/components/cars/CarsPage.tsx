@@ -32,6 +32,7 @@ export function CarsPage() {
       updated_at: null,
     };
     setCars((prev) => [newCar, ...prev]);
+    return newCar;
   };
 
   return (

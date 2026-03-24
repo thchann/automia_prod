@@ -24,7 +24,6 @@ export function LeadsPage() {
       id: `l_${Date.now()}`,
       lead_type: "pending",
       source: "manual",
-      platform_sender_id: `manual-${crypto.randomUUID()}`,
       status_id: statuses.find((s) => s.is_default)?.id || statuses[0]?.id || null,
       car_id: null,
       name: "New Lead",
@@ -43,6 +42,7 @@ export function LeadsPage() {
       desired_car_type: null,
     };
     setLeads((prev) => [newLead, ...prev]);
+    return newLead;
   };
 
   const tabs: { key: Tab; label: string }[] = [

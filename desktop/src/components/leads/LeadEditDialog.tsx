@@ -68,14 +68,6 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               <Input value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} />
             </div>
           </div>
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Platform sender ID</label>
-            <Input
-              value={form.platform_sender_id || ""}
-              onChange={(e) => setForm({ ...form, platform_sender_id: e.target.value })}
-              className="font-mono text-sm"
-            />
-          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Lead Type</label>
