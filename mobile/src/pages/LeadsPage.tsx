@@ -6,7 +6,6 @@ import AddLeadSheet from "@/components/AddLeadSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
 import {
   buildLeadSearchHaystackForColumns,
@@ -31,8 +30,8 @@ const LeadsPage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
-  const [statusFilterId, setStatusFilterId] = useState<string>("all");
-  const [leadTypeFilter, setLeadTypeFilter] = useState<LeadType | "all">("all");
+  const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
+  const [leadTypeFilters, setLeadTypeFilters] = useState<Set<LeadType>>(() => new Set());
   const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
     () => defaultLeadSearchColumns(),
   );
@@ -47,8 +46,11 @@ const LeadsPage = () => {
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
     return leads.filter((lead) => {
-      if (statusFilterId !== "all" && lead.status_id !== statusFilterId) return false;
-      if (leadTypeFilter !== "all" && lead.lead_type !== leadTypeFilter) return false;
+      if (statusFilterIds.size > 0) {
+        const sid = lead.status_id;
+        if (!sid || !statusFilterIds.has(sid)) return false;
+      }
+      if (leadTypeFilters.size > 0 && !leadTypeFilters.has(lead.lead_type)) return false;
       if (q) {
         const st = mockStatuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
@@ -63,7 +65,7 @@ const LeadsPage = () => {
       }
       return true;
     });
-  }, [leads, statusFilterId, leadTypeFilter, searchQuery, searchColumns]);
+  }, [leads, statusFilterIds, leadTypeFilters, searchQuery, searchColumns]);
 
   const handleAddLead = (lead: Lead) => {
     setLeads((prev) => [lead, ...prev]);
@@ -83,16 +85,34 @@ const LeadsPage = () => {
   };
 
   const clearFilters = () => {
-    setStatusFilterId("all");
-    setLeadTypeFilter("all");
+    setStatusFilterIds(new Set());
+    setLeadTypeFilters(new Set());
     setSearchQuery("");
     setSearchColumns(defaultLeadSearchColumns());
   };
 
+  const toggleStatusFilter = (statusId: string) => {
+    setStatusFilterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  };
+
+  const toggleLeadTypeFilter = (leadType: LeadType) => {
+    setLeadTypeFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadType)) next.delete(leadType);
+      else next.add(leadType);
+      return next;
+    });
+  };
+
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
-    statusFilterId !== "all" ||
-    leadTypeFilter !== "all" ||
+    statusFilterIds.size > 0 ||
+    leadTypeFilters.size > 0 ||
     searchQuery.trim().length > 0;
 
   return (
@@ -171,31 +191,49 @@ const LeadsPage = () => {
                 <div className="space-y-3 pt-2">
                   <div>
                     <p className="mb-1 text-xs text-muted-foreground">Status</p>
-                    <Select value={statusFilterId} onValueChange={setStatusFilterId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All statuses</SelectItem>
-                        {mockStatuses.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1">
+                    {mockStatuses.map((s) => (
+                      <label
+                        key={s.id}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md border px-2 py-2 text-sm transition-colors",
+                          statusFilterIds.has(s.id)
+                            ? "border-primary/40 bg-primary/10 text-foreground"
+                            : "border-transparent bg-muted/70 text-muted-foreground",
+                        )}
+                      >
+                        <Checkbox
+                          className={tableCheckboxClassName}
+                          checked={statusFilterIds.has(s.id)}
+                          onCheckedChange={() => toggleStatusFilter(s.id)}
+                        />
+                        <span>{s.name}</span>
+                      </label>
+                    ))}
+                  </div>
                   </div>
                   <div>
                     <p className="mb-1 text-xs text-muted-foreground">Lead type</p>
-                    <Select value={leadTypeFilter} onValueChange={(v) => setLeadTypeFilter(v as LeadType | "all")}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All lead types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All lead types</SelectItem>
-                        <SelectItem value="buyer">Buyer</SelectItem>
-                        <SelectItem value="seller">Seller</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1">
+                    {(["buyer", "seller", "pending"] as const).map((type) => (
+                      <label
+                        key={type}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md border px-2 py-2 text-sm capitalize transition-colors",
+                          leadTypeFilters.has(type)
+                            ? "border-primary/40 bg-primary/10 text-foreground"
+                            : "border-transparent bg-muted/70 text-muted-foreground",
+                        )}
+                      >
+                        <Checkbox
+                          className={tableCheckboxClassName}
+                          checked={leadTypeFilters.has(type)}
+                          onCheckedChange={() => toggleLeadTypeFilter(type)}
+                        />
+                        <span>{type}</span>
+                      </label>
+                    ))}
+                  </div>
                   </div>
                 </div>
               )}

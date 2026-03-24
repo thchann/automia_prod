@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { GetStartedBanner } from "@/components/GetStartedBanner";
-import { StatsSection } from "@/components/StatsSection";
-import { RecommendedModels } from "@/components/RecommendedModels";
 import { LeadsPage } from "@/components/leads/LeadsPage";
 import { CarsPage } from "@/components/cars/CarsPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import { SettingsPage } from "@/components/settings/SettingsPage";
+import { HomeOverview } from "@/components/home/HomeOverview";
 
 const Index = () => {
   const [activeItem, setActiveItem] = useState("Home");
@@ -23,13 +21,7 @@ const Index = () => {
       case "Settings":
         return <SettingsPage />;
       default:
-        return (
-          <>
-            <GetStartedBanner />
-            <StatsSection />
-            <RecommendedModels />
-          </>
-        );
+        return <HomeOverview />;
     }
   };
 

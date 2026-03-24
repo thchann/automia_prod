@@ -18,7 +18,6 @@ import {
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CarsTableProps {
   cars: Car[];
@@ -67,7 +66,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
-  const [statusFilterId, setStatusFilterId] = useState<"all" | Car["status"]>("all");
+  const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
   const [cardFilter, setCardFilter] = useState<"total" | "available" | "sold" | "owned" | null>(null);
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
@@ -81,18 +80,18 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
       if (cardFilter === "available" && car.status !== "available") return false;
       if (cardFilter === "sold" && car.status !== "sold") return false;
       if (cardFilter === "owned" && car.owner_type !== "owned") return false;
-      if (statusFilterId !== "all" && car.status !== statusFilterId) return false;
+      if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
         if (!matchesFuzzy(q, hay)) return false;
       }
       return true;
     });
-  }, [cars, cardFilter, statusFilterId, searchQuery, searchColumns]);
+  }, [cars, cardFilter, statusFilters, searchQuery, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilterId, searchColumns, cardFilter]);
+  }, [searchQuery, statusFilters, searchColumns, cardFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
   const paged = filteredCars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -122,10 +121,19 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
   };
 
   const clearFilters = () => {
-    setStatusFilterId("all");
+    setStatusFilters(new Set());
     setSearchQuery("");
     setSearchColumns(defaultCarSearchColumns());
     setCardFilter(null);
+  };
+
+  const toggleStatusFilter = (status: Car["status"]) => {
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
   };
 
   const statusStyle = (status: Car["status"]) => {
@@ -157,7 +165,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
 
   const hasActiveFilters =
     !allCarColumnsSelected(searchColumns) ||
-    statusFilterId !== "all" ||
+    statusFilters.size > 0 ||
     searchQuery.trim().length > 0;
 
   const visibleColumns = useMemo(
@@ -271,16 +279,26 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
             ) : (
               <div className="pt-2">
                 <p className="mb-1 text-xs text-muted-foreground">Status</p>
-                <Select value={statusFilterId} onValueChange={(v) => setStatusFilterId(v as "all" | Car["status"])}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="sold">Sold</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  {(["available", "sold"] as const).map((status) => (
+                    <label
+                      key={status}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md border px-2 py-2 text-sm capitalize transition-colors",
+                        statusFilters.has(status)
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-transparent bg-muted/70 text-muted-foreground",
+                      )}
+                    >
+                      <Checkbox
+                        className={tableCheckboxClassName}
+                        checked={statusFilters.has(status)}
+                        onCheckedChange={() => toggleStatusFilter(status)}
+                      />
+                      <span>{status}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
             {hasActiveFilters ? (
