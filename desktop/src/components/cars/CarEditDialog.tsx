@@ -5,6 +5,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Car } from "@/types/leads";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface CarEditDialogProps {
   car: Car | null;
@@ -15,6 +16,7 @@ interface CarEditDialogProps {
 
 export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialogProps) {
   const [form, setForm] = useState<Partial<Car>>({});
+  const { tx } = useLanguage();
 
   useEffect(() => {
     if (car) setForm({ ...car });
@@ -43,26 +45,26 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[540px]">
         <DialogHeader>
-          <DialogTitle>Edit car details</DialogTitle>
+          <DialogTitle>{tx("Edit car details", "Editar detalles del auto")}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Brand</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Brand", "Marca")}</label>
               <Input value={form.brand || ""} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Model</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Model", "Modelo")}</label>
               <Input value={form.model || ""} onChange={(e) => setForm({ ...form, model: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Year</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Year", "Ano")}</label>
               <Input type="number" value={form.year ?? ""} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value, 10) || 0 })} />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Mileage</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Mileage", "Kilometraje")}</label>
               <Input
                 type="number"
                 value={form.mileage ?? ""}
@@ -75,7 +77,7 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Price</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Price", "Precio")}</label>
               <Input
                 type="number"
                 value={form.price ?? ""}
@@ -86,7 +88,7 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Desired Price</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Desired Price", "Precio deseado")}</label>
               <Input
                 type="number"
                 value={form.desired_price ?? ""}
@@ -99,32 +101,32 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Owner Type</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueno")}</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.owner_type || "owned"}
                 onChange={(e) => setForm({ ...form, owner_type: e.target.value as Car["owner_type"] })}
               >
-                <option value="owned">Owned</option>
-                <option value="client">Client</option>
-                <option value="advisor">Advisor</option>
+                <option value="owned">{tx("Owned", "Propio")}</option>
+                <option value="client">{tx("Client", "Cliente")}</option>
+                <option value="advisor">{tx("Advisor", "Asesor")}</option>
               </select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Status</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Status", "Estado")}</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.status || "available"}
                 onChange={(e) => setForm({ ...form, status: e.target.value as Car["status"] })}
               >
-                <option value="available">Available</option>
-                <option value="sold">Sold</option>
+                <option value="available">{tx("Available", "Disponible")}</option>
+                <option value="sold">{tx("Sold", "Vendido")}</option>
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Listed at</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Listed at", "Publicado en")}</label>
               <Input
                 type="datetime-local"
                 value={listedAtInputValue}
@@ -135,14 +137,14 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Car Type</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Car Type", "Tipo de auto")}</label>
               <Input value={form.car_type || ""} onChange={(e) => setForm({ ...form, car_type: e.target.value || null })} />
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save changes</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{tx("Cancel", "Cancelar")}</Button>
+          <Button onClick={handleSave}>{tx("Save changes", "Guardar cambios")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

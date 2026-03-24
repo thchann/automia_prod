@@ -5,6 +5,7 @@ import { LeadEditDialog } from "./LeadEditDialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FunnelColumnColorMenu } from "./FunnelColumnColorMenu";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface LeadsFunnelProps {
   leads: Lead[];
@@ -15,6 +16,7 @@ interface LeadsFunnelProps {
 }
 
 export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatuses }: LeadsFunnelProps) {
+  const { tx } = useLanguage();
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -77,7 +79,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
   const addColumn = () => {
     const newStatus: LeadStatus = {
       id: `s_${Date.now()}`,
-      name: "New Column",
+      name: tx("New Column", "Nueva columna"),
       display_order: statuses.length,
       color: "#6B7280",
       is_default: false,
@@ -114,7 +116,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                         type="button"
                         className="h-6 w-6 shrink-0 rounded-full border-2 border-border shadow-sm outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         style={{ backgroundColor: color }}
-                        aria-label="Choose column color"
+                        aria-label={tx("Choose column color", "Elegir color de columna")}
                         onClick={(e) => e.stopPropagation()}
                       />
                     </PopoverTrigger>
@@ -146,7 +148,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                   ) : (
                     <>
                       <span className="truncate text-sm font-semibold uppercase tracking-wide text-foreground">
-                        {status.name}
+                        {translateStatusName(status.name, tx)}
                       </span>
                       <span className="shrink-0 text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
                         {columnLeads.length}
@@ -179,9 +181,9 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm text-foreground">{lead.name || "Unnamed"}</div>
+                          <div className="font-medium text-sm text-foreground">{lead.name || tx("Unnamed", "Sin nombre")}</div>
                           <span className="inline-block mt-1 text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
-                            {lead.lead_type}
+                            {lead.lead_type === "buyer" ? tx("buyer", "comprador") : lead.lead_type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}
                           </span>
                         </div>
                         <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" onClick={(e) => { e.stopPropagation(); }}>
@@ -233,4 +235,19 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
       />
     </div>
   );
+}
+
+function translateStatusName(name: string, tx: (enText: string, esText: string) => string) {
+  switch (name.toLowerCase()) {
+    case "new":
+      return tx("New", "Nuevo");
+    case "contacted":
+      return tx("Contacted", "Contactado");
+    case "qualified":
+      return tx("Qualified", "Calificado");
+    case "closed":
+      return tx("Closed", "Cerrado");
+    default:
+      return name;
+  }
 }

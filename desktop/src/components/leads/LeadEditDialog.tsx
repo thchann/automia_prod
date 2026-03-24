@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car } from "@/types/leads";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
@@ -21,6 +22,7 @@ interface LeadEditDialogProps {
 
 export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, cars }: LeadEditDialogProps) {
   const [form, setForm] = useState<Partial<Lead>>({});
+  const { tx } = useLanguage();
 
   useEffect(() => {
     if (lead) setForm({ ...lead });
@@ -45,12 +47,12 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit lead details</DialogTitle>
+          <DialogTitle>{tx("Edit lead details", "Editar detalles del lead")}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Name</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Name", "Nombre")}</label>
               <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
@@ -60,35 +62,35 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Phone</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Phone", "Telefono")}</label>
               <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Source</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Source", "Origen")}</label>
               <Input value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Lead Type</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Lead Type", "Tipo de lead")}</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={leadType}
                 onChange={(e) => setForm({ ...form, lead_type: e.target.value as Lead["lead_type"] })}
               >
-                <option value="pending">Pending</option>
-                <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
+                <option value="pending">{tx("Pending", "Pendiente")}</option>
+                <option value="buyer">{tx("Buyer", "Comprador")}</option>
+                <option value="seller">{tx("Seller", "Vendedor")}</option>
               </select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Status</label>
+              <label className="text-sm text-muted-foreground mb-1 block">{tx("Status", "Estado")}</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.status_id || ""}
                 onChange={(e) => setForm({ ...form, status_id: e.target.value || null })}
               >
-                <option value="">None</option>
+                <option value="">{tx("None", "Ninguno")}</option>
                 {statuses.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -96,13 +98,13 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
             </div>
           </div>
           <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Linked car</label>
+            <label className="text-sm text-muted-foreground mb-1 block">{tx("Linked car", "Auto vinculado")}</label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.car_id || ""}
               onChange={(e) => setForm({ ...form, car_id: e.target.value || null })}
             >
-              <option value="">None</option>
+              <option value="">{tx("None", "Ninguno")}</option>
               {cars.map((c) => (
                 <option key={c.id} value={c.id}>{c.year} {c.brand} {c.model}</option>
               ))}
@@ -111,10 +113,10 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
 
           {leadType === "buyer" && (
             <div className="space-y-3 rounded-lg border border-border p-4">
-              <p className="text-sm font-medium text-foreground">Buyer criteria</p>
+              <p className="text-sm font-medium text-foreground">{tx("Buyer criteria", "Criterios del comprador")}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Budget min</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget min", "Presupuesto minimo")}</label>
                   <Input
                     type="number"
                     value={form.desired_budget_min ?? ""}
@@ -122,7 +124,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Budget max</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget max", "Presupuesto maximo")}</label>
                   <Input
                     type="number"
                     value={form.desired_budget_max ?? ""}
@@ -132,7 +134,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Mileage max</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Mileage max", "Kilometraje maximo")}</label>
                   <Input
                     type="number"
                     value={form.desired_mileage_max ?? ""}
@@ -140,7 +142,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Car type</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Car type", "Tipo de auto")}</label>
                   <Input
                     value={form.desired_car_type || ""}
                     onChange={(e) => setForm({ ...form, desired_car_type: e.target.value || null })}
@@ -149,7 +151,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Year min</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Year min", "Ano minimo")}</label>
                   <Input
                     type="number"
                     value={form.desired_year_min ?? ""}
@@ -157,7 +159,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Year max</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Year max", "Ano maximo")}</label>
                   <Input
                     type="number"
                     value={form.desired_year_max ?? ""}
@@ -167,14 +169,14 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Desired make</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Desired make", "Marca deseada")}</label>
                   <Input
                     value={form.desired_make || ""}
                     onChange={(e) => setForm({ ...form, desired_make: e.target.value || null })}
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Desired model</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Desired model", "Modelo deseado")}</label>
                   <Input
                     value={form.desired_model || ""}
                     onChange={(e) => setForm({ ...form, desired_model: e.target.value || null })}
@@ -185,7 +187,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
           )}
 
           <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Notes</label>
+            <label className="text-sm text-muted-foreground mb-1 block">{tx("Notes", "Notas")}</label>
             <textarea
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.notes || ""}
@@ -194,8 +196,8 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save changes</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{tx("Cancel", "Cancelar")}</Button>
+          <Button onClick={handleSave}>{tx("Save changes", "Guardar cambios")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

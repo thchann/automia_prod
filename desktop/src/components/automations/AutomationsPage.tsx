@@ -2,18 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface Automation {
   id: string;
   name: string;
   createdAt: string;
 }
-
-const createAutomation = (): Automation => ({
-  id: `a_${Date.now()}`,
-  name: "Untitled automation",
-  createdAt: new Date().toISOString(),
-});
 
 const formatTime = (iso: string) => {
   const d = new Date(iso);
@@ -24,6 +19,12 @@ const formatTime = (iso: string) => {
 };
 
 export function AutomationsPage() {
+  const { tx, locale } = useLanguage();
+  const createAutomation = (): Automation => ({
+    id: `a_${Date.now()}`,
+    name: tx("Untitled automation", "Automatizacion sin titulo"),
+    createdAt: new Date().toISOString(),
+  });
   const [automations, setAutomations] = useState<Automation[]>([createAutomation()]);
 
   const handleAddAutomation = () => {
@@ -33,10 +34,10 @@ export function AutomationsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col box-border text-foreground">
       <header className="flex items-center justify-between border-b-2 border-border px-6 py-3 text-[20px] font-semibold leading-8">
-        <span className="text-foreground">Automations</span>
+        <span className="text-foreground">{tx("Automations", "Automatizaciones")}</span>
 
         <Button size="sm" className="px-4" onClick={handleAddAutomation}>
-          Start building
+          {tx("Start building", "Empezar")}
         </Button>
       </header>
 
@@ -45,7 +46,7 @@ export function AutomationsPage() {
           <div className="flex max-w-[1280px] items-center overflow-hidden px-3 py-3 text-[16px] leading-6">
             <span className="text-xs font-semibold leading-4 text-muted-foreground">
               Today,&nbsp;
-              {new Date().toLocaleDateString("en-US", {
+              {new Date().toLocaleDateString(locale, {
                 day: "numeric",
                 month: "short",
               })}
@@ -84,25 +85,28 @@ export function AutomationsPage() {
 
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-16 pt-6 pb-0">
           <div className="mb-2 text-xs font-semibold leading-7 tracking-[0.05em] text-muted-foreground uppercase">
-            Assistant
+            {tx("Assistant", "Asistente")}
           </div>
 
           <div className="flex w-full items-center justify-between text-[20px] font-bold leading-6 text-foreground">
-            <span>Name</span>
+            <span>{tx("Name", "Nombre")}</span>
             <Button size="sm" variant="outline">
-              Edit
+              {tx("Edit", "Editar")}
             </Button>
           </div>
 
           <div className="mt-5 w-full">
             <div className="mb-2 text-sm font-semibold leading-5 text-foreground">
-              Name
+              {tx("Name", "Nombre")}
             </div>
-            <Input placeholder="Enter a user friendly name" className="h-8 w-full text-sm" />
+            <Input
+              placeholder={tx("Enter a user friendly name", "Ingresa un nombre facil de reconocer")}
+              className="h-8 w-full text-sm"
+            />
           </div>
 
           <div className="mt-6 flex w-full items-center justify-between text-sm leading-5 text-foreground">
-            <span>System instructions</span>
+            <span>{tx("System instructions", "Instrucciones del sistema")}</span>
             <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full border border-border">
               ?
             </Button>
@@ -110,7 +114,7 @@ export function AutomationsPage() {
 
           <div className="mt-2 w-full">
             <Textarea
-              placeholder="You are a helpful assistant..."
+              placeholder={tx("You are a helpful assistant...", "Eres un asistente util...")}
               className="min-h-[112px] w-full text-sm"
             />
           </div>

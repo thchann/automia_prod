@@ -9,7 +9,7 @@
     "build": "npm run build:vercel",
     "build:desktop": "npm run build -w @automia/desktop",
     "build:mobile": "npm run build -w @automia/mobile",
-    "build:vercel": "npm run build:desktop && npm run build -w @automia/mobile -- --base /m/ && node scripts/copy-mobile-to-desktop.mjs",
+    "build:vercel": "npm run build -w @automia/mobile && npm run build -w @automia/desktop -- --base /desktop/ --outDir ../mobile/dist/desktop",
     "preview:desktop": "npm run preview -w @automia/desktop",
     "preview:mobile": "npm run preview -w @automia/mobile",
     "lint": "npm run lint --workspaces --if-present",

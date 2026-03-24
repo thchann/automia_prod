@@ -17,6 +17,41 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (path.startsWith("/desktop")) return;
+
+        function isMobileUa(ua) {
+          return (
+            /iPhone|iPod|iPad/i.test(ua) ||
+            /Android.*Mobile|Android.*; wv\)/i.test(ua) ||
+            /; wv\)/i.test(ua) ||
+            /CriOS|FxiOS|EdgiOS/i.test(ua) ||
+            /SamsungBrowser|Opera Mini|Opera Mobi|OPiOS|KaiOS|webOS|BlackBerry|IEMobile/i.test(ua) ||
+            /Mobile Safari/i.test(ua)
+          );
+        }
+
+        function isMobileDevice() {
+          var ua = navigator.userAgent || "";
+          var uaData = navigator.userAgentData;
+          if (uaData && typeof uaData.mobile === "boolean") {
+            if (uaData.mobile === true) return true;
+            if (uaData.mobile === false) return false;
+          }
+          if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+            return true;
+          }
+          return isMobileUa(ua);
+        }
+
+        var wantsDesktop = document.cookie.indexOf("automia_desktop=1") !== -1;
+        if (wantsDesktop || !isMobileDevice()) {
+          location.replace("/desktop" + location.search + location.hash);
+        }
+      })();
+    </script>
   </head>
 
   <body>

@@ -3,10 +3,12 @@ import { LeadsTable } from "./LeadsTable";
 import { LeadsFunnel } from "./LeadsFunnel";
 import { mockLeads, defaultStatuses, mockCars } from "@/data/mockLeads";
 import { Lead, LeadStatus } from "@/types/leads";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 type Tab = "table" | "funnel" | "coming_soon";
 
 export function LeadsPage() {
+  const { tx } = useLanguage();
   const [tab, setTab] = useState<Tab>("table");
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [statuses, setStatuses] = useState<LeadStatus[]>(defaultStatuses);
@@ -23,10 +25,10 @@ export function LeadsPage() {
     const newLead: Lead = {
       id: `l_${Date.now()}`,
       lead_type: "pending",
-      source: "manual",
+      source: tx("manual", "manual"),
       status_id: statuses.find((s) => s.is_default)?.id || statuses[0]?.id || null,
       car_id: null,
-      name: "New Lead",
+      name: tx("New Lead", "Nuevo lead"),
       instagram_handle: null,
       phone: null,
       notes: null,
@@ -46,9 +48,9 @@ export function LeadsPage() {
   };
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "table", label: "Table" },
-    { key: "funnel", label: "Funnel" },
-    { key: "coming_soon", label: "Coming soon" },
+    { key: "table", label: tx("Table", "Tabla") },
+    { key: "funnel", label: tx("Funnel", "Embudo") },
+    { key: "coming_soon", label: tx("Coming soon", "Proximamente") },
   ];
 
   return (
@@ -98,7 +100,7 @@ export function LeadsPage() {
         )}
         {tab === "coming_soon" && (
           <div className="flex items-center justify-center h-64 text-muted-foreground">
-            Coming soon
+            {tx("Coming soon", "Proximamente")}
           </div>
         )}
       </div>

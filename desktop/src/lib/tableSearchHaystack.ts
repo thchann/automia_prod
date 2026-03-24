@@ -35,12 +35,10 @@ export function summarizeBuyerCriteria(lead: Lead): string {
   const hasYears =
     lead.desired_year_min != null || lead.desired_year_max != null;
   if (hasYears) {
-    parts.push(
-      `Years ${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`,
-    );
+    parts.push(`${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`);
   }
   if (lead.desired_mileage_max != null) {
-    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} mi`);
+    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} km`);
   }
   return parts.length ? parts.join(" · ") : "—";
 }
