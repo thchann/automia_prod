@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
 import { mockCars as initialCars } from "@/data/mock";
-import type { Car, CarStatus, OwnerType } from "@/types/models";
+import type { Car, CarStatus } from "@/types/models";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
 import AddCarSheet from "@/components/AddCarSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +36,7 @@ const CarsPage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
-  const [statusFilterId, setStatusFilterId] = useState<"all" | CarStatus>("all");
+  const [statusFilters, setStatusFilters] = useState<Set<CarStatus>>(() => new Set());
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
@@ -47,14 +46,14 @@ const CarsPage = () => {
     const cols =
       searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
     return cars.filter((car) => {
-      if (statusFilterId !== "all" && car.status !== statusFilterId) return false;
+      if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
         if (!matchesFuzzy(q, hay)) return false;
       }
       return true;
     });
-  }, [cars, statusFilterId, searchQuery, searchColumns]);
+  }, [cars, statusFilters, searchQuery, searchColumns]);
 
   const handleAddCar = (car: Car) => {
     setCars((prev) => [car, ...prev]);
@@ -74,14 +73,23 @@ const CarsPage = () => {
   };
 
   const clearFilters = () => {
-    setStatusFilterId("all");
+    setStatusFilters(new Set());
     setSearchQuery("");
     setSearchColumns(defaultCarSearchColumns());
   };
 
+  const toggleStatusFilter = (status: CarStatus) => {
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  };
+
   const hasActiveFilters =
     !allCarColumnsSelected(searchColumns) ||
-    statusFilterId !== "all" ||
+    statusFilters.size > 0 ||
     searchQuery.trim().length > 0;
 
   return (
@@ -171,16 +179,23 @@ const CarsPage = () => {
               ) : (
                 <div className="pt-2">
                   <p className="mb-1 text-xs text-muted-foreground">Status</p>
-                  <Select value={statusFilterId} onValueChange={(v) => setStatusFilterId(v as "all" | CarStatus)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="sold">Sold</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-1">
+                  {(["available", "sold"] as const).map((status) => (
+                    <button
+                      type="button"
+                      key={status}
+                      onClick={() => toggleStatusFilter(status)}
+                      className={cn(
+                        "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
+                        statusFilters.has(status)
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-transparent bg-muted/70 text-muted-foreground",
+                      )}
+                    >
+                      <span>{status}</span>
+                    </button>
+                  ))}
+                </div>
                 </div>
               )}
               {hasActiveFilters ? (

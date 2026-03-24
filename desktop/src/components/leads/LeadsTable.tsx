@@ -19,7 +19,6 @@ import {
   type LeadSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { matchLeadToCars } from "@/lib/matchLeadToCars";
 
@@ -74,8 +73,8 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
   const [searchQuery, setSearchQuery] = useState("");
   const [cardFilter, setCardFilter] = useState<"total" | "new" | "contacted" | "qualified" | null>(null);
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
-  const [statusFilterId, setStatusFilterId] = useState<string>("all");
-  const [leadTypeFilter, setLeadTypeFilter] = useState<Lead["lead_type"] | "all">("all");
+  const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
+  const [leadTypeFilters, setLeadTypeFilters] = useState<Set<Lead["lead_type"]>>(() => new Set());
   const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
     () => defaultLeadSearchColumns(),
   );
@@ -88,8 +87,11 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
     return leads.filter((lead) => {
-      if (statusFilterId !== "all" && lead.status_id !== statusFilterId) return false;
-      if (leadTypeFilter !== "all" && lead.lead_type !== leadTypeFilter) return false;
+      if (statusFilterIds.size > 0) {
+        const sid = lead.status_id;
+        if (!sid || !statusFilterIds.has(sid)) return false;
+      }
+      if (leadTypeFilters.size > 0 && !leadTypeFilters.has(lead.lead_type)) return false;
       if (cardFilter != null && cardFilter !== "total") {
         const statusName = statuses.find((s) => s.id === lead.status_id)?.name?.toLowerCase() ?? "";
         if (cardFilter === "new" && statusName !== "new") return false;
@@ -110,11 +112,11 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       }
       return true;
     });
-  }, [leads, statusFilterId, leadTypeFilter, cardFilter, searchQuery, statuses, cars, searchColumns]);
+  }, [leads, statusFilterIds, leadTypeFilters, cardFilter, searchQuery, statuses, cars, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilterId, leadTypeFilter, cardFilter, searchColumns]);
+  }, [searchQuery, statusFilterIds, leadTypeFilters, cardFilter, searchColumns]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const paged = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -144,11 +146,29 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
   };
 
   const clearFilters = () => {
-    setStatusFilterId("all");
-    setLeadTypeFilter("all");
+    setStatusFilterIds(new Set());
+    setLeadTypeFilters(new Set());
     setCardFilter(null);
     setSearchQuery("");
     setSearchColumns(defaultLeadSearchColumns());
+  };
+
+  const toggleStatusFilter = (statusId: string) => {
+    setStatusFilterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  };
+
+  const toggleLeadTypeFilter = (leadType: Lead["lead_type"]) => {
+    setLeadTypeFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadType)) next.delete(leadType);
+      else next.add(leadType);
+      return next;
+    });
   };
 
   const statusStyle = (status: LeadStatus | undefined) => {
@@ -164,8 +184,8 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
-    statusFilterId !== "all" ||
-    leadTypeFilter !== "all" ||
+    statusFilterIds.size > 0 ||
+    leadTypeFilters.size > 0 ||
     cardFilter !== null ||
     searchQuery.trim().length > 0;
 
@@ -184,8 +204,6 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">All Leads</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">Bulk Update Status</Button>
-          <Button variant="outline" size="sm">Export Leads</Button>
           <div className="relative">
             <Button size="sm" onClick={() => setShowGenerateMenu(!showGenerateMenu)}>
               + Generate Lead <ChevronDown className="h-3 w-3 ml-1" />
@@ -317,31 +335,43 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
               <div className="space-y-3 pt-2">
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">Status</p>
-                  <Select value={statusFilterId} onValueChange={setStatusFilterId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
-                      {statuses.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    {statuses.map((s) => (
+                      <button
+                        type="button"
+                        key={s.id}
+                        onClick={() => toggleStatusFilter(s.id)}
+                        className={cn(
+                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm transition-colors",
+                          statusFilterIds.has(s.id)
+                            ? "border-primary/40 bg-primary/10 text-foreground"
+                            : "border-transparent bg-muted/70 text-muted-foreground",
+                        )}
+                      >
+                        <span>{s.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">Lead type</p>
-                  <Select value={leadTypeFilter} onValueChange={(v) => setLeadTypeFilter(v as Lead["lead_type"] | "all")}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All lead types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All lead types</SelectItem>
-                      <SelectItem value="buyer">Buyer</SelectItem>
-                      <SelectItem value="seller">Seller</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    {(["buyer", "seller", "pending"] as const).map((type) => (
+                      <button
+                        type="button"
+                        key={type}
+                        onClick={() => toggleLeadTypeFilter(type)}
+                        className={cn(
+                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
+                          leadTypeFilters.has(type)
+                            ? "border-primary/40 bg-primary/10 text-foreground"
+                            : "border-transparent bg-muted/70 text-muted-foreground",
+                        )}
+                      >
+                        <span>{type}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
