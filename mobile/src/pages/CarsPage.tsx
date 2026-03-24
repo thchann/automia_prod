@@ -6,6 +6,7 @@ import AddCarSheet from "@/components/AddCarSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,30 +36,25 @@ const CarsPage = () => {
   const [showAdd, setShowAdd] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<Set<CarStatus>>(() => new Set());
-  const [ownerFilter, setOwnerFilter] = useState<Set<OwnerType>>(() => new Set());
+  const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
+  const [statusFilterId, setStatusFilterId] = useState<"all" | CarStatus>("all");
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
-  const [statusSubOpen, setStatusSubOpen] = useState(false);
-  const [ownerSubOpen, setOwnerSubOpen] = useState(false);
 
   const filteredCars = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
     return cars.filter((car) => {
-      if (cols.has("status") && statusFilter.size > 0 && !statusFilter.has(car.status))
-        return false;
-      if (cols.has("owner") && ownerFilter.size > 0 && !ownerFilter.has(car.owner_type))
-        return false;
+      if (statusFilterId !== "all" && car.status !== statusFilterId) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
         if (!matchesFuzzy(q, hay)) return false;
       }
       return true;
     });
-  }, [cars, statusFilter, ownerFilter, searchQuery, searchColumns]);
+  }, [cars, statusFilterId, searchQuery, searchColumns]);
 
   const handleAddCar = (car: Car) => {
     setCars((prev) => [car, ...prev]);
@@ -70,8 +66,6 @@ const CarsPage = () => {
       if (next.has(id)) {
         if (next.size <= 1) return prev;
         next.delete(id);
-        if (id === "status") setStatusSubOpen(false);
-        if (id === "owner") setOwnerSubOpen(false);
       } else {
         next.add(id);
       }
@@ -79,37 +73,15 @@ const CarsPage = () => {
     });
   };
 
-  const toggleStatus = (s: CarStatus) => {
-    setStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
-  };
-
-  const toggleOwner = (o: OwnerType) => {
-    setOwnerFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(o)) next.delete(o);
-      else next.add(o);
-      return next;
-    });
-  };
-
   const clearFilters = () => {
-    setStatusFilter(new Set());
-    setOwnerFilter(new Set());
+    setStatusFilterId("all");
     setSearchQuery("");
     setSearchColumns(defaultCarSearchColumns());
-    setStatusSubOpen(false);
-    setOwnerSubOpen(false);
   };
 
   const hasActiveFilters =
     !allCarColumnsSelected(searchColumns) ||
-    statusFilter.size > 0 ||
-    ownerFilter.size > 0 ||
+    statusFilterId !== "all" ||
     searchQuery.trim().length > 0;
 
   return (
@@ -144,23 +116,35 @@ const CarsPage = () => {
           placeholder="Search cars (make, model, year, price…)"
           filterContent={(
             <div className="space-y-1 p-3">
-              <p className="text-xs text-muted-foreground">
-                Deselect a column to remove it from text search (only checked
-                fields are searched). Type in the bar to filter the list.{" "}
-                <span className="font-medium text-foreground">Status</span> and{" "}
-                <span className="font-medium text-foreground">Owner</span> can
-                add value filters when on. If{" "}
-                <span className="font-medium text-foreground">Year</span> (or
-                brand/model) is off, search won’t match on that field.
-              </p>
-              <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
-                {CAR_SEARCH_COLUMN_IDS.map((colId) => {
-                  const active = searchColumns.has(colId);
-                  const isStatus = colId === "status";
-                  const isOwner = colId === "owner";
-                  return (
-                    <div key={colId} className="space-y-1">
+              <div className="grid grid-cols-2 rounded-md border border-border p-1">
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                    filterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => setFilterMode("drop")}
+                >
+                  Drop
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                    filterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => setFilterMode("filter")}
+                >
+                  Filter
+                </button>
+              </div>
+              {filterMode === "drop" ? (
+                <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
+                  {CAR_SEARCH_COLUMN_IDS.map((colId) => {
+                    const active = searchColumns.has(colId);
+                    return (
                       <div
+                        key={colId}
                         className={cn(
                           "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
                           active
@@ -180,89 +164,25 @@ const CarsPage = () => {
                             </span>
                           ) : null}
                         </button>
-                        {isStatus && active ? (
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 hover:bg-background/60"
-                            aria-expanded={statusSubOpen}
-                            aria-label="Listing status filters"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setStatusSubOpen((o) => !o);
-                            }}
-                          >
-                            <ChevronDown
-                              className={cn(
-                                "h-4 w-4 transition-transform",
-                                statusSubOpen && "rotate-180",
-                              )}
-                            />
-                          </button>
-                        ) : null}
-                        {isOwner && active ? (
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 hover:bg-background/60"
-                            aria-expanded={ownerSubOpen}
-                            aria-label="Owner filters"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setOwnerSubOpen((o) => !o);
-                            }}
-                          >
-                            <ChevronDown
-                              className={cn(
-                                "h-4 w-4 transition-transform",
-                                ownerSubOpen && "rotate-180",
-                              )}
-                            />
-                          </button>
-                        ) : null}
                       </div>
-                      {isStatus && active && statusSubOpen ? (
-                        <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
-                          <p className="text-[11px] text-muted-foreground">
-                            Match any checked (none = any)
-                          </p>
-                          {(["available", "sold"] as const).map((s) => (
-                            <label
-                              key={s}
-                              className="flex cursor-pointer items-center gap-2 text-sm capitalize"
-                            >
-                              <Checkbox
-                                className={tableCheckboxClassName}
-                                checked={statusFilter.has(s)}
-                                onCheckedChange={() => toggleStatus(s)}
-                              />
-                              <span>{s}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-                      {isOwner && active && ownerSubOpen ? (
-                        <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
-                          <p className="text-[11px] text-muted-foreground">
-                            Match any checked (none = any)
-                          </p>
-                          {(["owned", "client", "advisor"] as const).map((o) => (
-                            <label
-                              key={o}
-                              className="flex cursor-pointer items-center gap-2 text-sm capitalize"
-                            >
-                              <Checkbox
-                                className={tableCheckboxClassName}
-                                checked={ownerFilter.has(o)}
-                                onCheckedChange={() => toggleOwner(o)}
-                              />
-                              <span>{o}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <p className="mb-1 text-xs text-muted-foreground">Status</p>
+                  <Select value={statusFilterId} onValueChange={(v) => setStatusFilterId(v as "all" | CarStatus)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {hasActiveFilters ? (
                 <Button
                   type="button"

@@ -61,7 +61,6 @@ export function buildLeadSearchHaystack(
     lead.notes,
     lead.source,
     statusName,
-    lead.platform_sender_id,
     formatShortDate(lead.created_at),
     formatShortDate(lead.updated_at),
   ];
@@ -96,7 +95,6 @@ export const LEAD_SEARCH_COLUMN_IDS = [
   "status",
   "source",
   "notes",
-  "senderId",
   "created",
   "updated",
 ] as const;
@@ -112,7 +110,6 @@ export const LEAD_SEARCH_COLUMN_LABELS: Record<LeadSearchColumnId, string> = {
   status: "Status",
   source: "Source",
   notes: "Notes",
-  senderId: "Sender ID",
   created: "Created",
   updated: "Updated",
 };
@@ -142,8 +139,6 @@ export function buildLeadSearchHaystackForColumns(
   if (active.has("status") && statusName) parts.push(statusName);
   if (active.has("source") && lead.source) parts.push(lead.source);
   if (active.has("notes") && lead.notes) parts.push(lead.notes);
-  if (active.has("senderId") && lead.platform_sender_id)
-    parts.push(lead.platform_sender_id);
   if (active.has("created"))
     parts.push(formatShortDate(lead.created_at));
   if (active.has("updated"))

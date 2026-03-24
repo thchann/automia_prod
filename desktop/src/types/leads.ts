@@ -34,7 +34,6 @@ export interface Lead {
   id: string;
   lead_type: "pending" | "buyer" | "seller";
   source: string;
-  platform_sender_id: string;
   status_id: string | null;
   car_id: string | null;
   name: string | null;

@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { mockLeads as initialLeads, mockStatuses, mockCars } from "@/data/mock";
-import type { Lead } from "@/types/models";
+import type { Lead, LeadType } from "@/types/models";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
 import AddLeadSheet from "@/components/AddLeadSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
 import {
   buildLeadSearchHaystackForColumns,
@@ -29,11 +30,12 @@ const LeadsPage = () => {
   const [showAdd, setShowAdd] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
+  const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
+  const [statusFilterId, setStatusFilterId] = useState<string>("all");
+  const [leadTypeFilter, setLeadTypeFilter] = useState<LeadType | "all">("all");
   const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
     () => defaultLeadSearchColumns(),
   );
-  const [statusSubOpen, setStatusSubOpen] = useState(false);
 
   const getStatusName = (id: string | null) => {
     const s = mockStatuses.find((st) => st.id === id);
@@ -45,10 +47,8 @@ const LeadsPage = () => {
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
     return leads.filter((lead) => {
-      if (cols.has("status") && statusFilterIds.size > 0) {
-        const sid = lead.status_id;
-        if (!sid || !statusFilterIds.has(sid)) return false;
-      }
+      if (statusFilterId !== "all" && lead.status_id !== statusFilterId) return false;
+      if (leadTypeFilter !== "all" && lead.lead_type !== leadTypeFilter) return false;
       if (q) {
         const st = mockStatuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
@@ -63,19 +63,10 @@ const LeadsPage = () => {
       }
       return true;
     });
-  }, [leads, statusFilterIds, searchQuery, searchColumns]);
+  }, [leads, statusFilterId, leadTypeFilter, searchQuery, searchColumns]);
 
   const handleAddLead = (lead: Lead) => {
     setLeads((prev) => [lead, ...prev]);
-  };
-
-  const toggleStatusFilter = (statusId: string) => {
-    setStatusFilterIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(statusId)) next.delete(statusId);
-      else next.add(statusId);
-      return next;
-    });
   };
 
   const toggleLeadColumn = (id: LeadSearchColumnId) => {
@@ -84,7 +75,6 @@ const LeadsPage = () => {
       if (next.has(id)) {
         if (next.size <= 1) return prev;
         next.delete(id);
-        if (id === "status") setStatusSubOpen(false);
       } else {
         next.add(id);
       }
@@ -93,15 +83,16 @@ const LeadsPage = () => {
   };
 
   const clearFilters = () => {
-    setStatusFilterIds(new Set());
+    setStatusFilterId("all");
+    setLeadTypeFilter("all");
     setSearchQuery("");
     setSearchColumns(defaultLeadSearchColumns());
-    setStatusSubOpen(false);
   };
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
-    statusFilterIds.size > 0 ||
+    statusFilterId !== "all" ||
+    leadTypeFilter !== "all" ||
     searchQuery.trim().length > 0;
 
   return (
@@ -124,24 +115,35 @@ const LeadsPage = () => {
           placeholder="Search leads (name, car, notes, status…)"
           filterContent={(
             <div className="space-y-1 p-3">
-              <p className="text-xs text-muted-foreground">
-                Deselect a column to remove it from text search (only checked
-                fields are searched). Type in the bar to filter the list.{" "}
-                <span className="font-medium text-foreground">Status</span> adds
-                value filters when on. If{" "}
-                <span className="font-medium text-foreground">Name</span>,{" "}
-                <span className="font-medium text-foreground">Car</span>, or{" "}
-                <span className="font-medium text-foreground">Buyer criteria</span>{" "}
-                is off, search won’t use that field (e.g. year ranges live under
-                Buyer criteria for buyers).
-              </p>
-              <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
-                {LEAD_SEARCH_COLUMN_IDS.map((colId) => {
-                  const active = searchColumns.has(colId);
-                  const isStatus = colId === "status";
-                  return (
-                    <div key={colId} className="space-y-1">
+              <div className="grid grid-cols-2 rounded-md border border-border p-1">
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                    filterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => setFilterMode("drop")}
+                >
+                  Drop
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                    filterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => setFilterMode("filter")}
+                >
+                  Filter
+                </button>
+              </div>
+              {filterMode === "drop" ? (
+                <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
+                  {LEAD_SEARCH_COLUMN_IDS.map((colId) => {
+                    const active = searchColumns.has(colId);
+                    return (
                       <div
+                        key={colId}
                         className={cn(
                           "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
                           active
@@ -161,50 +163,42 @@ const LeadsPage = () => {
                             </span>
                           ) : null}
                         </button>
-                        {isStatus && active ? (
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 hover:bg-background/60"
-                            aria-expanded={statusSubOpen}
-                            aria-label="Status value filters"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setStatusSubOpen((o) => !o);
-                            }}
-                          >
-                            <ChevronDown
-                              className={cn(
-                                "h-4 w-4 transition-transform",
-                                statusSubOpen && "rotate-180",
-                              )}
-                            />
-                          </button>
-                        ) : null}
                       </div>
-                      {isStatus && active && statusSubOpen ? (
-                        <div className="ml-1 space-y-2 border-l-2 border-border py-1 pl-3">
-                          <p className="text-[11px] text-muted-foreground">
-                            Match any checked status (none checked = any)
-                          </p>
-                          {mockStatuses.map((s) => (
-                            <label
-                              key={s.id}
-                              className="flex cursor-pointer items-center gap-2 text-sm"
-                            >
-                              <Checkbox
-                                className={tableCheckboxClassName}
-                                checked={statusFilterIds.has(s.id)}
-                                onCheckedChange={() => toggleStatusFilter(s.id)}
-                              />
-                              <span>{s.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Status</p>
+                    <Select value={statusFilterId} onValueChange={setStatusFilterId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        {mockStatuses.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Lead type</p>
+                    <Select value={leadTypeFilter} onValueChange={(v) => setLeadTypeFilter(v as LeadType | "all")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All lead types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All lead types</SelectItem>
+                        <SelectItem value="buyer">Buyer</SelectItem>
+                        <SelectItem value="seller">Seller</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               {hasActiveFilters ? (
                 <Button
                   type="button"

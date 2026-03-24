@@ -44,7 +44,7 @@ export function summarizeBuyerCriteria(lead: Lead): string {
   return parts.length ? parts.join(" · ") : "—";
 }
 
-/** Desktop parity: same column ids (sender may be empty on mobile data). */
+/** Desktop parity column ids (sender id removed). */
 export const LEAD_SEARCH_COLUMN_IDS = [
   "name",
   "instagram",
@@ -55,7 +55,6 @@ export const LEAD_SEARCH_COLUMN_IDS = [
   "status",
   "source",
   "notes",
-  "senderId",
   "created",
   "updated",
 ] as const;
@@ -71,19 +70,12 @@ export const LEAD_SEARCH_COLUMN_LABELS: Record<LeadSearchColumnId, string> = {
   status: "Status",
   source: "Source",
   notes: "Notes",
-  senderId: "Sender ID",
   created: "Created",
   updated: "Updated",
 };
 
 export function defaultLeadSearchColumns(): Set<LeadSearchColumnId> {
   return new Set(LEAD_SEARCH_COLUMN_IDS);
-}
-
-function leadSenderId(lead: Lead): string | null {
-  const v = (lead as Lead & { platform_sender_id?: string | null })
-    .platform_sender_id;
-  return v ?? null;
 }
 
 export function buildLeadSearchHaystackForColumns(
@@ -107,10 +99,6 @@ export function buildLeadSearchHaystackForColumns(
   if (active.has("status") && statusName) parts.push(statusName);
   if (active.has("source") && lead.source) parts.push(lead.source);
   if (active.has("notes") && lead.notes) parts.push(lead.notes);
-  if (active.has("senderId")) {
-    const sid = leadSenderId(lead);
-    if (sid) parts.push(sid);
-  }
   if (active.has("created")) parts.push(formatShortDate(lead.created_at));
   if (active.has("updated")) parts.push(formatShortDate(lead.updated_at));
   return parts.join(" ");
