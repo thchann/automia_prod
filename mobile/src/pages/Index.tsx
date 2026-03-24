@@ -13,7 +13,7 @@ const Index = () => {
 
   const renderTab = () => {
     switch (tab) {
-      case "dashboard": return <Dashboard />;
+      case "dashboard": return <Dashboard onTabChange={setTab} />;
       case "cars": return <CarsPage />;
       case "leads": return <LeadsPage />;
       case "automations": return <AutomationsPage />;

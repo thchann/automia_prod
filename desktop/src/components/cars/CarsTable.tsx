@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Car } from "@/types/leads";
+import { Car, Lead } from "@/types/leads";
 import { CarEditDialog } from "./CarEditDialog";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
@@ -18,10 +18,13 @@ import {
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CarsTableProps {
   cars: Car[];
+  leads: Lead[];
   onUpdateCar: (car: Car) => void;
+  onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => Car;
 }
@@ -63,12 +66,13 @@ function allCarColumnsSelected(s: Set<CarSearchColumnId>) {
   );
 }
 
-export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTableProps) {
+export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar, onAddCar }: CarsTableProps) {
   const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editCar, setEditCar] = useState<Car | null>(null);
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
+  const [bulkMatchCar, setBulkMatchCar] = useState<Car | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
@@ -177,6 +181,25 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
     () => CAR_SEARCH_COLUMN_IDS.filter((id) => searchColumns.has(id)),
     [searchColumns],
   );
+
+  const selectedCar =
+    selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
+
+  const assignCarToLead = (carId: string, leadId: string) => {
+    const now = new Date().toISOString();
+    for (const lead of leads) {
+      if (lead.id === leadId) {
+        onUpdateLead({ ...lead, car_id: carId, updated_at: now });
+      } else if (lead.car_id === carId) {
+        onUpdateLead({ ...lead, car_id: null, updated_at: now });
+      }
+    }
+  };
+
+  const deleteSelectedCars = () => {
+    for (const carId of selected) onDeleteCar(carId);
+    setSelected(new Set());
+  };
 
   return (
     <div className="flex max-w-full flex-col gap-4">
@@ -433,8 +456,20 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
           <span className="text-sm font-medium">{selected.size} {tx("Selected", "Seleccionados")}</span>
-          <Button variant="outline" size="sm">{tx("Duplicate", "Duplicar")}</Button>
-          <Button variant="destructive" size="sm">{tx("Delete", "Eliminar")}</Button>
+          {selected.size === 1 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (selectedCar) setBulkMatchCar(selectedCar);
+              }}
+            >
+              {tx("Match", "Vincular")}
+            </Button>
+          ) : null}
+          <Button variant="destructive" size="sm" onClick={deleteSelectedCars}>
+            {tx("Delete", "Eliminar")}
+          </Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
@@ -445,6 +480,43 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
         onOpenChange={(open) => !open && setEditCar(null)}
         onSave={onUpdateCar}
       />
+
+      <Dialog open={!!bulkMatchCar} onOpenChange={(open) => !open && setBulkMatchCar(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>
+              {tx("Match lead for", "Vincular lead para")}{" "}
+              {bulkMatchCar ? `${bulkMatchCar.year} ${bulkMatchCar.brand} ${bulkMatchCar.model}` : tx("car", "auto")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {leads.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{tx("No leads available.", "No hay leads disponibles.")}</p>
+            ) : (
+              leads.map((lead) => (
+                <button
+                  key={lead.id}
+                  type="button"
+                  className="w-full rounded-md border border-border p-3 text-left transition-colors hover:bg-surface-hover"
+                  onClick={() => {
+                    if (!bulkMatchCar) return;
+                    assignCarToLead(bulkMatchCar.id, lead.id);
+                    setBulkMatchCar(null);
+                    setSelected(new Set());
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{lead.name || tx("Unknown lead", "Lead desconocido")}</p>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {lead.lead_type === "buyer" ? tx("buyer", "comprador") : lead.lead_type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

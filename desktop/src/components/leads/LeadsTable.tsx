@@ -74,6 +74,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
   const [page, setPage] = useState(1);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [matchLead, setMatchLead] = useState<Lead | null>(null);
+  const [bulkMatchLead, setBulkMatchLead] = useState<Lead | null>(null);
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [cardFilter, setCardFilter] = useState<"total" | "new" | "contacted" | "qualified" | null>(null);
@@ -203,6 +204,25 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
     () => (matchLead ? matchLeadToCars(matchLead, cars).slice(0, 6) : []),
     [matchLead, cars],
   );
+
+  const selectedLead =
+    selected.size === 1 ? leads.find((lead) => lead.id === Array.from(selected)[0]) ?? null : null;
+
+  const assignLeadToCar = (leadId: string, carId: string) => {
+    const now = new Date().toISOString();
+    for (const lead of leads) {
+      if (lead.id === leadId) {
+        onUpdateLead({ ...lead, car_id: carId, updated_at: now });
+      } else if (lead.car_id === carId) {
+        onUpdateLead({ ...lead, car_id: null, updated_at: now });
+      }
+    }
+  };
+
+  const deleteSelectedLeads = () => {
+    for (const leadId of selected) onDeleteLead(leadId);
+    setSelected(new Set());
+  };
 
   return (
     <div className="flex max-w-full flex-col gap-4">
@@ -525,9 +545,20 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
           <span className="text-sm font-medium">{selected.size} {tx("Selected", "Seleccionados")}</span>
-          <Button variant="outline" size="sm">{tx("Duplicate", "Duplicar")}</Button>
-          <Button variant="outline" size="sm">{tx("Print", "Imprimir")}</Button>
-          <Button variant="destructive" size="sm">{tx("Delete", "Eliminar")}</Button>
+          {selected.size === 1 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (selectedLead) setBulkMatchLead(selectedLead);
+              }}
+            >
+              {tx("Match", "Vincular")}
+            </Button>
+          ) : null}
+          <Button variant="destructive" size="sm" onClick={deleteSelectedLeads}>
+            {tx("Delete", "Eliminar")}
+          </Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
@@ -559,7 +590,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   className="w-full rounded-md border border-border p-3 text-left transition-colors hover:bg-surface-hover"
                   onClick={() => {
                     if (!matchLead) return;
-                    onUpdateLead({ ...matchLead, car_id: m.car.id, updated_at: new Date().toISOString() });
+                    assignLeadToCar(matchLead.id, m.car.id);
                     setMatchLead(null);
                   }}
                 >
@@ -570,6 +601,42 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   <p className="mt-1 text-xs text-muted-foreground">
                     {m.reasons.slice(0, 2).map((r) => translateMatchReason(r, tx)).join(" · ")}
                   </p>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!bulkMatchLead} onOpenChange={(open) => !open && setBulkMatchLead(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>
+              {tx("Match car for", "Vincular auto para")} {bulkMatchLead?.name || tx("lead", "lead")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {cars.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{tx("No cars available.", "No hay autos disponibles.")}</p>
+            ) : (
+              cars.map((car) => (
+                <button
+                  key={car.id}
+                  type="button"
+                  className="w-full rounded-md border border-border p-3 text-left transition-colors hover:bg-surface-hover"
+                  onClick={() => {
+                    if (!bulkMatchLead) return;
+                    assignLeadToCar(bulkMatchLead.id, car.id);
+                    setBulkMatchLead(null);
+                    setSelected(new Set());
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{car.year} {car.brand} {car.model}</p>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
+                    </span>
+                  </div>
                 </button>
               ))
             )}
