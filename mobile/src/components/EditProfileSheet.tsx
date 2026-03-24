@@ -1,6 +1,7 @@
 import { useState } from "react";
 import DetailSheet from "@/components/DetailSheet";
 import { Camera } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface EditProfileSheetProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface EditProfileSheetProps {
 }
 
 const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps) => {
+  const { tx } = useLanguage();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [description, setDescription] = useState(user.client_description);
@@ -31,14 +33,14 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
   };
 
   return (
-    <DetailSheet open={open} onClose={onClose} title="Edit Profile">
+    <DetailSheet open={open} onClose={onClose} title={tx("Edit Profile", "Editar perfil")}>
       <div className="space-y-5">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-2 pb-2">
           <label className="relative cursor-pointer group">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
               {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={avatarPreview} alt={tx("Avatar", "Avatar")} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-bold text-muted-foreground">{name.charAt(0)}</span>
               )}
@@ -48,24 +50,24 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
             </div>
             <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
           </label>
-          <p className="text-xs text-primary font-medium">Edit picture</p>
+          <p className="text-xs text-primary font-medium">{tx("Edit picture", "Editar foto")}</p>
         </div>
 
-        <Field label="Name" value={name} onChange={setName} placeholder="Your name" />
+        <Field label={tx("Name", "Nombre")} value={name} onChange={setName} placeholder={tx("Your name", "Tu nombre")} />
         <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" type="email" />
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Bio / Description</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{tx("Bio / Description", "Bio / Descripcion")}</label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-            placeholder="Tell clients about yourself..."
+            placeholder={tx("Tell clients about yourself...", "Cuentales a tus clientes sobre ti...")}
             className="w-full bg-muted rounded-md px-3 py-2.5 text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none" />
         </div>
 
-        <Field label="Website" value={website} onChange={setWebsite} placeholder="https://yoursite.com" />
+        <Field label={tx("Website", "Sitio web")} value={website} onChange={setWebsite} placeholder="https://yoursite.com" />
 
         <button onClick={handleSave}
           className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-md active:scale-[0.98] transition-transform mt-2">
-          Save Profile
+          {tx("Save Profile", "Guardar perfil")}
         </button>
       </div>
     </DetailSheet>

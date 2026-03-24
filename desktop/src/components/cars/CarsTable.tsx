@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { format } from "date-fns";
 import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, X } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
@@ -18,6 +17,7 @@ import {
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface CarsTableProps {
   cars: Car[];
@@ -36,10 +36,14 @@ const stickyCheckboxHead =
 const stickyCheckboxCell =
   "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
 
-function formatShortDate(s: string | null) {
+function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
   try {
-    return format(new Date(s), "dd MMM yyyy");
+    return new Date(s).toLocaleDateString(locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return "—";
   }
@@ -60,6 +64,7 @@ function allCarColumnsSelected(s: Set<CarSearchColumnId>) {
 }
 
 export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTableProps) {
+  const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editCar, setEditCar] = useState<Car | null>(null);
@@ -154,11 +159,11 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
   };
 
   const statsCatalog = useMemo(() => ([
-    { id: "total", label: "Total Cars", color: "bg-blue-500", value: filteredCars.length },
-    { id: "available", label: "Available", color: "bg-emerald-500", value: filteredCars.filter((c) => c.status === "available").length },
-    { id: "sold", label: "Sold", color: "bg-amber-500", value: filteredCars.filter((c) => c.status === "sold").length },
-    { id: "owned", label: "Owned", color: "bg-purple-500", value: filteredCars.filter((c) => c.owner_type === "owned").length },
-  ]), [filteredCars]);
+    { id: "total", label: tx("Total Cars", "Total de autos"), color: "bg-blue-500", value: filteredCars.length },
+    { id: "available", label: tx("Available", "Disponible"), color: "bg-emerald-500", value: filteredCars.filter((c) => c.status === "available").length },
+    { id: "sold", label: tx("Sold", "Vendido"), color: "bg-amber-500", value: filteredCars.filter((c) => c.status === "sold").length },
+    { id: "owned", label: tx("Owned", "Propio"), color: "bg-purple-500", value: filteredCars.filter((c) => c.owner_type === "owned").length },
+  ]), [filteredCars, tx]);
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
@@ -176,10 +181,10 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
   return (
     <div className="flex max-w-full flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">All Cars</h1>
+        <h1 className="text-xl font-semibold text-foreground">{tx("All Cars", "Todos los autos")}</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled aria-disabled>
-            Export Cars
+            {tx("Export Cars", "Exportar autos")}
           </Button>
           <Button
             size="sm"
@@ -188,7 +193,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
               setEditCar(created);
             }}
           >
-            + Add Car
+            + {tx("Add Car", "Agregar auto")}
           </Button>
         </div>
       </div>
@@ -223,7 +228,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search cars (make, model, year, price…)"
+        placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, ano, precio...)")}
         filterContent={(
           <div className="space-y-1 p-3">
             <div className="grid grid-cols-2 rounded-md border border-border p-1">
@@ -235,7 +240,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                 )}
                 onClick={() => setFilterMode("drop")}
               >
-                Drop
+                {tx("Drop", "Ocultar")}
               </button>
               <button
                 type="button"
@@ -245,7 +250,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                 )}
                 onClick={() => setFilterMode("filter")}
               >
-                Filter
+                {tx("Filter", "Filtrar")}
               </button>
             </div>
             {filterMode === "drop" ? (
@@ -267,10 +272,10 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                         className="min-w-0 flex-1 text-left font-medium capitalize"
                         onClick={() => toggleCarColumn(colId)}
                       >
-                        {CAR_SEARCH_COLUMN_LABELS[colId]}
+                        {tx(CAR_SEARCH_COLUMN_LABELS[colId], translateCarColumn(CAR_SEARCH_COLUMN_LABELS[colId]))}
                         {!active ? (
                           <span className="ml-1 text-[10px] uppercase text-muted-foreground">
-                            off
+                            {tx("off", "off")}
                           </span>
                         ) : null}
                       </button>
@@ -280,7 +285,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
               </div>
             ) : (
               <div className="pt-2">
-                <p className="mb-1 text-xs text-muted-foreground">Status</p>
+                  <p className="mb-1 text-xs text-muted-foreground">{tx("Status", "Estado")}</p>
                 <div className="space-y-1">
                   {(["available", "sold"] as const).map((status) => (
                     <button
@@ -294,7 +299,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                           : "border-transparent bg-muted/70 text-muted-foreground",
                       )}
                     >
-                      <span>{status}</span>
+                      <span>{status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}</span>
                     </button>
                   ))}
                 </div>
@@ -308,7 +313,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                 className="mt-2 w-full"
                 onClick={clearFilters}
               >
-                Clear search &amp; filters
+                {tx("Clear search & filters", "Limpiar busqueda y filtros")}
               </Button>
             ) : null}
           </div>
@@ -326,18 +331,18 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              {visibleColumns.includes("brand") && <TableHead className="min-w-[100px]">Brand</TableHead>}
-              {visibleColumns.includes("model") && <TableHead className="min-w-[100px]">Model</TableHead>}
-              {visibleColumns.includes("year") && <TableHead className="min-w-[72px]">Year</TableHead>}
-              {visibleColumns.includes("mileage") && <TableHead className="min-w-[88px]">Mileage</TableHead>}
-              {visibleColumns.includes("price") && <TableHead className="min-w-[96px]">Price</TableHead>}
-              {visibleColumns.includes("desired") && <TableHead className="min-w-[100px]">Desired</TableHead>}
-              {visibleColumns.includes("carType") && <TableHead className="min-w-[88px]">Car type</TableHead>}
-              {visibleColumns.includes("listed") && <TableHead className="min-w-[100px]">Listed</TableHead>}
-              {visibleColumns.includes("owner") && <TableHead className="min-w-[100px]">Owner</TableHead>}
-              {visibleColumns.includes("status") && <TableHead className="min-w-[96px]">Status</TableHead>}
-              {visibleColumns.includes("added") && <TableHead className="min-w-[100px]">Added</TableHead>}
-              <TableHead className="min-w-[100px]">Actions</TableHead>
+              {visibleColumns.includes("brand") && <TableHead className="min-w-[100px]">{tx("Brand", "Marca")}</TableHead>}
+              {visibleColumns.includes("model") && <TableHead className="min-w-[100px]">{tx("Model", "Modelo")}</TableHead>}
+              {visibleColumns.includes("year") && <TableHead className="min-w-[72px]">{tx("Year", "Ano")}</TableHead>}
+              {visibleColumns.includes("mileage") && <TableHead className="min-w-[88px]">{tx("Mileage", "Kilometraje")}</TableHead>}
+              {visibleColumns.includes("price") && <TableHead className="min-w-[96px]">{tx("Price", "Precio")}</TableHead>}
+              {visibleColumns.includes("desired") && <TableHead className="min-w-[100px]">{tx("Desired", "Deseado")}</TableHead>}
+              {visibleColumns.includes("carType") && <TableHead className="min-w-[88px]">{tx("Car type", "Tipo de auto")}</TableHead>}
+              {visibleColumns.includes("listed") && <TableHead className="min-w-[100px]">{tx("Listed", "Publicado")}</TableHead>}
+              {visibleColumns.includes("owner") && <TableHead className="min-w-[100px]">{tx("Owner", "Propietario")}</TableHead>}
+              {visibleColumns.includes("status") && <TableHead className="min-w-[96px]">{tx("Status", "Estado")}</TableHead>}
+              {visibleColumns.includes("added") && <TableHead className="min-w-[100px]">{tx("Added", "Agregado")}</TableHead>}
+              <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -361,22 +366,22 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
                   {visibleColumns.includes("brand") && <TableCell className="font-medium">{car.brand}</TableCell>}
                   {visibleColumns.includes("model") && <TableCell>{car.model}</TableCell>}
                   {visibleColumns.includes("year") && <TableCell>{car.year}</TableCell>}
-                  {visibleColumns.includes("mileage") && <TableCell>{car.mileage != null ? car.mileage.toLocaleString() : "—"}</TableCell>}
-                  {visibleColumns.includes("price") && <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString()}` : "—"}</TableCell>}
-                  {visibleColumns.includes("desired") && <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString()}` : "—"}</TableCell>}
-                  {visibleColumns.includes("carType") && <TableCell className="capitalize">{car.car_type || "—"}</TableCell>}
-                  {visibleColumns.includes("listed") && <TableCell>{formatShortDate(car.listed_at)}</TableCell>}
+                  {visibleColumns.includes("mileage") && <TableCell>{car.mileage != null ? car.mileage.toLocaleString(locale) : "—"}</TableCell>}
+                  {visibleColumns.includes("price") && <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString(locale)}` : "—"}</TableCell>}
+                  {visibleColumns.includes("desired") && <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString(locale)}` : "—"}</TableCell>}
+                  {visibleColumns.includes("carType") && <TableCell className="capitalize">{car.car_type || tx("N/A", "N/D")}</TableCell>}
+                  {visibleColumns.includes("listed") && <TableCell>{formatShortDate(car.listed_at, locale)}</TableCell>}
                   {visibleColumns.includes("owner") && <TableCell>
                     <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${ownerStyle(car.owner_type)}`}>
-                      {car.owner_type}
+                      {car.owner_type === "owned" ? tx("owned", "propio") : car.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")}
                     </span>
                   </TableCell>}
                   {visibleColumns.includes("status") && <TableCell>
                     <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${statusStyle(car.status)}`}>
-                      {car.status}
+                      {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
                     </span>
                   </TableCell>}
-                  {visibleColumns.includes("added") && <TableCell>{formatShortDate(car.created_at)}</TableCell>}
+                  {visibleColumns.includes("added") && <TableCell>{formatShortDate(car.created_at, locale)}</TableCell>}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditCar(car)}>
@@ -399,13 +404,13 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {filteredCars.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
+          {tx("Showing", "Mostrando")} {filteredCars.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
           -
-          {Math.min(page * PAGE_SIZE, filteredCars.length)} of {filteredCars.length} entries
+          {Math.min(page * PAGE_SIZE, filteredCars.length)} {tx("of", "de")} {filteredCars.length} {tx("entries", "registros")}
         </span>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
-            <ChevronLeft className="h-4 w-4" /> Previous
+            <ChevronLeft className="h-4 w-4" /> {tx("Previous", "Anterior")}
           </Button>
           {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
             <Button
@@ -419,7 +424,7 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
             </Button>
           ))}
           <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-            Next <ChevronRight className="h-4 w-4" />
+            {tx("Next", "Siguiente")} <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -427,9 +432,9 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
 
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
-          <span className="text-sm font-medium">{selected.size} Selected</span>
-          <Button variant="outline" size="sm">Duplicate</Button>
-          <Button variant="destructive" size="sm">Delete</Button>
+          <span className="text-sm font-medium">{selected.size} {tx("Selected", "Seleccionados")}</span>
+          <Button variant="outline" size="sm">{tx("Duplicate", "Duplicar")}</Button>
+          <Button variant="destructive" size="sm">{tx("Delete", "Eliminar")}</Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
@@ -442,4 +447,33 @@ export function CarsTable({ cars, onUpdateCar, onDeleteCar, onAddCar }: CarsTabl
       />
     </div>
   );
+}
+
+function translateCarColumn(label: string) {
+  switch (label) {
+    case "Brand":
+      return "Marca";
+    case "Model":
+      return "Modelo";
+    case "Year":
+      return "Ano";
+    case "Mileage":
+      return "Kilometraje";
+    case "Price":
+      return "Precio";
+    case "Desired":
+      return "Deseado";
+    case "Car type":
+      return "Tipo de auto";
+    case "Listed":
+      return "Publicado";
+    case "Owner":
+      return "Propietario";
+    case "Status":
+      return "Estado";
+    case "Added":
+      return "Agregado";
+    default:
+      return label;
+  }
 }

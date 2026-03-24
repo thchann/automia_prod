@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 /** Muted presets similar to Notion-style column / background chips */
 export const FUNNEL_BACKGROUND_PRESETS: { label: string; hex: string | null }[] = [
@@ -21,6 +22,7 @@ interface FunnelColumnColorMenuProps {
 }
 
 export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: FunnelColumnColorMenuProps) {
+  const { tx } = useLanguage();
   const normalized = (h: string | null) => (h ?? "").toLowerCase();
 
   return (
@@ -29,7 +31,7 @@ export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: Funnel
         {lastUsed.length > 0 && (
           <section className="border-b border-border pb-1">
             <p className="px-3 pb-1 pt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Last used
+              {tx("Last used", "Ultimos usados")}
             </p>
             <div className="px-1">
               {lastUsed.map((hex) => (
@@ -46,7 +48,7 @@ export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: Funnel
                     className="h-5 w-5 shrink-0 rounded-md border border-border/60"
                     style={{ backgroundColor: hex }}
                   />
-                  <span className="truncate">{labelForHex(hex)}</span>
+                  <span className="truncate">{labelForHex(hex, tx)}</span>
                 </button>
               ))}
             </div>
@@ -55,7 +57,7 @@ export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: Funnel
 
         <section>
           <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Background color
+            {tx("Background color", "Color de fondo")}
           </p>
           <div className="px-1 pb-1">
             {FUNNEL_BACKGROUND_PRESETS.map(({ label, hex }) => {
@@ -73,7 +75,7 @@ export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: Funnel
                   onClick={() => onSelect(hex)}
                 >
                   <Swatch hex={hex} />
-                  <span>{label}</span>
+                  <span>{translateColorLabel(label, tx)}</span>
                 </button>
               );
             })}
@@ -84,9 +86,36 @@ export function FunnelColumnColorMenu({ currentHex, lastUsed, onSelect }: Funnel
   );
 }
 
-function labelForHex(hex: string): string {
+function labelForHex(hex: string, tx: (enText: string, esText: string) => string): string {
   const preset = FUNNEL_BACKGROUND_PRESETS.find((p) => p.hex && p.hex.toLowerCase() === hex.toLowerCase());
-  return preset ? `${preset.label} background` : "Custom";
+  return preset ? `${translateColorLabel(preset.label, tx)} ${tx("background", "fondo")}` : tx("Custom", "Personalizado");
+}
+
+function translateColorLabel(label: string, tx: (enText: string, esText: string) => string) {
+  switch (label) {
+    case "Default":
+      return tx("Default", "Predeterminado");
+    case "Gray":
+      return tx("Gray", "Gris");
+    case "Brown":
+      return tx("Brown", "Marron");
+    case "Orange":
+      return tx("Orange", "Naranja");
+    case "Yellow":
+      return tx("Yellow", "Amarillo");
+    case "Green":
+      return tx("Green", "Verde");
+    case "Blue":
+      return tx("Blue", "Azul");
+    case "Purple":
+      return tx("Purple", "Morado");
+    case "Pink":
+      return tx("Pink", "Rosa");
+    case "Red":
+      return tx("Red", "Rojo");
+    default:
+      return label;
+  }
 }
 
 function Swatch({ hex }: { hex: string | null }) {

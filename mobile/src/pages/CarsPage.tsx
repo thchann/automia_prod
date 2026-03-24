@@ -4,7 +4,6 @@ import type { Car, CarStatus } from "@/types/models";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
 import AddCarSheet from "@/components/AddCarSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,31 +14,25 @@ import {
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
 import {
   buildCarSearchHaystackForColumns,
-  CAR_SEARCH_COLUMN_IDS,
-  CAR_SEARCH_COLUMN_LABELS,
   defaultCarSearchColumns,
   allCarColumnsSelected,
   type CarSearchColumnId,
 } from "@/lib/searchHaystack";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
-
-const fmt = (n: number | null) => (n != null ? `$${n.toLocaleString()}` : "—");
-
-const tableCheckboxClassName =
-  "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 const CarsPage = () => {
+  const { tx, locale } = useLanguage();
+  const fmt = (n: number | null) => (n != null ? `$${n.toLocaleString(locale)}` : "—");
   const [cars, setCars] = useState<Car[]>(initialCars);
   const [selected, setSelected] = useState<Car | null>(null);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<CarStatus>>(() => new Set());
-  const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
-    () => defaultCarSearchColumns(),
-  );
+  const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(() => defaultCarSearchColumns());
 
   const filteredCars = useMemo(() => {
     const q = searchQuery.trim();
@@ -57,19 +50,6 @@ const CarsPage = () => {
 
   const handleAddCar = (car: Car) => {
     setCars((prev) => [car, ...prev]);
-  };
-
-  const toggleCarColumn = (id: CarSearchColumnId) => {
-    setSearchColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size <= 1) return prev;
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
   };
 
   const clearFilters = () => {
@@ -95,24 +75,27 @@ const CarsPage = () => {
   return (
     <div className="px-5 pt-14 pb-24 max-w-[430px] mx-auto animate-fade-in">
       <div className="flex items-end justify-between mb-1">
-        <h1 className="text-3xl font-extrabold tracking-tight">Cars</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">{tx("Cars", "Autos")}</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               className="flex h-9 min-w-[2.75rem] items-center justify-center gap-0.5 rounded-full bg-primary px-2.5 active:scale-95 transition-transform shadow-md"
-              aria-label="Add car"
+              aria-label={tx("Add car", "Agregar auto")}
             >
               <Plus size={18} className="text-primary-foreground" />
               <ChevronDown size={14} className="text-primary-foreground" aria-hidden />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onSelect={() => setShowAdd(true)}>
-              Manual entry
+            <DropdownMenuItem onSelect={() => {
+              setEditingCar(null);
+              setShowAdd(true);
+            }}>
+              {tx("Manual entry", "Entrada manual")}
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>Import CSV</DropdownMenuItem>
-            <DropdownMenuItem disabled>From Instagram</DropdownMenuItem>
+            <DropdownMenuItem disabled>{tx("Import CSV", "Importar CSV")}</DropdownMenuItem>
+            <DropdownMenuItem disabled>{tx("From Instagram", "Desde Instagram")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -121,64 +104,11 @@ const CarsPage = () => {
         <TableSearchToolbar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search cars (make, model, year, price…)"
+          placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, ano, precio...)")}
           filterContent={(
             <div className="space-y-1 p-3">
-              <div className="grid grid-cols-2 rounded-md border border-border p-1">
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                    filterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                  )}
-                  onClick={() => setFilterMode("drop")}
-                >
-                  Drop
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                    filterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                  )}
-                  onClick={() => setFilterMode("filter")}
-                >
-                  Filter
-                </button>
-              </div>
-              {filterMode === "drop" ? (
-                <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
-                  {CAR_SEARCH_COLUMN_IDS.map((colId) => {
-                    const active = searchColumns.has(colId);
-                    return (
-                      <div
-                        key={colId}
-                        className={cn(
-                          "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
-                          active
-                            ? "border-primary/40 bg-primary/10 text-foreground"
-                            : "border-transparent bg-muted/70 text-muted-foreground",
-                        )}
-                      >
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left font-medium capitalize"
-                          onClick={() => toggleCarColumn(colId)}
-                        >
-                          {CAR_SEARCH_COLUMN_LABELS[colId]}
-                          {!active ? (
-                            <span className="ml-1 text-[10px] uppercase text-muted-foreground">
-                              off
-                            </span>
-                          ) : null}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="pt-2">
-                  <p className="mb-1 text-xs text-muted-foreground">Status</p>
+              <div className="pt-2">
+                  <p className="mb-1 text-xs text-muted-foreground">{tx("Status", "Estado")}</p>
                 <div className="space-y-1">
                   {(["available", "sold"] as const).map((status) => (
                     <button
@@ -192,12 +122,11 @@ const CarsPage = () => {
                           : "border-transparent bg-muted/70 text-muted-foreground",
                       )}
                     >
-                      <span>{status}</span>
+                      <span>{status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}</span>
                     </button>
                   ))}
                 </div>
-                </div>
-              )}
+              </div>
               {hasActiveFilters ? (
                 <Button
                   type="button"
@@ -206,7 +135,7 @@ const CarsPage = () => {
                   className="mt-2 w-full"
                   onClick={clearFilters}
                 >
-                  Clear search &amp; filters
+                  {tx("Clear search & filters", "Limpiar busqueda y filtros")}
                 </Button>
               ) : null}
             </div>
@@ -215,7 +144,7 @@ const CarsPage = () => {
       </div>
 
       <p className="text-sm text-muted-foreground mb-6">
-        {filteredCars.length} in inventory
+        {filteredCars.length} {tx("in inventory", "en inventario")}
       </p>
 
       <div className="bg-card rounded-lg shadow-sm overflow-hidden">
@@ -233,7 +162,7 @@ const CarsPage = () => {
                 {car.year} {car.brand} {car.model}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {car.car_type || "—"} · {car.owner_type}
+                {car.car_type || "—"} · {car.owner_type === "owned" ? tx("owned", "propio") : car.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")}
               </p>
             </div>
             <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -246,7 +175,7 @@ const CarsPage = () => {
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {car.status}
+                  {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
                 </span>
               </div>
               <ChevronRight size={16} className="text-muted-foreground" />
@@ -260,32 +189,51 @@ const CarsPage = () => {
         onClose={() => setSelected(null)}
         title={selected ? `${selected.year} ${selected.brand} ${selected.model}` : ""}
         subtitle={selected?.car_type || undefined}
-        onEdit={() => {}}
+        onEdit={() => {
+          if (!selected) return;
+          setEditingCar(selected);
+          setSelected(null);
+          setShowAdd(true);
+        }}
       >
         {selected && (
           <>
-            <DetailRow label="Brand" value={selected.brand} />
-            <DetailRow label="Model" value={selected.model} />
-            <DetailRow label="Year" value={String(selected.year)} />
+            <DetailRow label={tx("Brand", "Marca")} value={selected.brand} />
+            <DetailRow label={tx("Model", "Modelo")} value={selected.model} />
+            <DetailRow label={tx("Year", "Ano")} value={String(selected.year)} />
             <DetailRow
-              label="Mileage"
-              value={selected.mileage != null ? `${selected.mileage.toLocaleString()} mi` : null}
+              label={tx("Mileage", "Kilometraje")}
+              value={selected.mileage != null ? `${selected.mileage.toLocaleString(locale)} km` : null}
             />
-            <DetailRow label="Listing Price" value={fmt(selected.price)} />
-            <DetailRow label="Desired Price" value={fmt(selected.desired_price)} />
-            <DetailRow label="Type" value={selected.car_type} />
-            <DetailRow label="Owner Type" value={selected.owner_type} />
-            <DetailRow label="Status" value={selected.status} />
+            <DetailRow label={tx("Listing Price", "Precio de lista")} value={fmt(selected.price)} />
+            <DetailRow label={tx("Desired Price", "Precio deseado")} value={fmt(selected.desired_price)} />
+            <DetailRow label={tx("Type", "Tipo")} value={selected.car_type} />
+            <DetailRow label={tx("Owner Type", "Tipo de dueno")} value={selected.owner_type === "owned" ? tx("owned", "propio") : selected.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")} />
+            <DetailRow label={tx("Status", "Estado")} value={selected.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")} />
             <DetailRow
-              label="Listed"
-              value={selected.listed_at ? new Date(selected.listed_at).toLocaleDateString() : null}
+              label={tx("Listed", "Publicado")}
+              value={selected.listed_at ? new Date(selected.listed_at).toLocaleDateString(locale) : null}
             />
-            <DetailRow label="Created" value={new Date(selected.created_at).toLocaleDateString()} />
+            <DetailRow label={tx("Created", "Creado")} value={new Date(selected.created_at).toLocaleDateString(locale)} />
           </>
         )}
       </DetailSheet>
 
-      <AddCarSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={handleAddCar} />
+      <AddCarSheet
+        open={showAdd}
+        onClose={() => {
+          setShowAdd(false);
+          setEditingCar(null);
+        }}
+        onSave={(car) => {
+          setCars((prev) => {
+            const exists = prev.some((c) => c.id === car.id);
+            if (exists) return prev.map((c) => (c.id === car.id ? car : c));
+            return [car, ...prev];
+          });
+        }}
+        initialCar={editingCar}
+      />
     </div>
   );
 };

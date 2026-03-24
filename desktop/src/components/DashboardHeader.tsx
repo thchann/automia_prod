@@ -1,11 +1,13 @@
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "@/hooks/use-theme";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
+  const { tx } = useLanguage();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -24,13 +26,13 @@ export function DashboardHeader() {
       </div>
       <div className="flex items-center gap-3">
         <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Coming soon
+          {tx("Coming soon", "Proximamente")}
         </button>
         <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Dashboard
+          {tx("Dashboard", "Panel")}
         </button>
         <button className="text-sm font-medium border border-border rounded-full px-4 py-1.5 text-foreground hover:bg-surface-hover transition-colors">
-          Start building
+          {tx("Start building", "Empezar")}
         </button>
         <div className="relative" ref={ref}>
           <button
@@ -64,7 +66,11 @@ export function DashboardHeader() {
                 ))}
               </div>
               <div className="border-t border-border pt-2 space-y-1">
-                {["Terms & policies", "Help", "Log out"].map((item) => (
+                {[
+                  tx("Terms & policies", "Terminos y politicas"),
+                  tx("Help", "Ayuda"),
+                  tx("Log out", "Cerrar sesion"),
+                ].map((item) => (
                   <button
                     key={item}
                     className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"

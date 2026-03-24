@@ -1,4 +1,5 @@
 import { LayoutDashboard, Car, Users, Zap, Settings } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 type Tab = "dashboard" | "cars" | "leads" | "automations" | "settings";
 
@@ -16,6 +17,8 @@ const tabs: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 ];
 
 const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
+  const { tx } = useLanguage();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-nav-bg border-t border-border safe-area-bottom">
       <div className="flex items-center justify-around h-16 max-w-[430px] mx-auto px-2">
@@ -31,7 +34,7 @@ const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
             >
               <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
               <span className={`text-[10px] leading-tight ${isActive ? "font-semibold" : "font-medium"}`}>
-                {label}
+                {translateBottomNavLabel(label, tx)}
               </span>
             </button>
           );
@@ -42,3 +45,20 @@ const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
 };
 
 export default BottomNav;
+
+function translateBottomNavLabel(label: string, tx: (enText: string, esText: string) => string) {
+  switch (label) {
+    case "Dashboard":
+      return tx("Dashboard", "Panel");
+    case "Cars":
+      return tx("Cars", "Autos");
+    case "Leads":
+      return "Leads";
+    case "Automations":
+      return tx("Automations", "Automat.");
+    case "Settings":
+      return tx("Settings", "Ajustes");
+    default:
+      return label;
+  }
+}

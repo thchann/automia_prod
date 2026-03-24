@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { format } from "date-fns";
 import { Link2, Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
@@ -21,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { matchLeadToCars } from "@/lib/matchLeadToCars";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -41,10 +41,14 @@ const stickyCheckboxHead =
 const stickyCheckboxCell =
   "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
 
-function formatShortDate(s: string | null) {
+function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
   try {
-    return format(new Date(s), "dd MMM yyyy");
+    return new Date(s).toLocaleDateString(locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return "—";
   }
@@ -65,6 +69,7 @@ function allLeadColumnsSelected(s: Set<LeadSearchColumnId>) {
 }
 
 export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, onAddLead }: LeadsTableProps) {
+  const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -202,11 +207,11 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
   return (
     <div className="flex max-w-full flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">All Leads</h1>
+        <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Button size="sm" onClick={() => setShowGenerateMenu(!showGenerateMenu)}>
-              + Generate Lead <ChevronDown className="h-3 w-3 ml-1" />
+              + {tx("Generate Lead", "Generar lead")} <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
             {showGenerateMenu && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
@@ -219,21 +224,21 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                     setShowGenerateMenu(false);
                   }}
                 >
-                  Manual entry
+                  {tx("Manual entry", "Entrada manual")}
                 </button>
                 <button
                   type="button"
                   className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
                   disabled
                 >
-                  Import CSV
+                  {tx("Import CSV", "Importar CSV")}
                 </button>
                 <button
                   type="button"
                   className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
                   disabled
                 >
-                  From Instagram
+                  {tx("From Instagram", "Desde Instagram")}
                 </button>
               </div>
             )}
@@ -243,10 +248,10 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
 
       <div className="grid grid-cols-4 gap-4">
         {[
-          { id: "total", label: "Total Leads", value: totalLeads, color: "bg-blue-500" },
-          { id: "new", label: "New Leads", value: newLeads, color: "bg-amber-500" },
-          { id: "contacted", label: "Contacted", value: contactedLeads, color: "bg-emerald-500" },
-          { id: "qualified", label: "Qualified", value: qualifiedLeads, color: "bg-red-500" },
+          { id: "total", label: tx("Total Leads", "Total de leads"), value: totalLeads, color: "bg-blue-500" },
+          { id: "new", label: tx("New Leads", "Leads nuevos"), value: newLeads, color: "bg-amber-500" },
+          { id: "contacted", label: tx("Contacted", "Contactado"), value: contactedLeads, color: "bg-emerald-500" },
+          { id: "qualified", label: tx("Qualified", "Calificado"), value: qualifiedLeads, color: "bg-red-500" },
         ].map((stat) => (
           <button
             key={stat.label}
@@ -276,7 +281,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Search leads (name, car, notes, status…)"
+        placeholder={tx("Search leads (name, car, notes, status…)", "Buscar leads (nombre, auto, notas, estado...)")}
         filterContent={(
           <div className="space-y-1 p-3">
             <div className="grid grid-cols-2 rounded-md border border-border p-1">
@@ -288,7 +293,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                 )}
                 onClick={() => setFilterMode("drop")}
               >
-                Drop
+                {tx("Drop", "Ocultar")}
               </button>
               <button
                 type="button"
@@ -298,7 +303,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                 )}
                 onClick={() => setFilterMode("filter")}
               >
-                Filter
+                {tx("Filter", "Filtrar")}
               </button>
             </div>
             {filterMode === "drop" ? (
@@ -320,10 +325,10 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                         className="min-w-0 flex-1 text-left font-medium"
                         onClick={() => toggleLeadColumn(colId)}
                       >
-                        {LEAD_SEARCH_COLUMN_LABELS[colId]}
+                        {tx(LEAD_SEARCH_COLUMN_LABELS[colId], translateLeadColumn(LEAD_SEARCH_COLUMN_LABELS[colId]))}
                         {!active ? (
                           <span className="ml-1 text-[10px] uppercase text-muted-foreground">
-                            off
+                            {tx("off", "off")}
                           </span>
                         ) : null}
                       </button>
@@ -334,7 +339,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
             ) : (
               <div className="space-y-3 pt-2">
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Status</p>
+                  <p className="mb-1 text-xs text-muted-foreground">{tx("Status", "Estado")}</p>
                   <div className="space-y-1">
                     {statuses.map((s) => (
                       <button
@@ -348,13 +353,13 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                             : "border-transparent bg-muted/70 text-muted-foreground",
                         )}
                       >
-                        <span>{s.name}</span>
+                        <span>{translateStatusName(s.name, tx)}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Lead type</p>
+                  <p className="mb-1 text-xs text-muted-foreground">{tx("Lead type", "Tipo de lead")}</p>
                   <div className="space-y-1">
                     {(["buyer", "seller", "pending"] as const).map((type) => (
                       <button
@@ -368,7 +373,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                             : "border-transparent bg-muted/70 text-muted-foreground",
                         )}
                       >
-                        <span>{type}</span>
+                        <span>{type === "buyer" ? tx("buyer", "comprador") : type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}</span>
                       </button>
                     ))}
                   </div>
@@ -383,7 +388,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                 className="mt-2 w-full"
                 onClick={clearFilters}
               >
-                Clear search &amp; filters
+                {tx("Clear search & filters", "Limpiar busqueda y filtros")}
               </Button>
             ) : null}
           </div>
@@ -401,18 +406,18 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              {visibleColumns.includes("name") && <TableHead className="min-w-[120px]">Name</TableHead>}
+              {visibleColumns.includes("name") && <TableHead className="min-w-[120px]">{tx("Name", "Nombre")}</TableHead>}
               {visibleColumns.includes("instagram") && <TableHead className="min-w-[100px]">Instagram</TableHead>}
-              {visibleColumns.includes("phone") && <TableHead className="min-w-[100px]">Phone</TableHead>}
-              {visibleColumns.includes("leadType") && <TableHead className="min-w-[88px]">Lead type</TableHead>}
-              {visibleColumns.includes("car") && <TableHead className="min-w-[160px]">Car</TableHead>}
-              {visibleColumns.includes("buyerCriteria") && <TableHead className="min-w-[220px]">Buyer criteria</TableHead>}
-              {visibleColumns.includes("status") && <TableHead className="min-w-[100px]">Status</TableHead>}
-              {visibleColumns.includes("source") && <TableHead className="min-w-[88px]">Source</TableHead>}
-              {visibleColumns.includes("notes") && <TableHead className="min-w-[140px]">Notes</TableHead>}
-              {visibleColumns.includes("created") && <TableHead className="min-w-[100px]">Created</TableHead>}
-              {visibleColumns.includes("updated") && <TableHead className="min-w-[100px]">Updated</TableHead>}
-              <TableHead className="min-w-[100px]">Actions</TableHead>
+              {visibleColumns.includes("phone") && <TableHead className="min-w-[100px]">{tx("Phone", "Telefono")}</TableHead>}
+              {visibleColumns.includes("leadType") && <TableHead className="min-w-[88px]">{tx("Lead type", "Tipo de lead")}</TableHead>}
+              {visibleColumns.includes("car") && <TableHead className="min-w-[160px]">{tx("Car", "Auto")}</TableHead>}
+              {visibleColumns.includes("buyerCriteria") && <TableHead className="min-w-[220px]">{tx("Buyer criteria", "Criterios del comprador")}</TableHead>}
+              {visibleColumns.includes("status") && <TableHead className="min-w-[100px]">{tx("Status", "Estado")}</TableHead>}
+              {visibleColumns.includes("source") && <TableHead className="min-w-[88px]">{tx("Source", "Origen")}</TableHead>}
+              {visibleColumns.includes("notes") && <TableHead className="min-w-[140px]">{tx("Notes", "Notas")}</TableHead>}
+              {visibleColumns.includes("created") && <TableHead className="min-w-[100px]">{tx("Created", "Creado")}</TableHead>}
+              {visibleColumns.includes("updated") && <TableHead className="min-w-[100px]">{tx("Updated", "Actualizado")}</TableHead>}
+              <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -438,7 +443,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   {visibleColumns.includes("name") && <TableCell className="font-medium">{lead.name || "—"}</TableCell>}
                   {visibleColumns.includes("instagram") && <TableCell>{lead.instagram_handle || "—"}</TableCell>}
                   {visibleColumns.includes("phone") && <TableCell>{lead.phone || "—"}</TableCell>}
-                  {visibleColumns.includes("leadType") && <TableCell className="capitalize">{lead.lead_type}</TableCell>}
+                  {visibleColumns.includes("leadType") && <TableCell className="capitalize">{lead.lead_type === "buyer" ? tx("buyer", "comprador") : lead.lead_type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}</TableCell>}
                   {visibleColumns.includes("car") && <TableCell>{car ? `${car.year} ${car.brand} ${car.model}` : "—"}</TableCell>}
                   {visibleColumns.includes("buyerCriteria") && (
                     <TableCell className="text-sm text-muted-foreground max-w-[280px]">
@@ -454,7 +459,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                           className="text-xs px-3 py-1 rounded-full font-medium"
                           style={{ backgroundColor: `${color}15`, color }}
                         >
-                          {status?.name || "Unassigned"}
+                          {status ? translateStatusName(status.name, tx) : tx("Unassigned", "Sin asignar")}
                         </span>
                       );
                     })()}
@@ -463,8 +468,8 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   {visibleColumns.includes("notes") && <TableCell className="text-sm max-w-[160px]" title={lead.notes ?? undefined}>
                     {truncateText(lead.notes, 48)}
                   </TableCell>}
-                  {visibleColumns.includes("created") && <TableCell>{formatShortDate(lead.created_at)}</TableCell>}
-                  {visibleColumns.includes("updated") && <TableCell>{formatShortDate(lead.updated_at)}</TableCell>}
+                  {visibleColumns.includes("created") && <TableCell>{formatShortDate(lead.created_at, locale)}</TableCell>}
+                  {visibleColumns.includes("updated") && <TableCell>{formatShortDate(lead.updated_at, locale)}</TableCell>}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       {lead.lead_type === "buyer" ? (
@@ -492,13 +497,13 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {filteredLeads.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
+          {tx("Showing", "Mostrando")} {filteredLeads.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
           -
-          {Math.min(page * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length} entries
+          {Math.min(page * PAGE_SIZE, filteredLeads.length)} {tx("of", "de")} {filteredLeads.length} {tx("entries", "registros")}
         </span>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
-            <ChevronLeft className="h-4 w-4" /> Previous
+            <ChevronLeft className="h-4 w-4" /> {tx("Previous", "Anterior")}
           </Button>
           {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
             <Button
@@ -512,17 +517,17 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
             </Button>
           ))}
           <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-            Next <ChevronRight className="h-4 w-4" />
+            {tx("Next", "Siguiente")} <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
-          <span className="text-sm font-medium">{selected.size} Selected</span>
-          <Button variant="outline" size="sm">Duplicate</Button>
-          <Button variant="outline" size="sm">Print</Button>
-          <Button variant="destructive" size="sm">Delete</Button>
+          <span className="text-sm font-medium">{selected.size} {tx("Selected", "Seleccionados")}</span>
+          <Button variant="outline" size="sm">{tx("Duplicate", "Duplicar")}</Button>
+          <Button variant="outline" size="sm">{tx("Print", "Imprimir")}</Button>
+          <Button variant="destructive" size="sm">{tx("Delete", "Eliminar")}</Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
         </div>
       )}
@@ -540,12 +545,12 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">
           <DialogHeader>
             <DialogTitle>
-              Match cars for {matchLead?.name || "buyer lead"}
+              {tx("Match cars for", "Buscar autos para")} {matchLead?.name || tx("buyer lead", "lead comprador")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {matchResults.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No inventory matches yet.</p>
+              <p className="text-sm text-muted-foreground">{tx("No inventory matches yet.", "Todavia no hay coincidencias de inventario.")}</p>
             ) : (
               matchResults.map((m) => (
                 <button
@@ -560,9 +565,11 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-medium">{m.car.year} {m.car.brand} {m.car.model}</p>
-                    <span className="text-xs text-muted-foreground">Score {m.score}</span>
+                    <span className="text-xs text-muted-foreground">{tx("Score", "Puntaje")} {m.score}</span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{m.reasons.slice(0, 2).join(" · ")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {m.reasons.slice(0, 2).map((r) => translateMatchReason(r, tx)).join(" · ")}
+                  </p>
                 </button>
               ))
             )}
@@ -571,4 +578,59 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
       </Dialog>
     </div>
   );
+}
+
+function translateLeadColumn(label: string) {
+  switch (label) {
+    case "Name":
+      return "Nombre";
+    case "Phone":
+      return "Telefono";
+    case "Lead type":
+      return "Tipo de lead";
+    case "Car":
+      return "Auto";
+    case "Buyer criteria":
+      return "Criterios del comprador";
+    case "Status":
+      return "Estado";
+    case "Source":
+      return "Origen";
+    case "Notes":
+      return "Notas";
+    case "Created":
+      return "Creado";
+    case "Updated":
+      return "Actualizado";
+    default:
+      return label;
+  }
+}
+
+function translateStatusName(name: string, tx: (enText: string, esText: string) => string) {
+  switch (name.toLowerCase()) {
+    case "new":
+      return tx("New", "Nuevo");
+    case "contacted":
+      return tx("Contacted", "Contactado");
+    case "qualified":
+      return tx("Qualified", "Calificado");
+    case "closed":
+      return tx("Closed", "Cerrado");
+    default:
+      return name;
+  }
+}
+
+function translateMatchReason(reason: string, tx: (enText: string, esText: string) => string) {
+  return reason
+    .replace("Price in budget", tx("Price in budget", "Precio dentro del presupuesto"))
+    .replace("Price above min", tx("Price above min", "Precio por encima del minimo"))
+    .replace("Price below max", tx("Price below max", "Precio por debajo del maximo"))
+    .replace("Year match", tx("Year match", "Ano coincide"))
+    .replace("Mileage within max", tx("Mileage within max", "Kilometraje dentro del maximo"))
+    .replace("Make match", tx("Make match", "Marca coincide"))
+    .replace("Model match", tx("Model match", "Modelo coincide"))
+    .replace("Type match", tx("Type match", "Tipo coincide"))
+    .replace("No strong criteria match", tx("No strong criteria match", "Sin coincidencia fuerte de criterios"));
 }

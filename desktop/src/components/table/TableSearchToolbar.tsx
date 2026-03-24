@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 type TableSearchToolbarProps = {
   value: string;
@@ -23,6 +24,8 @@ export function TableSearchToolbar({
   className,
   filterContentClassName,
 }: TableSearchToolbarProps) {
+  const { tx } = useLanguage();
+
   return (
     <div
       className={cn(
@@ -50,7 +53,7 @@ export function TableSearchToolbar({
             type="button"
             onClick={() => onChange("")}
             className="flex shrink-0 items-center justify-center px-2 text-muted-foreground hover:text-foreground"
-            aria-label="Clear search"
+            aria-label={tx("Clear search", "Limpiar busqueda")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -71,7 +74,7 @@ export function TableSearchToolbar({
               variant="outline"
               size="icon"
               className="h-10 w-10 shrink-0 border-border"
-              aria-label="Open filters"
+              aria-label={tx("Open filters", "Abrir filtros")}
             >
               <Filter className="h-4 w-4" />
             </Button>

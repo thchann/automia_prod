@@ -2,9 +2,11 @@ import { useState } from "react";
 import { CarsTable } from "./CarsTable";
 import { mockCars } from "@/data/mockLeads";
 import { Car } from "@/types/leads";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 export function CarsPage() {
   const [cars, setCars] = useState<Car[]>(mockCars);
+  const { tx } = useLanguage();
 
   const handleUpdateCar = (updated: Car) => {
     setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -17,8 +19,8 @@ export function CarsPage() {
   const handleAddCar = () => {
     const newCar: Car = {
       id: `c_${Date.now()}`,
-      brand: "New",
-      model: "Car",
+      brand: tx("New", "Nuevo"),
+      model: tx("Car", "Auto"),
       year: new Date().getFullYear(),
       mileage: 0,
       price: 0,

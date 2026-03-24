@@ -7,37 +7,43 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLanguage } from "@/i18n/LanguageProvider";
 
 interface NavItem {
   label: string;
+  displayLabel: string;
   icon: React.ElementType;
   disabled?: boolean;
 }
 
 interface NavGroup {
   title: string;
+  displayTitle: string;
   items: NavItem[];
 }
 
 const navGroups: NavGroup[] = [
   {
     title: "Create",
+    displayTitle: "Create",
     items: [
-      { label: "Leads", icon: Users },
-      { label: "Automations", icon: Zap },
+      { label: "Leads", displayLabel: "Leads", icon: Users },
+      { label: "Automations", displayLabel: "Automations", icon: Zap },
     ],
   },
   {
     title: "Manage",
+    displayTitle: "Manage",
     items: [
-      { label: "Cars", icon: Car },
-      { label: "AI assistant", icon: Bot, disabled: true },
+      { label: "Cars", displayLabel: "Cars", icon: Car },
+      { label: "AI assistant", displayLabel: "AI assistant", icon: Bot, disabled: true },
     ],
   },
   {
     title: "Optimize",
+    displayTitle: "Optimize",
     items: [
-      { label: "Settings", icon: Settings },
+      { label: "Settings", displayLabel: "Settings", icon: Settings },
     ],
   },
 ];
@@ -49,6 +55,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { tx } = useLanguage();
 
   // Same left inset expanded/collapsed; fixed row height so icon-only rows match icon+label height.
   const navButtonClass =
@@ -56,11 +63,13 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
 
   const NavButton = ({
     label,
+    displayLabel,
     icon: Icon,
     isActive,
     disabled = false,
   }: {
     label: string;
+    displayLabel: string;
     icon: React.ElementType;
     isActive: boolean;
     disabled?: boolean;
@@ -83,7 +92,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
       >
         <Icon className="h-4 w-4 shrink-0" aria-hidden />
         {!collapsed && (
-          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+          <span className="min-w-0 flex-1 truncate text-left">
+            {tx(displayLabel, translateSidebar(displayLabel))}
+          </span>
         )}
       </button>
     );
@@ -93,7 +104,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
-            {label}
+            {tx(displayLabel, translateSidebar(displayLabel))}
           </TooltipContent>
         </Tooltip>
       );
@@ -109,7 +120,12 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
       <nav className="flex-1 overflow-y-auto overscroll-y-none scrollbar-none px-2 pt-2 pb-3">
         {/* Home */}
         <div className="mb-1">
-          <NavButton label="Home" icon={Home} isActive={activeItem === "Home"} />
+          <NavButton
+            label="Home"
+            displayLabel="Home"
+            icon={Home}
+            isActive={activeItem === "Home"}
+          />
         </div>
         {navGroups.map((group) => (
           <div key={group.title} className="mt-4">
@@ -119,7 +135,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
                 className={`m-0 whitespace-nowrap text-xs font-medium leading-6 text-sidebar-muted ${collapsed ? "select-none opacity-0" : ""}`}
                 aria-hidden={collapsed}
               >
-                {group.title}
+                {tx(group.displayTitle, translateSidebar(group.displayTitle))}
               </h3>
             </div>
             <div className="space-y-0.5">
@@ -127,6 +143,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
                 <NavButton
                   key={item.label}
                   label={item.label}
+                  displayLabel={item.displayLabel}
                   icon={item.icon}
                   isActive={activeItem === item.label}
                   disabled={item.disabled}
@@ -143,7 +160,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
           type="button"
           onClick={() => setCollapsed(!collapsed)}
           className="flex h-9 w-full shrink-0 items-center justify-start pl-3 pr-2 text-muted-foreground hover:text-foreground"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? tx("Expand sidebar", "Expandir barra lateral") : tx("Collapse sidebar", "Colapsar barra lateral")}
         >
           <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -153,4 +170,29 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
       </div>
     </aside>
   );
+}
+
+function translateSidebar(label: string) {
+  switch (label) {
+    case "Home":
+      return "Inicio";
+    case "Create":
+      return "Crear";
+    case "Leads":
+      return "Leads";
+    case "Automations":
+      return "Automatizaciones";
+    case "Manage":
+      return "Gestionar";
+    case "Cars":
+      return "Autos";
+    case "AI assistant":
+      return "Asistente IA";
+    case "Optimize":
+      return "Optimizar";
+    case "Settings":
+      return "Configuracion";
+    default:
+      return label;
+  }
 }
