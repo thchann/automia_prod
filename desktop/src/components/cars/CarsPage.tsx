@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { CarsTable } from "./CarsTable";
-import { mockCars } from "@/data/mockLeads";
-import { Car } from "@/types/leads";
+import { mockCars, mockLeads } from "@/data/mockLeads";
+import { Car, Lead } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 
 export function CarsPage() {
   const [cars, setCars] = useState<Car[]>(mockCars);
+  const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const { tx } = useLanguage();
 
   const handleUpdateCar = (updated: Car) => {
@@ -14,6 +15,10 @@ export function CarsPage() {
 
   const handleDeleteCar = (id: string) => {
     setCars((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleUpdateLead = (updated: Lead) => {
+    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
 
   const handleAddCar = () => {
@@ -42,7 +47,9 @@ export function CarsPage() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <CarsTable
           cars={cars}
+          leads={leads}
           onUpdateCar={handleUpdateCar}
+          onUpdateLead={handleUpdateLead}
           onDeleteCar={handleDeleteCar}
           onAddCar={handleAddCar}
         />
