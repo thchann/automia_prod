@@ -9,8 +9,16 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
-const routerBasename =
-  import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
+function getRouterBasename(): string | undefined {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/m")) {
+    return "/m";
+  }
+  const base = import.meta.env.BASE_URL;
+  if (base === "/" || base === "") return undefined;
+  return base.replace(/\/$/, "");
+}
+
+const routerBasename = getRouterBasename();
 
 const App = () => (
   <LanguageProvider>

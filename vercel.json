@@ -4,6 +4,9 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "mobile/dist",
   "rewrites": [
+    { "source": "/m", "destination": "/index.html" },
+    { "source": "/m/", "destination": "/index.html" },
+    { "source": "/m/:path*", "destination": "/index.html" },
     { "source": "/desktop", "destination": "/desktop/index.html" },
     { "source": "/desktop/", "destination": "/desktop/index.html" },
     { "source": "/desktop/:path*", "destination": "/desktop/index.html" }

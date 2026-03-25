@@ -1,7 +1,7 @@
 # Automia monorepo
 
 - **`desktop/`** — desktop web app (served at `/desktop` in production).
-- **`mobile/`** — phone-first web app (served at `/` in production).
+- **`mobile/`** — phone-first web app (canonical URL **`/m`** in production; `/` redirects phones to `/m`).
 
 ## Setup
 
@@ -34,15 +34,16 @@ The repo root includes `vercel.json`: install at root, run **`build:vercel`**. P
 
 In the Vercel project settings, set **Root Directory** to **`.`** (repository root).
 
-**Mobile vs desktop:** Visiting **`/`** opens the phone UI by default on phones. Desktop browsers are redirected to **`/desktop`** by an inline script in `mobile/index.html` (using Client Hints `userAgentData.mobile` when available, iPad “desktop UA” heuristic, then User-Agent fallback). On phone, using **Settings → View desktop site** sets `automia_desktop=1` for one year and routes to **`/desktop`**.
+**Mobile vs desktop:** On a **phone**, visiting **`/`** redirects to **`/m`** (canonical mobile app). Opening **`/m`** directly also loads the mobile app. Desktop browsers hitting **`/`** are redirected to **`/desktop`** by an inline script in `mobile/index.html` (Client Hints `userAgentData.mobile` when available, iPad heuristic, then User-Agent fallback). Cookie **`automia_desktop=1`** forces the desktop app (e.g. from a “desktop site” preference).
 
 ### Manual checks (routing)
 
-- Phone (default browser): open **`/`** → should stay on phone UI.
-- Phone after **View desktop site** on mobile: **`/`** should route to **`/desktop`** until cookie expires or site data is cleared.
-- Laptop/desktop browser: open **`/`** → should redirect to **`/desktop`**.
-- Desktop direct link **`/desktop`** should stay on desktop UI and support refresh/deep links.
-- **Dev note:** in local dev, run both servers (`8080` desktop, `8081` mobile). Production-like routing is validated with `npm run build:vercel` and a static preview of `mobile/dist`.
+- Phone: open **`/`** → should redirect to **`/m`** and show the phone UI.
+- Phone: open **`/m`** directly → should show the phone UI (no broken assets).
+- Phone with **`automia_desktop=1`**: **`/`** or **`/m`** should route to **`/desktop`** until the cookie is cleared.
+- Laptop/desktop: open **`/`** → should redirect to **`/desktop`**.
+- **`/desktop`** supports refresh and deep links.
+- **Dev:** `npm run dev:mobile` — try **`http://localhost:8081/m`** (middleware rewrites to the SPA). Production-like behavior: `npm run build:vercel` and preview `mobile/dist`.
 
 ### Leads / Cars table search
 

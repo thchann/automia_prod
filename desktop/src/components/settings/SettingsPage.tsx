@@ -18,10 +18,6 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 const SETTINGS_TABS = [
   { key: "account", i18nKey: "settings.tab.account", fallback: "Account" },
   { key: "languages", i18nKey: "settings.tab.languages", fallback: "Languages" },
-  { key: "sharing", i18nKey: "settings.tab.sharing", fallback: "Sharing" },
-  { key: "update-schedule", i18nKey: "settings.tab.updateSchedule", fallback: "Update schedule" },
-  { key: "billing", i18nKey: "settings.tab.billing", fallback: "Billing" },
-  { key: "questions", i18nKey: "settings.tab.questions", fallback: "Questions" },
 ] as const;
 
 const tabTriggerClass =
@@ -67,16 +63,6 @@ export function SettingsPage() {
           <TabsContent value="languages" className="mt-0 outline-none">
             <LanguageSettingsPanel />
           </TabsContent>
-
-          {SETTINGS_TABS.filter((tab) => tab.key !== "account" && tab.key !== "languages").map((tab) => (
-            <TabsContent
-              key={tab.key}
-              value={tab.key}
-              className="mt-0 rounded-lg border border-dashed border-border bg-muted/20 p-12 text-center text-sm text-muted-foreground outline-none"
-            >
-              {t(tab.i18nKey, tab.fallback)} — {tx("coming soon", "proximamente")}
-            </TabsContent>
-          ))}
         </Tabs>
       </div>
     </div>
