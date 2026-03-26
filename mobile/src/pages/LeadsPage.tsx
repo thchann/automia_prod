@@ -107,7 +107,7 @@ const LeadsPage = () => {
   );
 
   return (
-    <div className="px-5 pt-14 pb-24 max-w-[430px] mx-auto animate-fade-in">
+    <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
       <div className="flex items-end justify-between mb-1">
         <h1 className="text-3xl font-extrabold tracking-tight">Leads</h1>
         <button
@@ -191,7 +191,7 @@ const LeadsPage = () => {
         {filteredLeads.length} {tx("total", "total")}
       </p>
 
-      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-md border border-border bg-card">
         {filteredLeads.map((lead, i) => (
           <button
             key={lead.id}

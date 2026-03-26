@@ -24,10 +24,10 @@ const SettingsPage = () => {
   }, [dark]);
 
   return (
-    <div className="px-5 pt-14 pb-24 max-w-[430px] mx-auto animate-fade-in">
+    <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
       <h1 className="text-3xl font-extrabold tracking-tight mb-6">{tx("Settings", "Ajustes")}</h1>
 
-      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+      <div className="rounded-md border border-border bg-card overflow-hidden">
         <button onClick={() => setShowProfile(true)} className="w-full flex items-center gap-4 px-4 py-3.5 border-b border-border active:scale-[0.98] active:bg-muted/50 transition-all">
           <User size={18} className="text-muted-foreground" />
           <span className="text-sm font-medium">{tx("Edit Profile", "Editar perfil")}</span>

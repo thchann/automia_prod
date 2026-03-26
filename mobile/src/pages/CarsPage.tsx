@@ -73,7 +73,7 @@ const CarsPage = () => {
     searchQuery.trim().length > 0;
 
   return (
-    <div className="px-5 pt-14 pb-24 max-w-[430px] mx-auto animate-fade-in">
+    <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
       <div className="flex items-end justify-between mb-1">
         <h1 className="text-3xl font-extrabold tracking-tight">{tx("Cars", "Autos")}</h1>
         <DropdownMenu>
@@ -147,7 +147,7 @@ const CarsPage = () => {
         {filteredCars.length} {tx("in inventory", "en inventario")}
       </p>
 
-      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-md border border-border bg-card">
         {filteredCars.map((car, i) => (
           <button
             key={car.id}

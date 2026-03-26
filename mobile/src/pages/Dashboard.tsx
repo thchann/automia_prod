@@ -51,7 +51,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
       : tx("Good evening", "Buenas noches");
 
   return (
-    <div className="px-5 pt-14 pb-24 max-w-[430px] mx-auto animate-fade-in">
+    <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -70,7 +70,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
       <button
         type="button"
         onClick={() => onTabChange("leads")}
-        className="w-full bg-card rounded-lg p-5 shadow-sm mb-4 text-left"
+        className="w-full rounded-md border border-border bg-card p-5 mb-4 text-left"
       >
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground font-medium">{tx("Active leads", "Leads activos")}</p>
@@ -86,7 +86,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <button type="button" onClick={() => onTabChange("cars")} className="bg-card rounded-lg p-4 shadow-sm text-left">
+        <button type="button" onClick={() => onTabChange("cars")} className="rounded-md border border-border bg-card p-4 text-left">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-muted-foreground font-medium">{tx("Inventory", "Inventario")}</p>
             <Car size={14} className="text-muted-foreground" />
@@ -98,7 +98,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
           </div>
         </button>
 
-        <button type="button" onClick={() => onTabChange("cars")} className="bg-card rounded-lg p-4 shadow-sm text-left">
+        <button type="button" onClick={() => onTabChange("cars")} className="rounded-md border border-border bg-card p-4 text-left">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-muted-foreground font-medium">{tx("Sold", "Vendidos")}</p>
             <TrendingUp size={14} className="text-stat-positive" />
@@ -112,7 +112,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
       </div>
 
       {/* Recent activity */}
-      <div className="bg-card rounded-lg p-5 shadow-sm">
+      <div className="rounded-md border border-border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-muted-foreground font-medium">{tx("Recent activity", "Actividad reciente")}</p>
           <Clock size={14} className="text-muted-foreground" />

@@ -23,7 +23,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderTab()}
+      <div className="mx-auto max-w-[430px]">
+        {renderTab()}
+      </div>
       <BottomNav active={tab} onTabChange={setTab} />
     </div>
   );
