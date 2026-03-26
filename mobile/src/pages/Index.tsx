@@ -22,9 +22,11 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-[430px]">
-        {renderTab()}
+    <div className="h-[100dvh] overflow-hidden bg-background">
+      <div className="mx-auto flex h-full max-w-[430px] flex-col">
+        <div className="flex-1 overflow-y-auto pb-24">
+          {renderTab()}
+        </div>
       </div>
       <BottomNav active={tab} onTabChange={setTab} />
     </div>
