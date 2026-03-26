@@ -11,7 +11,13 @@ export interface Lead {
   phone: string | null;
   notes: string | null;
   status_id: string | null;
+  /**
+   * Primary / legacy single match (kept for compatibility).
+   * When multiple cars are matched, this is typically the first one.
+   */
   car_id: string | null;
+  /** Multiple matched cars for the same lead (one car still only belongs to one lead). */
+  car_ids?: string[] | null;
   desired_budget_min: number | null;
   desired_budget_max: number | null;
   desired_mileage_max: number | null;

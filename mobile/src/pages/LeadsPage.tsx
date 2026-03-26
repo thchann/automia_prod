@@ -102,7 +102,7 @@ const LeadsPage = () => {
     return `https://instagram.com/${normalized}`;
   };
   const matchedCars = useMemo(
-    () => (selected && selected.lead_type === "buyer" ? matchLeadToCars(selected, mockCars).slice(0, 6) : []),
+    () => (selected && selected.lead_type === "buyer" ? matchLeadToCars(selected, mockCars) : []),
     [selected],
   );
 
@@ -292,6 +292,31 @@ const LeadsPage = () => {
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {tx("Score", "Puntaje")}: {m.score} · {m.reasons.slice(0, 2).join(" · ")}
                           </p>
+
+                          {(() => {
+                            const matchedLeadForCar = leads.find((l) => l.car_id === m.car.id) ?? null;
+                            const matchedLeadTypeLabel = matchedLeadForCar
+                              ? matchedLeadForCar.lead_type === "buyer"
+                                ? tx("buyer", "comprador")
+                                : matchedLeadForCar.lead_type === "seller"
+                                ? tx("seller", "vendedor")
+                                : tx("pending", "pendiente")
+                              : tx("Unassigned", "Sin asignar");
+                            const matchedLeadName = matchedLeadForCar
+                              ? matchedLeadForCar.name || tx("Unnamed", "Sin nombre")
+                              : tx("No match", "Sin vincular");
+
+                            return (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="text-[11px] bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md">
+                                  {matchedLeadTypeLabel}
+                                </span>
+                                <span className="text-[11px] bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md">
+                                  {matchedLeadName}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))
                     )}
