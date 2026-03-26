@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CarsTable } from "./CarsTable";
 import { mockCars, mockLeads } from "@/data/mockLeads";
 import { Car, Lead } from "@/types/leads";
+import { CURRENT_USER_ID } from "@/lib/currentUser";
 import { useLanguage } from "@/i18n/LanguageProvider";
 
 export function CarsPage() {
@@ -24,6 +25,7 @@ export function CarsPage() {
   const handleAddCar = () => {
     const newCar: Car = {
       id: `c_${Date.now()}`,
+      user_id: CURRENT_USER_ID,
       brand: tx("New", "Nuevo"),
       model: tx("Car", "Auto"),
       year: new Date().getFullYear(),

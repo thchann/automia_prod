@@ -1,0 +1,152 @@
+import type {
+  CarResponse,
+  LeadCreate,
+  LeadResponse,
+  LeadStatusResponse,
+  LeadUpdate,
+  CarCreate,
+  CarUpdate,
+} from "@automia/api";
+import type { Car, Lead, LeadStatus } from "@/types/models";
+
+function toNum(v: string | number | null | undefined): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return v;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+export function mapCarFromApi(c: CarResponse): Car {
+  const attachments = c.attachments as Car["attachments"];
+  return {
+    id: c.id,
+    user_id: c.user_id,
+    brand: c.brand,
+    model: c.model,
+    year: c.year,
+    mileage: c.mileage,
+    price: toNum(c.price),
+    desired_price: toNum(c.desired_price),
+    car_type: c.car_type,
+    listed_at: c.listed_at,
+    owner_type: c.owner_type as Car["owner_type"],
+    status: c.status as Car["status"],
+    attachments,
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  };
+}
+
+export function mapLeadFromApi(l: LeadResponse): Lead {
+  return {
+    id: l.id,
+    name: l.name,
+    lead_type: l.lead_type as Lead["lead_type"],
+    source: l.source,
+    instagram_handle: l.instagram_handle,
+    phone: l.phone,
+    notes: l.notes,
+    status_id: l.status_id,
+    car_id: l.car_id,
+    desired_budget_min: toNum(l.desired_budget_min),
+    desired_budget_max: toNum(l.desired_budget_max),
+    desired_mileage_max: l.desired_mileage_max,
+    desired_year_min: l.desired_year_min,
+    desired_year_max: l.desired_year_max,
+    desired_make: l.desired_make,
+    desired_model: l.desired_model,
+    desired_car_type: l.desired_car_type,
+    created_at: l.created_at,
+    updated_at: l.updated_at,
+  };
+}
+
+export function mapStatusFromApi(s: LeadStatusResponse): LeadStatus {
+  return {
+    id: s.id,
+    name: s.name,
+    display_order: s.display_order,
+    color: s.color,
+    is_default: s.is_default,
+    created_at: s.created_at,
+  };
+}
+
+export function leadToApiUpdate(lead: Lead): LeadUpdate {
+  return {
+    lead_type: lead.lead_type,
+    source: lead.source,
+    status_id: lead.status_id,
+    car_id: lead.car_id,
+    name: lead.name,
+    instagram_handle: lead.instagram_handle,
+    phone: lead.phone,
+    notes: lead.notes,
+    desired_budget_min: lead.desired_budget_min,
+    desired_budget_max: lead.desired_budget_max,
+    desired_mileage_max: lead.desired_mileage_max,
+    desired_year_min: lead.desired_year_min,
+    desired_year_max: lead.desired_year_max,
+    desired_make: lead.desired_make,
+    desired_model: lead.desired_model,
+    desired_car_type: lead.desired_car_type,
+  };
+}
+
+export function leadFormToCreate(lead: Lead): LeadCreate {
+  const base: LeadCreate = {
+    lead_type: lead.lead_type,
+    source: lead.source,
+    status_id: lead.status_id ?? undefined,
+    name: lead.name,
+    instagram_handle: lead.instagram_handle,
+    phone: lead.phone,
+    notes: lead.notes,
+    desired_budget_min: lead.desired_budget_min,
+    desired_budget_max: lead.desired_budget_max,
+    desired_mileage_max: lead.desired_mileage_max,
+    desired_year_min: lead.desired_year_min,
+    desired_year_max: lead.desired_year_max,
+    desired_make: lead.desired_make,
+    desired_model: lead.desired_model,
+    desired_car_type: lead.desired_car_type,
+  };
+  if (lead.source !== "manual") {
+    base.platform_sender_id =
+      lead.instagram_handle?.replace(/^@/, "") || `ig_${crypto.randomUUID()}`;
+  }
+  return base;
+}
+
+export function carToApiUpdate(car: Car): CarUpdate {
+  return {
+    brand: car.brand,
+    model: car.model,
+    year: car.year,
+    mileage: car.mileage,
+    price: car.price,
+    desired_price: car.desired_price,
+    car_type: car.car_type,
+    listed_at: car.listed_at,
+    owner_type: car.owner_type,
+    status: car.status,
+    // Important: send `null` when the user removes all attachments so the backend clears JSONB.
+    attachments: car.attachments ?? null,
+  };
+}
+
+export function carFormToCreate(car: Car): CarCreate {
+  return {
+    brand: car.brand,
+    model: car.model,
+    year: car.year,
+    mileage: car.mileage,
+    price: car.price,
+    desired_price: car.desired_price,
+    car_type: car.car_type,
+    listed_at: car.listed_at,
+    owner_type: car.owner_type,
+    status: car.status,
+    attachments: car.attachments ?? null,
+  };
+}

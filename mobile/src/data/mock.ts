@@ -1,4 +1,5 @@
 import type { Lead, Car, LeadStatus } from "@/types/models";
+import { CURRENT_USER_ID } from "@/lib/currentUser";
 
 export const mockStatuses: LeadStatus[] = [
   { id: "s1", name: "New", display_order: 0, color: "#007AFF", is_default: true },
@@ -53,37 +54,37 @@ export const mockLeads: Lead[] = [
 
 export const mockCars: Car[] = [
   {
-    id: "c1", brand: "BMW", model: "M4 Competition", year: 2023, mileage: 12400,
+    id: "c1", user_id: CURRENT_USER_ID, brand: "BMW", model: "M4 Competition", year: 2023, mileage: 12400,
     price: 72500, desired_price: 74000, car_type: "sports", listed_at: "2026-03-01T00:00:00Z",
     owner_type: "owned", status: "available", attachments: null,
     created_at: "2026-03-01T00:00:00Z", updated_at: null,
   },
   {
-    id: "c2", brand: "Mercedes-Benz", model: "C300", year: 2021, mileage: 34200,
+    id: "c2", user_id: CURRENT_USER_ID, brand: "Mercedes-Benz", model: "C300", year: 2021, mileage: 34200,
     price: 32000, desired_price: 35000, car_type: "sedan", listed_at: "2026-03-10T00:00:00Z",
     owner_type: "client", status: "available", attachments: null,
     created_at: "2026-03-10T00:00:00Z", updated_at: null,
   },
   {
-    id: "c3", brand: "Porsche", model: "Cayenne S", year: 2022, mileage: 18900,
+    id: "c3", user_id: CURRENT_USER_ID, brand: "Porsche", model: "Cayenne S", year: 2022, mileage: 18900,
     price: 68000, desired_price: 70000, car_type: "suv", listed_at: "2026-02-20T00:00:00Z",
     owner_type: "owned", status: "available", attachments: null,
     created_at: "2026-02-20T00:00:00Z", updated_at: null,
   },
   {
-    id: "c4", brand: "Tesla", model: "Model 3", year: 2022, mileage: 28700,
+    id: "c4", user_id: CURRENT_USER_ID, brand: "Tesla", model: "Model 3", year: 2022, mileage: 28700,
     price: 29500, desired_price: 31000, car_type: "sedan", listed_at: "2026-03-15T00:00:00Z",
     owner_type: "client", status: "available", attachments: null,
     created_at: "2026-03-15T00:00:00Z", updated_at: null,
   },
   {
-    id: "c5", brand: "Ford", model: "F-150 Raptor", year: 2024, mileage: 5200,
+    id: "c5", user_id: CURRENT_USER_ID, brand: "Ford", model: "F-150 Raptor", year: 2024, mileage: 5200,
     price: 78000, desired_price: 79500, car_type: "truck", listed_at: "2026-03-18T00:00:00Z",
     owner_type: "owned", status: "available", attachments: null,
     created_at: "2026-03-18T00:00:00Z", updated_at: null,
   },
   {
-    id: "c6", brand: "Audi", model: "RS5", year: 2021, mileage: 41000,
+    id: "c6", user_id: CURRENT_USER_ID, brand: "Audi", model: "RS5", year: 2021, mileage: 41000,
     price: 52000, desired_price: null, car_type: "sports", listed_at: null,
     owner_type: "advisor", status: "sold", attachments: null,
     created_at: "2026-01-15T00:00:00Z", updated_at: "2026-03-05T00:00:00Z",

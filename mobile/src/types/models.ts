@@ -26,6 +26,8 @@ export interface Lead {
 
 export interface Car {
   id: string;
+  /** Owning user — one car belongs to exactly one user. */
+  user_id: string;
   brand: string;
   model: string;
   year: number;

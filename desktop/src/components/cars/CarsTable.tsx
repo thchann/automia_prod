@@ -55,7 +55,8 @@ function formatShortDate(s: string | null, locale: string) {
 function thumbnailUrl(car: Car): string | null {
   const list = car.attachments;
   if (!list?.length) return null;
-  const img = list.find((a) => a.type === "image") ?? list[0];
+  const img = list.find((a) => a.type === "image");
+  // Only show an image preview when an image attachment exists.
   return img?.url ?? null;
 }
 
