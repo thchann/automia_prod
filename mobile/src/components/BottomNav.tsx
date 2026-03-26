@@ -21,7 +21,7 @@ const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
-      <div className="mx-auto max-w-[430px] px-3 pb-2">
+      <div className="mx-auto max-w-[430px] px-3 pb-0">
         <div className="flex h-16 items-center justify-around rounded-xl border border-border bg-nav-bg shadow-sm">
         {tabs.map(({ key, label, icon: Icon }) => {
           const isActive = active === key;
