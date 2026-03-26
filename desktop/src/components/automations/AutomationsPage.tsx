@@ -18,6 +18,19 @@ const formatTime = (iso: string) => {
     .padStart(2, "0")}`;
 };
 
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5a4.25 4.25 0 0 0 4.25-4.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5Zm8.99 1.15a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+    </svg>
+  );
+}
+
 export function AutomationsPage() {
   const { tx, locale } = useLanguage();
   const createAutomation = (): Automation => ({
@@ -117,6 +130,17 @@ export function AutomationsPage() {
               placeholder={tx("You are a helpful assistant...", "Eres un asistente util...")}
               className="min-h-[112px] w-full text-sm"
             />
+          </div>
+
+          <div className="mt-4 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 w-full justify-start gap-2"
+            >
+              <InstagramIcon className="h-4 w-4 text-[#E1306C]" />
+              {tx("Connect to Instagram", "Conectar con Instagram")}
+            </Button>
           </div>
         </div>
       </div>

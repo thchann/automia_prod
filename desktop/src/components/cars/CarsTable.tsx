@@ -19,6 +19,16 @@ import {
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CarsTableProps {
   cars: Car[];
@@ -74,6 +84,8 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
   const [editCar, setEditCar] = useState<Car | null>(null);
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
   const [bulkMatchCar, setBulkMatchCar] = useState<Car | null>(null);
+  const [bulkMatchCarIds, setBulkMatchCarIds] = useState<string[] | null>(null);
+  const [pendingUnmatchCar, setPendingUnmatchCar] = useState<Car | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
@@ -186,12 +198,23 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
   const selectedCar =
     selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
 
+  const getLeadForCar = (carId: string) => leads.find((l) => l.car_id === carId) ?? null;
+
   const assignCarToLead = (carId: string, leadId: string) => {
     const now = new Date().toISOString();
     for (const lead of leads) {
       if (lead.id === leadId) {
         onUpdateLead({ ...lead, car_id: carId, updated_at: now });
       } else if (lead.car_id === carId) {
+        onUpdateLead({ ...lead, car_id: null, updated_at: now });
+      }
+    }
+  };
+
+  const unmatchCar = (carId: string) => {
+    const now = new Date().toISOString();
+    for (const lead of leads) {
+      if (lead.car_id === carId) {
         onUpdateLead({ ...lead, car_id: null, updated_at: now });
       }
     }
@@ -457,16 +480,42 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-xl px-6 py-3 flex items-center gap-4 z-50">
           <span className="text-sm font-medium">{selected.size} {tx("Selected", "Seleccionados")}</span>
-          {selected.size === 1 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (selectedCar) setBulkMatchCar(selectedCar);
-              }}
-            >
-              {tx("Match", "Vincular")}
-            </Button>
+          {selected.size >= 1 ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (selected.size === 1) {
+                    if (selectedCar) setBulkMatchCar(selectedCar);
+                    setBulkMatchCarIds(null);
+                    return;
+                  }
+                  setBulkMatchCar(null);
+                  setBulkMatchCarIds(Array.from(selected));
+                }}
+              >
+                {tx("Match", "Vincular")}
+              </Button>
+
+              {(() => {
+                if (selected.size !== 1) return null;
+                const matchedLead = selectedCar ? getLeadForCar(selectedCar.id) : null;
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!matchedLead}
+                    onClick={() => {
+                      if (!selectedCar) return;
+                      setPendingUnmatchCar(selectedCar);
+                    }}
+                  >
+                    {tx("Unmatch", "Desvincular")}
+                  </Button>
+                );
+              })()}
+            </>
           ) : null}
           <Button variant="destructive" size="sm" onClick={deleteSelectedCars}>
             {tx("Delete", "Eliminar")}
@@ -518,6 +567,90 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!bulkMatchCarIds}
+        onOpenChange={(open) => {
+          if (!open) setBulkMatchCarIds(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>
+              {tx("Match lead for", "Vincular lead para")} {bulkMatchCarIds ? `(${bulkMatchCarIds.length})` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {leads.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{tx("No leads available.", "No hay leads disponibles.")}</p>
+            ) : (
+              leads.map((lead) => (
+                <button
+                  key={lead.id}
+                  type="button"
+                  className="w-full rounded-md border border-border p-3 text-left transition-colors hover:bg-surface-hover"
+                  onClick={() => {
+                    const ids = bulkMatchCarIds ?? [];
+                    if (ids.length === 0) return;
+                    for (const carId of ids) assignCarToLead(carId, lead.id);
+                    setBulkMatchCarIds(null);
+                    setSelected(new Set());
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{lead.name || tx("Unknown lead", "Lead desconocido")}</p>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {lead.lead_type === "buyer" ? tx("buyer", "comprador") : lead.lead_type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!pendingUnmatchCar}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnmatchCar(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tx("Unmatch car", "Desvincular auto")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUnmatchCar ? (() => {
+                const matchedLead = getLeadForCar(pendingUnmatchCar.id);
+                if (!matchedLead) return tx("This car has no match.", "Este auto no tiene vinculo.");
+                const matchedLeadType =
+                  matchedLead.lead_type === "buyer"
+                    ? tx("buyer", "comprador")
+                    : matchedLead.lead_type === "seller"
+                    ? tx("seller", "vendedor")
+                    : tx("pending", "pendiente");
+                return tx(
+                  `This car is matched with ${matchedLeadType} ${matchedLead.name || tx("Unnamed", "Sin nombre")}. Unmatch it?`,
+                  `Este auto esta vinculado con ${matchedLeadType} ${matchedLead.name || tx("Unnamed", "Sin nombre")}. ¿Desvincular?`,
+                );
+              })() : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tx("Cancel", "Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingUnmatchCar) return;
+                unmatchCar(pendingUnmatchCar.id);
+                setPendingUnmatchCar(null);
+                setSelected(new Set());
+              }}
+            >
+              {tx("Unmatch", "Desvincular")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

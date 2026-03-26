@@ -20,15 +20,16 @@ const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
   const { tx } = useLanguage();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-nav-bg border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-[430px] mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
+      <div className="mx-auto max-w-[430px] px-3 pb-2">
+        <div className="flex h-16 items-center justify-around rounded-xl border border-border bg-nav-bg shadow-sm">
         {tabs.map(({ key, label, icon: Icon }) => {
           const isActive = active === key;
           return (
             <button
               key={key}
               onClick={() => onTabChange(key)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors duration-150 active:scale-95 ${
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-colors duration-150 active:scale-95 ${
                 isActive ? "text-nav-active" : "text-nav-inactive"
               }`}
             >
@@ -39,6 +40,7 @@ const BottomNav = ({ active, onTabChange }: BottomNavProps) => {
             </button>
           );
         })}
+        </div>
       </div>
     </nav>
   );

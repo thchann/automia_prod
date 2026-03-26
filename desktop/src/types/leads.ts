@@ -40,7 +40,13 @@ export interface Lead {
   lead_type: "pending" | "buyer" | "seller";
   source: string;
   status_id: string | null;
+  /**
+   * Primary / legacy single match (kept for compatibility).
+   * When multiple cars are matched, this is typically the first one.
+   */
   car_id: string | null;
+  /** Multiple matched cars for the same lead (one car still only belongs to one lead). */
+  car_ids?: string[] | null;
   name: string | null;
   instagram_handle: string | null;
   phone: string | null;
