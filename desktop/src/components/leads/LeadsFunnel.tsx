@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Plus, MoreVertical } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
@@ -23,7 +23,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
   const [colorMenuOpenId, setColorMenuOpenId] = useState<string | null>(null);
   const [lastUsedColors, setLastUsedColors] = useState<string[]>([]);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
-  const dragOverColumnRef = useRef<string | null>(null);
+  const [dragOverStatusId, setDragOverStatusId] = useState<string | null>(null);
 
   const getLeadsForStatus = (statusId: string) =>
     leads.filter((l) => l.status_id === statusId);
@@ -37,7 +37,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
 
   const handleDragOver = (e: React.DragEvent, statusId: string) => {
     e.preventDefault();
-    dragOverColumnRef.current = statusId;
+    setDragOverStatusId(statusId);
   };
 
   const handleDrop = (e: React.DragEvent, targetStatusId: string) => {
@@ -48,7 +48,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
       onUpdateLead({ ...lead, status_id: targetStatusId });
     }
     setDraggedLeadId(null);
-    dragOverColumnRef.current = null;
+    setDragOverStatusId(null);
   };
 
   const startEditColumn = (status: LeadStatus) => {
@@ -62,6 +62,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
       statuses.map((s) => (s.id === editingColumnId ? { ...s, name: editingName } : s)),
     );
     setEditingColumnId(null);
+    setColorMenuOpenId(null);
   };
 
   const updateColumnColor = (statusId: string, color: string | null) => {
@@ -100,41 +101,48 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
           return (
             <div
               key={status.id}
-              className="min-w-[280px] w-[280px] flex flex-col bg-muted/30 rounded-lg border border-border"
+              className="min-w-[280px] w-[280px] flex flex-col bg-muted/30 rounded-none border border-border"
               onDragOver={(e) => handleDragOver(e, status.id)}
               onDrop={(e) => handleDrop(e, status.id)}
+              onDragLeave={(e) => {
+                const next = e.relatedTarget as Node | null;
+                if (next && e.currentTarget.contains(next)) return;
+                setDragOverStatusId((prev) => (prev === status.id ? null : prev));
+              }}
             >
               {/* Column header */}
               <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Popover
-                    open={colorMenuOpenId === status.id}
-                    onOpenChange={(open) => setColorMenuOpenId(open ? status.id : null)}
-                  >
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="h-6 w-6 shrink-0 rounded-full border-2 border-border shadow-sm outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        style={{ backgroundColor: color }}
-                        aria-label={tx("Choose column color", "Elegir color de columna")}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-auto border-0 bg-transparent p-0 shadow-none"
-                      align="start"
-                      side="bottom"
-                      sideOffset={8}
-                      collisionPadding={16}
-                      onOpenAutoFocus={(e) => e.preventDefault()}
+                  {editingColumnId === status.id && (
+                    <Popover
+                      open={colorMenuOpenId === status.id}
+                      onOpenChange={(open) => setColorMenuOpenId(open ? status.id : null)}
                     >
-                      <FunnelColumnColorMenu
-                        currentHex={status.color}
-                        lastUsed={lastUsedColors}
-                        onSelect={(hex) => handleColorSelect(status.id, hex)}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-6 w-6 shrink-0 rounded-full border-2 border-border shadow-sm outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          style={{ backgroundColor: color }}
+                          aria-label={tx("Choose column color", "Elegir color de columna")}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto border-0 bg-transparent p-0 shadow-none"
+                        align="start"
+                        side="bottom"
+                        sideOffset={8}
+                        collisionPadding={16}
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <FunnelColumnColorMenu
+                          currentHex={status.color}
+                          lastUsed={lastUsedColors}
+                          onSelect={(hex) => handleColorSelect(status.id, hex)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
 
                   {editingColumnId === status.id ? (
                     <Input
@@ -167,6 +175,12 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
 
               {/* Cards */}
               <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                {columnLeads.length === 0 && dragOverStatusId === status.id && (
+                  <div
+                    className="pointer-events-none h-1 w-full rounded-full bg-muted/45"
+                    aria-hidden
+                  />
+                )}
                 {columnLeads.map((lead) => {
                   const car = getCar(lead.car_id);
                   return (
@@ -174,6 +188,10 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                       key={lead.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, lead.id)}
+                      onDragEnd={() => {
+                        setDraggedLeadId(null);
+                        setDragOverStatusId(null);
+                      }}
                       className={`bg-card border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
                         draggedLeadId === lead.id ? "opacity-50" : ""
                       }`}
@@ -209,6 +227,12 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
                     </div>
                   );
                 })}
+                {columnLeads.length > 0 && dragOverStatusId === status.id && (
+                  <div
+                    className="pointer-events-none h-1 w-full rounded-full bg-muted/45"
+                    aria-hidden
+                  />
+                )}
               </div>
             </div>
           );

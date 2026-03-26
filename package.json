@@ -1,7 +1,7 @@
 {
   "name": "automia",
   "private": true,
-  "workspaces": ["desktop", "mobile"],
+  "workspaces": ["desktop", "mobile", "packages/api"],
   "scripts": {
     "dev": "npm run dev -w @automia/desktop",
     "dev:desktop": "npm run dev -w @automia/desktop",

@@ -1,4 +1,5 @@
 import { Lead, LeadStatus, Car } from "@/types/leads";
+import { CURRENT_USER_ID } from "@/lib/currentUser";
 
 export const defaultStatuses: LeadStatus[] = [
   { id: "s1", name: "New", display_order: 0, color: "#3B82F6", is_default: true, created_at: "2024-01-01" },
@@ -10,6 +11,7 @@ export const defaultStatuses: LeadStatus[] = [
 export const mockCars: Car[] = [
   {
     id: "c1",
+    user_id: CURRENT_USER_ID,
     brand: "Tesla",
     model: "Model 3",
     year: 2024,
@@ -26,6 +28,7 @@ export const mockCars: Car[] = [
   },
   {
     id: "c2",
+    user_id: CURRENT_USER_ID,
     brand: "BMW",
     model: "X5",
     year: 2023,
@@ -42,6 +45,7 @@ export const mockCars: Car[] = [
   },
   {
     id: "c3",
+    user_id: CURRENT_USER_ID,
     brand: "Ford",
     model: "Mustang",
     year: 2024,
@@ -58,6 +62,7 @@ export const mockCars: Car[] = [
   },
   {
     id: "c_nissan",
+    user_id: CURRENT_USER_ID,
     brand: "Nissan",
     model: "Altima",
     year: 2023,
@@ -74,6 +79,7 @@ export const mockCars: Car[] = [
   },
   {
     id: "c4",
+    user_id: CURRENT_USER_ID,
     brand: "Toyota",
     model: "Camry",
     year: 2023,
@@ -90,6 +96,7 @@ export const mockCars: Car[] = [
   },
   {
     id: "c5",
+    user_id: CURRENT_USER_ID,
     brand: "Mercedes",
     model: "C-Class",
     year: 2024,

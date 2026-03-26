@@ -15,6 +15,8 @@ export interface CarAttachment {
 
 export interface Car {
   id: string;
+  /** Owning user — one car belongs to exactly one user. */
+  user_id: string;
   brand: string;
   model: string;
   year: number;
@@ -32,6 +34,9 @@ export interface Car {
 
 export interface Lead {
   id: string;
+  /** Workspace owner — each lead belongs to one user. */
+  user_id?: string;
+  platform_sender_id?: string | null;
   lead_type: "pending" | "buyer" | "seller";
   source: string;
   status_id: string | null;

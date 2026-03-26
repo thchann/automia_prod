@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DetailSheet from "@/components/DetailSheet";
 import type { Car, CarStatus, OwnerType } from "@/types/models";
+import { CURRENT_USER_ID } from "@/lib/currentUser";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface AddCarSheetProps {
   open: boolean;
   onClose: () => void;
-  onSave: (car: Car) => void;
+  onSave: (car: Car) => void | Promise<void>;
   initialCar?: Car | null;
 }
 
@@ -16,6 +19,9 @@ const statuses: CarStatus[] = ["available", "sold"];
 
 const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetProps) => {
   const { tx } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const MAX_ATTACHMENTS = 10;
+
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
@@ -25,6 +31,7 @@ const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetPr
   const [carType, setCarType] = useState("");
   const [ownerType, setOwnerType] = useState<OwnerType>("owned");
   const [status, setStatus] = useState<CarStatus>("available");
+  const [attachments, setAttachments] = useState<Car["attachments"]>(initialCar?.attachments ?? null);
 
   useEffect(() => {
     if (!open) return;
@@ -41,17 +48,64 @@ const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetPr
     setCarType(initialCar.car_type ?? "");
     setOwnerType(initialCar.owner_type ?? "owned");
     setStatus(initialCar.status ?? "available");
+    setAttachments(initialCar.attachments ?? null);
   }, [open, initialCar]);
 
   const reset = () => {
     setBrand(""); setModel(""); setYear(""); setMileage("");
     setPrice(""); setDesiredPrice(""); setCarType(""); setOwnerType("owned"); setStatus("available");
+    setAttachments(null);
+  };
+
+  const attachmentList = attachments ?? [];
+
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const current = attachmentList;
+    const remaining = MAX_ATTACHMENTS - current.length;
+    if (remaining <= 0) return;
+
+    const picked = Array.from(files).slice(0, remaining);
+    const added = picked.map((file) => {
+      const isImage = file.type?.startsWith("image/");
+      return {
+        type: isImage ? "image" : "document",
+        url: URL.createObjectURL(file),
+        filename: file.name,
+      };
+    });
+
+    const merged = [...current, ...added].slice(0, MAX_ATTACHMENTS);
+    setAttachments(merged.length ? merged : null);
+  };
+
+  const removeAttachment = (index: number) => {
+    const current = attachmentList;
+    const removed = current[index];
+    if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+    const next = current.filter((_, i) => i !== index);
+    setAttachments(next.length ? next : null);
+  };
+
+  const viewAttachment = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const downloadAttachment = (url: string, filename: string | null | undefined) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename?.trim() || "attachment";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const handleSave = () => {
     if (!brand.trim() || !model.trim() || !year.trim()) return;
     const car: Car = {
       id: initialCar?.id ?? `c-${Date.now()}`,
+      user_id: initialCar?.user_id ?? CURRENT_USER_ID,
       brand: brand.trim(),
       model: model.trim(),
       year: parseInt(year),
@@ -62,13 +116,14 @@ const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetPr
       listed_at: initialCar?.listed_at ?? new Date().toISOString(),
       owner_type: ownerType,
       status,
-      attachments: initialCar?.attachments ?? null,
+      attachments: attachments ?? null,
       created_at: initialCar?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    onSave(car);
-    reset();
-    onClose();
+    void Promise.resolve(onSave(car)).then(() => {
+      reset();
+      onClose();
+    });
   };
 
   return (
@@ -116,6 +171,111 @@ const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetPr
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Attachments */}
+        <div className="bg-muted rounded-md px-3 py-2.5 border border-border">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <label className="text-xs text-muted-foreground font-medium">
+              {tx("Attachments", "Adjuntos")}
+            </label>
+            <div className="text-[11px] text-muted-foreground">
+              {attachmentList.length}/{MAX_ATTACHMENTS}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="*/*"
+              className="hidden"
+              onChange={(e) => {
+                handleFilesSelected(e.target.files);
+                e.currentTarget.value = "";
+              }}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              {tx("Upload attachment", "Subir adjunto")}
+            </Button>
+          </div>
+
+          {attachmentList.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{tx("No attachments yet.", "Aun no hay adjuntos.")}</p>
+          ) : (
+            <div className="space-y-2">
+              {attachmentList.map((att, idx) => (
+                <div
+                  key={`${att.url}-${idx}`}
+                  className="flex items-center justify-between gap-3 border border-border rounded-md p-2 bg-background"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {att.type === "image" ? (
+                      <img
+                        src={att.url}
+                        alt={att.filename ?? "attachment"}
+                        className="h-12 w-12 rounded-md border border-border object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-md border border-border bg-muted/30 flex items-center justify-center shrink-0">
+                        <FileText className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {att.filename ?? tx("Untitled", "Sin nombre")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground capitalize">
+                        {att.type}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-0 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      title={tx("View", "Ver")}
+                      aria-label={tx("View", "Ver")}
+                      onClick={() => viewAttachment(att.url)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      title={tx("Download", "Descargar")}
+                      aria-label={tx("Download", "Descargar")}
+                      onClick={() => downloadAttachment(att.url, att.filename)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      title={tx("Remove", "Quitar")}
+                      aria-label={tx("Remove", "Quitar")}
+                      onClick={() => removeAttachment(idx)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <button onClick={handleSave}
