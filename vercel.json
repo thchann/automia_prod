@@ -7,6 +7,9 @@
     { "source": "/m", "destination": "/index.html" },
     { "source": "/m/", "destination": "/index.html" },
     { "source": "/m/:path*", "destination": "/index.html" },
+    { "source": "/verification", "destination": "/verification/index.html" },
+    { "source": "/verification/", "destination": "/verification/index.html" },
+    { "source": "/verification/:path*", "destination": "/verification/index.html" },
     { "source": "/desktop", "destination": "/desktop/index.html" },
     { "source": "/desktop/", "destination": "/desktop/index.html" },
     { "source": "/desktop/:path*", "destination": "/desktop/index.html" }
