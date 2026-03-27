@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 30% 97%;
+    --foreground: 30 10% 15%;
+
+    --card: 30 25% 95%;
+    --card-foreground: 30 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 10% 15%;
+
+    --primary: 28 85% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 20% 92%;
+    --secondary-foreground: 30 10% 25%;
+
+    --muted: 30 15% 93%;
+    --muted-foreground: 30 8% 50%;
+
+    --accent: 28 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 15% 88%;
+    --input: 30 15% 88%;
+    --ring: 28 85% 55%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 30 10% 15%;
+    --sidebar-primary: 28 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 25% 95%;
+    --sidebar-accent-foreground: 30 10% 15%;
+    --sidebar-border: 30 15% 88%;
+    --sidebar-ring: 28 85% 55%;
+
+    --font-heading: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  .dark {
+    --background: 30 8% 12%;
+    --foreground: 30 15% 90%;
+
+    --card: 30 6% 16%;
+    --card-foreground: 30 15% 90%;
+
+    --popover: 30 6% 16%;
+    --popover-foreground: 30 15% 90%;
+
+    --primary: 28 85% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 6% 20%;
+    --secondary-foreground: 30 15% 85%;
+
+    --muted: 30 5% 22%;
+    --muted-foreground: 30 10% 55%;
+
+    --accent: 28 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 5% 22%;
+    --input: 30 5% 22%;
+    --ring: 28 85% 55%;
+
+    --sidebar-background: 30 8% 10%;
+    --sidebar-foreground: 30 15% 90%;
+    --sidebar-primary: 28 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 6% 16%;
+    --sidebar-accent-foreground: 30 15% 90%;
+    --sidebar-border: 30 5% 22%;
+    --sidebar-ring: 28 85% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
