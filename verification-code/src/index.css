@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Amazing Grotesk';
+  src: url('./assets/Amazing_Grotesk_Demi.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design system: Automia warm theme */
+
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 20 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 10% 15%;
+
+    --primary: 30 100% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 30% 95%;
+    --secondary-foreground: 20 10% 15%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 30 60% 92%;
+    --accent-foreground: 20 10% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 30 100% 55%;
+
+    --radius: 0.75rem;
+
+    --verify-bg: 220 20% 98%;
+    --verify-card-shadow: 0 1px 2px 0 hsla(0, 0%, 0%, 0.05);
+
+    font-family: 'Poppins', sans-serif;
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 20 10% 10%;
+    --foreground: 30 10% 90%;
+
+    --card: 20 8% 14%;
+    --card-foreground: 30 10% 90%;
+
+    --popover: 20 8% 14%;
+    --popover-foreground: 30 10% 90%;
+
+    --primary: 30 100% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 20 8% 18%;
+    --secondary-foreground: 30 10% 90%;
+
+    --muted: 20 8% 18%;
+    --muted-foreground: 20 10% 60%;
+
+    --accent: 20 15% 20%;
+    --accent-foreground: 30 10% 90%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 8% 22%;
+    --input: 20 8% 22%;
+    --ring: 30 100% 55%;
+    --sidebar-background: 20 10% 8%;
+    --sidebar-foreground: 30 10% 90%;
+    --sidebar-primary: 30 100% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 20 8% 15%;
+    --sidebar-accent-foreground: 30 10% 90%;
+    --sidebar-border: 20 8% 18%;
+    --sidebar-ring: 30 100% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
