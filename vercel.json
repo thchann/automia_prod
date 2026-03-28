@@ -17,7 +17,6 @@
     { "source": "/verification/", "destination": "/verification/index.html" },
     { "source": "/verification/:path*", "destination": "/verification/index.html" },
     { "source": "/desktop", "destination": "/desktop/index.html" },
-    { "source": "/desktop/", "destination": "/desktop/index.html" },
-    { "source": "/desktop/:path*", "destination": "/desktop/index.html" }
+    { "source": "/desktop/", "destination": "/desktop/index.html" }
   ]
 }
