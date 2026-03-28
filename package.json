@@ -9,7 +9,7 @@
     "build": "npm run build:vercel",
     "build:desktop": "npm run build -w @automia/desktop",
     "build:mobile": "npm run build -w @automia/mobile",
-    "build:vercel": "npm run build -w @automia/mobile && npm run build -w @automia/desktop -- --base /desktop/ --outDir ../mobile/dist/desktop && npm install --prefix onboarding && npm run build --prefix onboarding -- --base /desktop/onboarding/ --outDir ../mobile/dist/desktop/onboarding && npm ci --prefix verification-code && npm run build --prefix verification-code -- --base /verification/ --outDir ../mobile/dist/verification",
+    "build:vercel": "npm run build -w @automia/mobile && npm run build -w @automia/desktop -- --base /desktop/ --outDir ../mobile/dist/desktop && npm install --prefix desktop/onboarding && npm run build --prefix desktop/onboarding -- --base /desktop/onboarding/ --outDir ../../mobile/dist/desktop/onboarding && npm install --prefix desktop/login && npm run build --prefix desktop/login -- --base /desktop/login/ --outDir ../../mobile/dist/desktop/login && npm ci --prefix verification-code && npm run build --prefix verification-code -- --base /verification/ --outDir ../mobile/dist/verification",
     "preview:desktop": "npm run preview -w @automia/desktop",
     "preview:mobile": "npm run preview -w @automia/mobile",
     "lint": "npm run lint --workspaces --if-present",
