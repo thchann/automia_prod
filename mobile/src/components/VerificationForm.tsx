@@ -70,7 +70,7 @@ export default function VerificationForm({
       <button
         type="button"
         onClick={onRequestLogin}
-        className="text-sm font-semibold text-accent hover:opacity-80 transition-opacity"
+        className="text-sm font-semibold text-black hover:opacity-80 transition-opacity"
       >
         Continue to login page →
       </button>
