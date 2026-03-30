@@ -13,6 +13,7 @@
     { "source": "/desktop/login", "destination": "/desktop/login/index.html" },
     { "source": "/desktop/login/", "destination": "/desktop/login/index.html" },
     { "source": "/desktop/login/:path*", "destination": "/desktop/login/index.html" },
+    { "source": "/desktop/:path*", "destination": "/desktop/index.html" },
     { "source": "/verification", "destination": "/index.html" },
     { "source": "/verification/", "destination": "/index.html" },
     { "source": "/verification/:path*", "destination": "/index.html" },

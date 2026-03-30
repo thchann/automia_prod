@@ -1,13 +1,22 @@
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { clearAccessToken } from "@/lib/accessAuth";
 
 export function DashboardHeader() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
   const { tx } = useLanguage();
+
+  const handleLogout = () => {
+    clearAccessToken();
+    setOpen(false);
+    navigate("/sign-in", { replace: true });
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -33,6 +42,13 @@ export function DashboardHeader() {
         </button>
         <button className="text-sm font-medium border border-border rounded-full px-4 py-1.5 text-foreground hover:bg-surface-hover transition-colors">
           {tx("Start building", "Empezar")}
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {tx("Log out", "Cerrar sesion")}
         </button>
         <div className="relative" ref={ref}>
           <button
@@ -66,18 +82,25 @@ export function DashboardHeader() {
                 ))}
               </div>
               <div className="border-t border-border pt-2 space-y-1">
-                {[
-                  tx("Terms & policies", "Terminos y politicas"),
-                  tx("Help", "Ayuda"),
-                  tx("Log out", "Cerrar sesion"),
-                ].map((item) => (
-                  <button
-                    key={item}
-                    className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
-                  >
-                    {item}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
+                >
+                  {tx("Terms & policies", "Terminos y politicas")}
+                </button>
+                <button
+                  type="button"
+                  className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
+                >
+                  {tx("Help", "Ayuda")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
+                >
+                  {tx("Log out", "Cerrar sesion")}
+                </button>
               </div>
             </div>
           )}
