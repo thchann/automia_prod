@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { clearAccessToken } from "@/lib/accessAuth";
 import { useLanguage } from "@/i18n/LanguageProvider";
 
 const SETTINGS_TABS = [
@@ -70,17 +72,22 @@ export function SettingsPage() {
 }
 
 function AccountSettingsForm() {
+  const navigate = useNavigate();
   const { tx } = useLanguage();
   const [firstName, setFirstName] = useState("Theodore");
   const [surname, setSurname] = useState("Chan");
   const [email, setEmail] = useState("tchan@trinity.edu");
+
+  const handleLogout = () => {
+    clearAccessToken();
+    navigate("/sign-in", { replace: true });
+  };
 
   return (
     <div className="flex flex-col">
       <SettingsSection
         title={tx("Profile", "Perfil")}
         description={tx("Set your account details", "Configura los datos de tu cuenta")}
-        isLast
       >
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1 space-y-4">
@@ -130,6 +137,25 @@ function AccountSettingsForm() {
             </div>
           </div>
         </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title={tx("Session", "Sesion")}
+        description={tx(
+          "Sign out of Automia on this browser. You will need your access code to sign in again.",
+          "Cierra sesion en este navegador. Necesitaras tu codigo de acceso para volver a entrar.",
+        )}
+        isLast
+      >
+        <Button
+          type="button"
+          variant="outline"
+          className="w-fit rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          {tx("Log out", "Cerrar sesion")}
+        </Button>
       </SettingsSection>
     </div>
   );

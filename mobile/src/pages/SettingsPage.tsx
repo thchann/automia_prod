@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Moon, Sun, User, Globe, LogOut } from "lucide-react";
 import EditProfileSheet from "@/components/EditProfileSheet";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { clearAccessToken } from "@/lib/accessAuth";
 
 const SettingsPage = () => {
+  const navigate = useNavigate();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const { language, setLanguage, tx } = useLanguage();
   const [showProfile, setShowProfile] = useState(false);
@@ -70,7 +73,14 @@ const SettingsPage = () => {
             <div className={`absolute top-1 w-4 h-4 rounded-full bg-card shadow transition-transform ${dark ? "left-5" : "left-1"}`} />
           </div>
         </button>
-        <button className="w-full flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] active:bg-muted/50 transition-all text-destructive">
+        <button
+          type="button"
+          onClick={() => {
+            clearAccessToken();
+            navigate("/login", { replace: true });
+          }}
+          className="w-full flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] active:bg-muted/50 transition-all text-destructive"
+        >
           <LogOut size={18} />
           <span className="text-sm font-medium">{tx("Log Out", "Cerrar sesion")}</span>
         </button>
