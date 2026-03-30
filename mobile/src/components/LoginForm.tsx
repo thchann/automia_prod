@@ -12,8 +12,10 @@ type LoginFormValues = {
 
 export default function LoginForm({
   onLogin,
+  onCreateAccount,
 }: {
   onLogin: (values: LoginFormValues) => Promise<void> | void;
+  onCreateAccount: () => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -145,7 +147,11 @@ export default function LoginForm({
       {/* Bottom link */}
       <p className="text-center text-sm text-muted-foreground mt-4">
         Don't have an account?{" "}
-        <button type="button" className="font-semibold text-accent underline underline-offset-2 hover:opacity-80 transition-opacity">
+        <button
+          type="button"
+          onClick={onCreateAccount}
+          className="font-semibold text-accent underline underline-offset-2 hover:opacity-80 transition-opacity"
+        >
           Create an account
         </button>
       </p>

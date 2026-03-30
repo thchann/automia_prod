@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import AuthToggle from "@/components/AuthToggle";
 import LoginForm from "@/components/LoginForm";
 import VerificationForm from "@/components/VerificationForm";
 
@@ -17,7 +16,6 @@ function safeGetVerified() {
 
 export default function VerificationFlowPage({ initialTab }: { initialTab: VerificationTab }) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<VerificationTab>(initialTab);
   const [isAlreadyVerified] = useState(() => safeGetVerified());
 
   const handleVerified = async () => {
@@ -44,20 +42,19 @@ export default function VerificationFlowPage({ initialTab }: { initialTab: Verif
           <span className="text-3xl font-bold text-black">Automia</span>
         </div>
 
-        <AuthToggle activeTab={activeTab} onTabChange={setActiveTab} />
-
         <div className="w-full">
-          {activeTab === "login" ? (
+          {initialTab === "login" ? (
             <LoginForm
               onLogin={() => {
-                // UI-only: after login, require code entry in the verification tab.
-                setActiveTab("verification");
+                // UI-only: proceed to the mobile app.
+                navigate("/");
               }}
+              onCreateAccount={() => navigate("/verification")}
             />
           ) : (
             <VerificationForm
               onVerify={async () => handleVerified()}
-              onRequestLogin={() => setActiveTab("login")}
+              onRequestLogin={() => navigate("/login")}
             />
           )}
         </div>
