@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = 5;
 
 export default function VerificationForm({
   onVerify,
@@ -12,18 +12,27 @@ export default function VerificationForm({
 }) {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const isFilled = useMemo(() => code.every((d) => d !== ""), [code]);
   const fullCode = useMemo(() => code.join(""), [code]);
 
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const digit = value.slice(-1);
+    const letter = value.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
     setCode((prev) => {
       const next = [...prev];
-      next[index] = digit;
+      next[index] = letter;
       return next;
     });
+    if (letter && index < CODE_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, key: string) => {
+    if (key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -48,13 +57,17 @@ export default function VerificationForm({
         {code.map((digit, i) => (
           <input
             key={i}
+            ref={(el) => {
+              inputRefs.current[i] = el;
+            }}
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             maxLength={1}
             value={digit}
             onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e.key)}
             className="w-16 h-16 rounded-xl border border-border bg-secondary/50 text-center text-2xl font-bold text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            aria-label={`Digit ${i + 1}`}
+            aria-label={`Letter ${i + 1}`}
           />
         ))}
       </div>

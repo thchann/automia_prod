@@ -9,8 +9,6 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 
 const HOME_OWNER_NAME = "Theodore Chan";
 
-const layerTabs = ["Overview", "Recent activity"] as const;
-
 const listItemBaseClass =
   "grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/70";
 
@@ -42,33 +40,6 @@ export function HomeOverview() {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [editCar, setEditCar] = useState<CarType | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
-  const [activeView, setActiveView] = useState<(typeof layerTabs)[number]>("Overview");
-  const featureCards = [
-    {
-      title: tx("Designed for Resellers & Owners", "Disenado para revendedores y propietarios"),
-      description: tx(
-        "A clean workspace for your pipeline with clear layers for creation, management, and optimization.",
-        "Un espacio limpio para tu pipeline con capas claras para crear, gestionar y optimizar.",
-      ),
-      chip: tx("Creators & Teams", "Revendedores y equipos"),
-    },
-    {
-      title: tx("Lead-Driven Decision Support", "Soporte de decisiones guiado por leads"),
-      description: tx(
-        "Surfaced context for faster lead and inventory decisions at a glance.",
-        "Contexto visible para tomar decisiones de leads e inventario mas rapido.",
-      ),
-      chip: tx("Decision support", "Soporte de decisiones"),
-    },
-    {
-      title: tx("Effortless Workflow Management", "Gestion de flujo sin friccion"),
-      description: tx(
-        "Structured sections and consistent card stacks so important updates are easier to track.",
-        "Secciones estructuradas y tarjetas consistentes para seguir mejor las actualizaciones importantes.",
-      ),
-      chip: tx("Workflow", "Flujo de trabajo"),
-    },
-  ];
   const today = now.toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
@@ -93,7 +64,7 @@ export function HomeOverview() {
     .slice(0, 10);
 
   return (
-    <section className="space-y-6 pb-6">
+    <section className="space-y-8 pb-6">
       <div className="rounded-xl border border-border bg-gradient-to-r from-primary/15 via-primary/10 to-transparent px-5 py-4">
         <p className="text-xl font-semibold text-foreground">
           {tx("Welcome back", "Bienvenido de nuevo")}, {HOME_OWNER_NAME}
@@ -101,55 +72,20 @@ export function HomeOverview() {
         <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{today}</p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {layerTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveView(tab)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeView === tab
-                  ? "bg-primary/15 text-foreground"
-                  : "bg-muted/60 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tab === "Overview" ? tx("Overview", "Resumen") : tx("Recent activity", "Actividad reciente")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeView === "Overview" ? (
-        <div className="grid gap-4 xl:grid-cols-3">
-          {featureCards.map((card) => (
-            <article key={card.title} className="rounded-xl border border-border bg-card p-4">
-              <div className="mb-3 h-36 rounded-lg border border-border bg-gradient-to-b from-primary/10 to-primary/5" />
-              <p className="mb-2 text-lg font-semibold text-foreground">{card.title}</p>
-              <p className="text-sm leading-relaxed text-muted-foreground">{card.description}</p>
-              <div className="mt-4 inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {card.chip}
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
-
       <div className="space-y-3">
         <div>
           <p className="text-base font-semibold text-foreground">
-            {tx("Recent activity", "Actividad reciente")}
+            {tx("Recent leads", "Leads recientes")}
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div>
           {recentActivity.map((entry) =>
             entry.type === "car" ? (
               <button
                 key={`car-${entry.id}`}
                 type="button"
-                className={listItemBaseClass}
+                className={`${listItemBaseClass} border-b border-border/70 first:border-t first:border-border/70 last:border-b-0`}
                 onClick={() => setEditCar(entry.item)}
               >
                 <div className="min-w-0">
@@ -184,7 +120,7 @@ export function HomeOverview() {
               <button
                 key={`lead-${entry.id}`}
                 type="button"
-                className={listItemBaseClass}
+                className={`${listItemBaseClass} border-b border-border/70 first:border-t first:border-border/70 last:border-b-0`}
                 onClick={() => setEditLead(entry.item)}
               >
                 <div className="min-w-0">

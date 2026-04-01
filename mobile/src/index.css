@@ -101,6 +101,23 @@
 @layer base {
   * {
     @apply border-border;
+    scrollbar-width: auto;
+    -ms-overflow-style: auto;
+  }
+
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--muted));
   }
 
   body {
@@ -118,12 +135,4 @@
     height: 100%;
   }
 
-  /* Hide scrollbar globally */
-  * {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  *::-webkit-scrollbar {
-    display: none;
-  }
 }
