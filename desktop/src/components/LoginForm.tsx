@@ -150,7 +150,7 @@ export default function LoginForm({
         <button
           type="button"
           onClick={onCreateAccount}
-          className="font-semibold text-accent underline underline-offset-2 hover:opacity-80 transition-opacity"
+          className="font-semibold text-black underline underline-offset-2 hover:opacity-80 transition-opacity"
         >
           Create an account
         </button>

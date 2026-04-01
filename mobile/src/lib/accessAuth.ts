@@ -44,9 +44,9 @@ export function isAccessGranted(): boolean {
 
 /** TODO: replace with POST /auth/verify or equivalent */
 export async function verifyAccessCode(code: string): Promise<{ ok: boolean; token?: string; error?: string }> {
-  const trimmed = code.replace(/\s/g, "");
+  const trimmed = code.replace(/\s/g, "").toUpperCase();
   await new Promise((r) => setTimeout(r, 250));
-  if (trimmed === "1234") {
+  if (trimmed === "ABCDE") {
     const token = `automia.${btoa(JSON.stringify({ v: 1, ts: Date.now(), scope: "mobile" }))}`;
     setAccessToken(token);
     return { ok: true, token };

@@ -175,12 +175,7 @@ function LanguageSettingsPanel() {
         isLast
       >
         <div className="grid gap-4 md:grid-cols-[minmax(180px,220px)_1fr]">
-          <div className="space-y-1">
-            <Label>{tx("Language", "Idioma")}</Label>
-            <p className="text-xs text-muted-foreground">
-              {tx("Apply to all desktop pages", "Aplicar en todas las paginas de desktop")}
-            </p>
-          </div>
+          <div />
           <Select value={language} onValueChange={(value) => setLanguage(value as "en" | "es")}>
             <SelectTrigger className="h-10 rounded-lg">
               <SelectValue placeholder={tx("Select language", "Selecciona idioma")} />
