@@ -1,15 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { createCar, updateCar, type CarCreate } from "@automia/api";
 import DetailSheet from "@/components/DetailSheet";
 import type { Car, CarStatus, OwnerType } from "@/types/models";
-import { CURRENT_USER_ID } from "@/lib/currentUser";
+import { carToUpdatePayload } from "@/lib/apiMappers";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+function attachmentsForApi(att: Car["attachments"]): Car["attachments"] | null {
+  if (!att?.length) return null;
+  const filtered = att.filter((a) => !a.url.startsWith("blob:"));
+  return filtered.length ? filtered : null;
+}
+
 interface AddCarSheetProps {
   open: boolean;
   onClose: () => void;
-  onSave: (car: Car) => void | Promise<void>;
+  onSaved?: () => void | Promise<void>;
   initialCar?: Car | null;
 }
 
@@ -17,7 +24,7 @@ const carTypes = ["sedan", "suv", "sports", "truck", "coupe", "hatchback", "van"
 const ownerTypes: OwnerType[] = ["owned", "client", "advisor"];
 const statuses: CarStatus[] = ["available", "sold"];
 
-const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetProps) => {
+const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetProps) => {
   const { tx } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const MAX_ATTACHMENTS = 10;
@@ -101,29 +108,51 @@ const AddCarSheet = ({ open, onClose, onSave, initialCar = null }: AddCarSheetPr
     a.remove();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!brand.trim() || !model.trim() || !year.trim()) return;
-    const car: Car = {
-      id: initialCar?.id ?? `c-${Date.now()}`,
-      user_id: initialCar?.user_id ?? CURRENT_USER_ID,
-      brand: brand.trim(),
-      model: model.trim(),
-      year: parseInt(year),
-      mileage: mileage ? parseInt(mileage) : null,
-      price: price ? parseFloat(price) : null,
-      desired_price: desiredPrice ? parseFloat(desiredPrice) : null,
-      car_type: carType || null,
-      listed_at: initialCar?.listed_at ?? new Date().toISOString(),
-      owner_type: ownerType,
-      status,
-      attachments: attachments ?? null,
-      created_at: initialCar?.created_at ?? new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    void Promise.resolve(onSave(car)).then(() => {
-      reset();
-      onClose();
-    });
+    const yearNum = parseInt(year, 10);
+    const mileageNum = mileage ? parseInt(mileage, 10) : null;
+    const priceNum = price ? parseFloat(price) : null;
+    const desiredNum = desiredPrice ? parseFloat(desiredPrice) : null;
+    const safeAtt = attachmentsForApi(attachments);
+
+    if (initialCar) {
+      const attForApi = safeAtt ?? attachmentsForApi(initialCar.attachments);
+      const updated: Car = {
+        ...initialCar,
+        brand: brand.trim(),
+        model: model.trim(),
+        year: yearNum,
+        mileage: mileageNum,
+        price: priceNum,
+        desired_price: desiredNum,
+        car_type: carType || null,
+        listed_at: initialCar.listed_at,
+        owner_type: ownerType,
+        status,
+        attachments: attachments ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      await updateCar(initialCar.id, carToUpdatePayload({ ...updated, attachments: attForApi }));
+    } else {
+      const body: CarCreate = {
+        brand: brand.trim(),
+        model: model.trim(),
+        year: yearNum,
+        mileage: mileageNum,
+        price: priceNum,
+        desired_price: desiredNum,
+        car_type: carType || null,
+        listed_at: new Date().toISOString(),
+        owner_type: ownerType,
+        status,
+        attachments: safeAtt,
+      };
+      await createCar(body);
+    }
+    await Promise.resolve(onSaved?.());
+    reset();
+    onClose();
   };
 
   return (

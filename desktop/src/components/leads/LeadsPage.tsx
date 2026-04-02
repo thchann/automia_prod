@@ -1,50 +1,103 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ApiError,
+  createLead,
+  createLeadStatus,
+  deleteLead,
+  listCars,
+  listLeadStatuses,
+  listLeads,
+  updateLead,
+  updateLeadStatus,
+} from "@automia/api";
 import { LeadsTable } from "./LeadsTable";
 import { LeadsFunnel } from "./LeadsFunnel";
-import { mockLeads, defaultStatuses, mockCars } from "@/data/mockLeads";
 import { Lead, LeadStatus } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi, leadToUpdatePayload } from "@/lib/apiMappers";
 
 type Tab = "table" | "funnel" | "coming_soon";
 
 export function LeadsPage() {
   const { tx } = useLanguage();
+  const queryClient = useQueryClient();
+
+  const { data: leadsData } = useQuery({
+    queryKey: ["leads"],
+    queryFn: () => listLeads({ limit: 200 }),
+  });
+  const { data: statusesData } = useQuery({
+    queryKey: ["lead-statuses"],
+    queryFn: () => listLeadStatuses(),
+  });
+  const { data: carsData } = useQuery({
+    queryKey: ["cars"],
+    queryFn: async () => {
+      try {
+        return await listCars();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          return { cars: [] };
+        }
+        throw e;
+      }
+    },
+  });
+
+  const statuses = useMemo(
+    () => statusesData?.statuses.map(mapStatusFromApi) ?? [],
+    [statusesData],
+  );
+
+  const leads = useMemo(() => {
+    if (!leadsData?.leads) return [];
+    return leadsData.leads.map((r) => mapLeadFromApi(r, statuses));
+  }, [leadsData, statuses]);
+
+  const cars = useMemo(
+    () => carsData?.cars.map(mapCarFromApi) ?? [],
+    [carsData],
+  );
+
   const [tab, setTab] = useState<Tab>("table");
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
-  const [statuses, setStatuses] = useState<LeadStatus[]>(defaultStatuses);
 
-  const handleUpdateLead = (updated: Lead) => {
-    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  const handleUpdateLead = async (updated: Lead) => {
+    await updateLead(updated.id, leadToUpdatePayload(updated));
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
-  const handleDeleteLead = (id: string) => {
-    setLeads((prev) => prev.filter((l) => l.id !== id));
+  const handleDeleteLead = async (id: string) => {
+    await deleteLead(id);
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
-  const handleAddLead = () => {
-    const newLead: Lead = {
-      id: `l_${Date.now()}`,
+  const handleAddLead = async (): Promise<Lead> => {
+    const defaultStatus = statuses[0];
+    const created = await createLead({
       lead_type: "pending",
-      source: tx("manual", "manual"),
-      status_id: statuses.find((s) => s.is_default)?.id || statuses[0]?.id || null,
-      car_id: null,
+      source: "manual",
+      platform_sender_id: `manual-${crypto.randomUUID()}`,
+      status_id: defaultStatus?.id ?? undefined,
       name: tx("New Lead", "Nuevo lead"),
-      instagram_handle: null,
-      phone: null,
-      notes: null,
-      created_at: new Date().toISOString(),
-      updated_at: null,
-      desired_budget_min: null,
-      desired_budget_max: null,
-      desired_mileage_max: null,
-      desired_year_min: null,
-      desired_year_max: null,
-      desired_make: null,
-      desired_model: null,
-      desired_car_type: null,
-    };
-    setLeads((prev) => [newLead, ...prev]);
-    return newLead;
+    });
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    return mapLeadFromApi(created, statuses);
+  };
+
+  const handleUpdateStatuses = async (next: LeadStatus[]) => {
+    const prev = statuses;
+    for (const s of next) {
+      const old = prev.find((p) => p.id === s.id);
+      if (!old && s.id.startsWith("s_")) {
+        await createLeadStatus({ name: s.name, display_order: s.display_order });
+        continue;
+      }
+      if (old && old.name !== s.name && !s.id.startsWith("s_")) {
+        await updateLeadStatus(s.id, { name: s.name });
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ["lead-statuses"] });
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -55,7 +108,6 @@ export function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Tabs */}
       <div className="flex items-center gap-0 border-b border-border">
         {tabs.map((t) => (
           <button
@@ -65,8 +117,8 @@ export function LeadsPage() {
               tab === t.key
                 ? "text-foreground"
                 : t.key === "coming_soon"
-                ? "text-muted-foreground cursor-not-allowed"
-                : "text-muted-foreground hover:text-foreground"
+                  ? "text-muted-foreground cursor-not-allowed"
+                  : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
@@ -77,13 +129,12 @@ export function LeadsPage() {
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {tab === "table" && (
           <LeadsTable
             leads={leads}
             statuses={statuses}
-            cars={mockCars}
+            cars={cars}
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
             onAddLead={handleAddLead}
@@ -93,9 +144,9 @@ export function LeadsPage() {
           <LeadsFunnel
             leads={leads}
             statuses={statuses}
-            cars={mockCars}
+            cars={cars}
             onUpdateLead={handleUpdateLead}
-            onUpdateStatuses={setStatuses}
+            onUpdateStatuses={handleUpdateStatuses}
           />
         )}
         {tab === "coming_soon" && (

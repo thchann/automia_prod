@@ -33,10 +33,10 @@ import {
 interface CarsTableProps {
   cars: Car[];
   leads: Lead[];
-  onUpdateCar: (car: Car) => void;
+  onUpdateCar: (car: Car) => void | Promise<void>;
   onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
-  onAddCar: () => Car;
+  onAddCar: () => Car | Promise<Car>;
 }
 
 const PAGE_SIZE = 9;
@@ -236,8 +236,7 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
           <Button
             size="sm"
             onClick={() => {
-              const created = onAddCar();
-              setEditCar(created);
+              void Promise.resolve(onAddCar()).then((created) => setEditCar(created));
             }}
           >
             + {tx("Add Car", "Agregar auto")}

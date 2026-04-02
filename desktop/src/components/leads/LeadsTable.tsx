@@ -36,9 +36,9 @@ interface LeadsTableProps {
   leads: Lead[];
   statuses: LeadStatus[];
   cars: Car[];
-  onUpdateLead: (lead: Lead) => void;
-  onDeleteLead: (id: string) => void;
-  onAddLead: () => Lead;
+  onUpdateLead: (lead: Lead) => void | Promise<void>;
+  onDeleteLead: (id: string) => void | Promise<void>;
+  onAddLead: () => Lead | Promise<Lead>;
 }
 
 const PAGE_SIZE = 9;
@@ -347,9 +347,10 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
                   type="button"
                   className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
                   onClick={() => {
-                    const created = onAddLead();
-                    setEditLead(created);
-                    setShowGenerateMenu(false);
+                    void Promise.resolve(onAddLead()).then((created) => {
+                      setEditLead(created);
+                      setShowGenerateMenu(false);
+                    });
                   }}
                 >
                   {tx("Manual entry", "Entrada manual")}

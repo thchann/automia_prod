@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { mockCars as initialCars } from "@/data/mock";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, listCars } from "@automia/api";
 import type { Car, CarStatus } from "@/types/models";
+import { mapCarFromApi } from "@/lib/apiMappers";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
 import AddCarSheet from "@/components/AddCarSheet";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
@@ -24,8 +26,23 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 
 const CarsPage = () => {
   const { tx, locale } = useLanguage();
+  const queryClient = useQueryClient();
   const fmt = (n: number | null) => (n != null ? `$${n.toLocaleString(locale)}` : "—");
-  const [cars, setCars] = useState<Car[]>(initialCars);
+
+  const { data: carsData } = useQuery({
+    queryKey: ["cars"],
+    queryFn: async () => {
+      try {
+        return await listCars();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          return { cars: [] };
+        }
+        throw e;
+      }
+    },
+  });
+  const cars = useMemo(() => carsData?.cars.map(mapCarFromApi) ?? [], [carsData]);
   const [selected, setSelected] = useState<Car | null>(null);
   const [editingCar, setEditingCar] = useState<Car | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -47,10 +64,6 @@ const CarsPage = () => {
       return true;
     });
   }, [cars, statusFilters, searchQuery, searchColumns]);
-
-  const handleAddCar = (car: Car) => {
-    setCars((prev) => [car, ...prev]);
-  };
 
   const clearFilters = () => {
     setStatusFilters(new Set());
@@ -225,12 +238,8 @@ const CarsPage = () => {
           setShowAdd(false);
           setEditingCar(null);
         }}
-        onSave={(car) => {
-          setCars((prev) => {
-            const exists = prev.some((c) => c.id === car.id);
-            if (exists) return prev.map((c) => (c.id === car.id ? car : c));
-            return [car, ...prev];
-          });
+        onSaved={async () => {
+          await queryClient.invalidateQueries({ queryKey: ["cars"] });
         }}
         initialCar={editingCar}
       />

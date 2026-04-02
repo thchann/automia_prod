@@ -15,7 +15,7 @@ interface LeadEditDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (lead: Lead) => void;
+  onSave: (lead: Lead) => void | Promise<void>;
   statuses: LeadStatus[];
   cars: Car[];
 }
@@ -33,12 +33,13 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
   const leadType = form.lead_type || "pending";
 
   const handleSave = () => {
-    onSave({
-      ...lead,
-      ...form,
-      updated_at: new Date().toISOString(),
-    } as Lead);
-    onOpenChange(false);
+    void Promise.resolve(
+      onSave({
+        ...lead,
+        ...form,
+        updated_at: new Date().toISOString(),
+      } as Lead),
+    ).then(() => onOpenChange(false));
   };
 
   const numOrNull = (v: string) => (v === "" ? null : Number(v));

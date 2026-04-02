@@ -4,6 +4,7 @@ export type OwnerType = "owned" | "client" | "advisor";
 
 export interface Lead {
   id: string;
+  platform_sender_id?: string | null;
   name: string | null;
   lead_type: LeadType;
   source: string;
@@ -28,6 +29,8 @@ export interface Lead {
   desired_car_type: string | null;
   created_at: string;
   updated_at: string | null;
+  /** Populated client-side from statuses list */
+  status?: LeadStatus;
 }
 
 export interface Car {
