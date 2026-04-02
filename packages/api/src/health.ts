@@ -5,7 +5,7 @@ export async function getHealth(): Promise<{ status?: string } | unknown> {
   return apiRequest("/health", { skipAuth: true });
 }
 
-/** GET the public site URL for a simple connectivity check (default https://www.automiacars.com/). */
+/** GET the health URL from getHealthCheckPingUrl() (default Railway /health). */
 export async function pingSiteHealth(): Promise<void> {
   const url = getHealthCheckPingUrl();
   let res: Response;
