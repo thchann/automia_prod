@@ -1,3 +1,18 @@
+/** Public URL for the verification “Test connection” button — not the JSON API base (avoids localhost when VITE_API_URL is unset). */
+const DEFAULT_HEALTH_CHECK_URL = "https://www.automiacars.com/";
+
+export function getHealthCheckPingUrl(): string {
+  const raw = import.meta.env.VITE_HEALTH_CHECK_URL;
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      return new URL(raw.trim()).href;
+    } catch {
+      return DEFAULT_HEALTH_CHECK_URL;
+    }
+  }
+  return DEFAULT_HEALTH_CHECK_URL;
+}
+
 /** Base origin only, no trailing slash. */
 export function getApiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL;

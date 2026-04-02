@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ApiError,
-  getApiBaseUrl,
   getExpectedRegistrationCode,
-  getHealth,
+  getHealthCheckPingUrl,
   normalizeAccessCode,
+  pingSiteHealth,
 } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
 import VerificationForm from "@/components/VerificationForm";
@@ -20,8 +20,8 @@ export default function VerificationPage() {
   const handlePingBackend = async () => {
     setPinging(true);
     try {
-      await getHealth();
-      toast.success("Backend reachable");
+      await pingSiteHealth();
+      toast.success("Site reachable");
     } catch (e) {
       if (e instanceof ApiError) {
         toast.error(e.message || "Request failed");
@@ -68,9 +68,9 @@ export default function VerificationPage() {
             onClick={() => void handlePingBackend()}
             className="w-full rounded-xl border border-border bg-background py-3 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40"
           >
-            {pinging ? "Calling backend…" : "Test backend connection"}
+            {pinging ? "Checking…" : "Test connection"}
           </button>
-          <p className="text-center text-[11px] text-muted-foreground break-all px-1">{getApiBaseUrl()}</p>
+          <p className="text-center text-[11px] text-muted-foreground break-all px-1">{getHealthCheckPingUrl()}</p>
         </div>
       </div>
     </div>
