@@ -16,7 +16,7 @@ export function getHealthCheckPingUrl(): string {
 /** Base origin only, no trailing slash. */
 export function getApiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL;
-  let url = "http://localhost:8000";
+  let url = "https://www.automiacars.com/";
   if (typeof raw === "string" && raw.trim()) {
     url = raw.trim().replace(/\/$/, "");
   }
