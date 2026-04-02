@@ -1,4 +1,10 @@
-export { getApiBaseUrl, getExpectedRegistrationCode, normalizeAccessCode, normalizeApiOriginForBrowser } from "./env";
+export {
+  getApiBaseUrl,
+  getExpectedRegistrationCode,
+  getHealthCheckPingUrl,
+  normalizeAccessCode,
+  normalizeApiOriginForBrowser,
+} from "./env";
 export {
   clearAuthTokens,
   getAccessToken,
