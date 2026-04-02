@@ -3,17 +3,18 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { clearAccessToken } from "@/lib/accessAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function DashboardHeader() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
   const { tx } = useLanguage();
 
   const handleLogout = () => {
-    clearAccessToken();
+    logout();
     setOpen(false);
     navigate("/sign-in", { replace: true });
   };
@@ -55,7 +56,7 @@ export function DashboardHeader() {
             onClick={() => setOpen(!open)}
             className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold"
           >
-            T
+            {(user?.name || "?").charAt(0).toUpperCase()}
           </button>
           {open && (
             <div className="absolute right-0 top-10 w-56 bg-popover border border-border rounded-xl shadow-lg p-4 z-50">

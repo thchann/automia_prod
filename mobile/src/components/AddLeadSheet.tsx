@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createLead, updateLead } from "@automia/api";
 import DetailSheet from "@/components/DetailSheet";
 import type { Lead, LeadStatus, LeadType } from "@/types/models";
 import { useLanguage } from "@/i18n/LanguageProvider";
@@ -6,10 +7,10 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 interface AddLeadSheetProps {
   open: boolean;
   onClose: () => void;
-  onSave: (lead: Lead) => void;
+  onSaved?: () => void | Promise<void>;
   statuses: LeadStatus[];
   initialLead?: Lead | null;
-  onAddStatus?: (name: string) => LeadStatus;
+  onAddStatus?: (name: string) => Promise<LeadStatus> | LeadStatus;
 }
 
 const leadTypes: LeadType[] = ["pending", "buyer", "seller"];
@@ -18,7 +19,7 @@ const sources = ["manual", "instagram"];
 const AddLeadSheet = ({
   open,
   onClose,
-  onSave,
+  onSaved,
   statuses,
   initialLead = null,
   onAddStatus,
@@ -68,30 +69,49 @@ const AddLeadSheet = ({
     setNewStatusName("");
   }, [open, initialLead, statuses]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
-    const lead: Lead = {
-      id: initialLead?.id ?? `l-${Date.now()}`,
-      name: name.trim(),
-      lead_type: leadType,
-      source,
-      instagram_handle: instagram || null,
-      phone: phone || null,
-      notes: notes || null,
-      status_id: statusId || null,
-      car_id: null,
-      desired_budget_min: desiredBudgetMin ? parseFloat(desiredBudgetMin) : null,
-      desired_budget_max: desiredBudgetMax ? parseFloat(desiredBudgetMax) : null,
-      desired_mileage_max: null,
-      desired_year_min: null,
-      desired_year_max: null,
-      desired_make: desiredMake || null,
-      desired_model: desiredModel || null,
-      desired_car_type: desiredCarType || null,
-      created_at: initialLead?.created_at ?? new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    onSave(lead);
+    const budgetMin = desiredBudgetMin ? parseFloat(desiredBudgetMin) : null;
+    const budgetMax = desiredBudgetMax ? parseFloat(desiredBudgetMax) : null;
+    if (initialLead) {
+      await updateLead(initialLead.id, {
+        lead_type: leadType,
+        status_id: statusId || null,
+        car_id: initialLead.car_id ?? null,
+        name: name.trim(),
+        instagram_handle: instagram || null,
+        phone: phone || null,
+        notes: notes || null,
+        desired_budget_min: budgetMin,
+        desired_budget_max: budgetMax,
+        desired_mileage_max: null,
+        desired_year_min: null,
+        desired_year_max: null,
+        desired_make: desiredMake || null,
+        desired_model: desiredModel || null,
+        desired_car_type: desiredCarType || null,
+      });
+    } else {
+      await createLead({
+        lead_type: leadType,
+        source,
+        platform_sender_id: `manual-${crypto.randomUUID()}`,
+        status_id: statusId || undefined,
+        name: name.trim(),
+        instagram_handle: instagram || null,
+        phone: phone || null,
+        notes: notes || null,
+        desired_budget_min: budgetMin,
+        desired_budget_max: budgetMax,
+        desired_mileage_max: null,
+        desired_year_min: null,
+        desired_year_max: null,
+        desired_make: desiredMake || null,
+        desired_model: desiredModel || null,
+        desired_car_type: desiredCarType || null,
+      });
+    }
+    await Promise.resolve(onSaved?.());
     reset();
     onClose();
   };
@@ -99,10 +119,11 @@ const AddLeadSheet = ({
   const handleAddStatus = () => {
     const value = newStatusName.trim();
     if (!value || !onAddStatus) return;
-    const created = onAddStatus(value);
-    setStatusId(created.id);
-    setNewStatusName("");
-    setShowAddStatus(false);
+    void Promise.resolve(onAddStatus(value)).then((created) => {
+      setStatusId(created.id);
+      setNewStatusName("");
+      setShowAddStatus(false);
+    });
   };
 
   return (

@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Trash2 } from "lucide-react";
+import { patchMe } from "@automia/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,9 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { clearAccessToken } from "@/lib/accessAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { toast } from "@/components/ui/sonner";
 
 const SETTINGS_TABS = [
   { key: "account", i18nKey: "settings.tab.account", fallback: "Account" },
@@ -74,13 +76,40 @@ export function SettingsPage() {
 function AccountSettingsForm() {
   const navigate = useNavigate();
   const { tx } = useLanguage();
-  const [firstName, setFirstName] = useState("Theodore");
-  const [surname, setSurname] = useState("Chan");
-  const [email, setEmail] = useState("tchan@trinity.edu");
+  const { user, logout, refreshUser } = useAuth();
+  const [name, setName] = useState("");
+  const [clientDescription, setClientDescription] = useState("");
+  const [website, setWebsite] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setName(user.name);
+    setClientDescription(user.client_description ?? "");
+    setWebsite(user.website ?? "");
+  }, [user]);
 
   const handleLogout = () => {
-    clearAccessToken();
+    logout();
     navigate("/sign-in", { replace: true });
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      await patchMe({
+        name: name.trim(),
+        client_description: clientDescription.trim() || null,
+        website: website.trim() || null,
+      });
+      await refreshUser();
+      toast.success(tx("Saved", "Guardado"));
+    } catch {
+      toast.error(tx("Could not save", "No se pudo guardar"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -91,47 +120,59 @@ function AccountSettingsForm() {
       >
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="settings-first-name">{tx("Name", "Nombre")}</Label>
-                <Input
-                  id="settings-first-name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="h-10 rounded-lg"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-surname">{tx("Surname", "Apellido")}</Label>
-                <Input
-                  id="settings-surname"
-                  value={surname}
-                  onChange={(e) => setSurname(e.target.value)}
-                  className="h-10 rounded-lg"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-name">{tx("Name", "Nombre")}</Label>
+              <Input
+                id="settings-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 rounded-lg"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-email">{tx("Email", "Correo")}</Label>
               <Input
                 id="settings-email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={user?.email ?? ""}
+                readOnly
+                className="h-10 rounded-lg bg-muted/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-bio">{tx("About", "Acerca de")}</Label>
+              <Input
+                id="settings-bio"
+                value={clientDescription}
+                onChange={(e) => setClientDescription(e.target.value)}
                 className="h-10 rounded-lg"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-website">{tx("Website", "Sitio web")}</Label>
+              <Input
+                id="settings-website"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="h-10 rounded-lg"
+              />
+            </div>
+            <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+              {saving ? tx("Saving…", "Guardando…") : tx("Save", "Guardar")}
+            </Button>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-3 lg:items-end lg:pl-4">
             <Avatar className="h-24 w-24 border border-border">
-              <AvatarImage src="" alt="" />
-              <AvatarFallback className="text-lg">TC</AvatarFallback>
+              <AvatarImage src={user?.avatar_url ?? ""} alt="" />
+              <AvatarFallback className="text-lg">
+                {(user?.name || "?").charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" className="rounded-full">
+              <Button type="button" variant="outline" size="sm" className="rounded-full" disabled>
                 {tx("Edit photo", "Editar foto")}
               </Button>
-              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 rounded-md">
+              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 rounded-md" disabled>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>

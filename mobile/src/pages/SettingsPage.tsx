@@ -1,22 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Sun, User, Globe, LogOut } from "lucide-react";
+import { patchMe } from "@automia/api";
 import EditProfileSheet from "@/components/EditProfileSheet";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { clearAccessToken } from "@/lib/accessAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/sonner";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const { user, logout, refreshUser } = useAuth();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const { language, setLanguage, tx } = useLanguage();
   const [showProfile, setShowProfile] = useState(false);
-  const [profile, setProfile] = useState({
-    name: "Steve",
-    email: "steve@carsales.ai",
-    client_description: "Miami-based car advisor specializing in luxury and sports vehicles.",
-    website: "https://stevecars.com",
-    avatar_url: null as string | null,
-  });
 
   useEffect(() => {
     if (dark) {
@@ -25,6 +21,22 @@ const SettingsPage = () => {
       document.documentElement.classList.remove("dark");
     }
   }, [dark]);
+
+  const profileUser = user
+    ? {
+        name: user.name,
+        email: user.email,
+        client_description: user.client_description ?? "",
+        website: user.website ?? "",
+        avatar_url: user.avatar_url,
+      }
+    : {
+        name: "",
+        email: "",
+        client_description: "",
+        website: "",
+        avatar_url: null as string | null,
+      };
 
   return (
     <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
@@ -76,7 +88,7 @@ const SettingsPage = () => {
         <button
           type="button"
           onClick={() => {
-            clearAccessToken();
+            logout();
             navigate("/login", { replace: true });
           }}
           className="w-full flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] active:bg-muted/50 transition-all text-destructive"
@@ -89,8 +101,21 @@ const SettingsPage = () => {
       <EditProfileSheet
         open={showProfile}
         onClose={() => setShowProfile(false)}
-        user={profile}
-        onSave={(updated) => setProfile(updated)}
+        user={profileUser}
+        onSave={async (updated) => {
+          try {
+            await patchMe({
+              name: updated.name,
+              client_description: updated.client_description || null,
+              website: updated.website || null,
+              avatar_url: updated.avatar_url,
+            });
+            await refreshUser();
+            toast.success(tx("Profile saved", "Perfil guardado"));
+          } catch {
+            toast.error(tx("Could not save profile", "No se pudo guardar el perfil"));
+          }
+        }}
       />
     </div>
   );

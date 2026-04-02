@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { mockLeads, mockCars, mockStatuses, mockUser } from "@/data/mock";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, createLeadStatus, listCars, listLeadStatuses, listLeads } from "@automia/api";
 import type { Lead, Car as CarType } from "@/types/models";
 import { TrendingUp, Users, Car, Clock } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import AddLeadSheet from "@/components/AddLeadSheet";
 import AddCarSheet from "@/components/AddCarSheet";
+import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi } from "@/lib/apiMappers";
 
 type Tab = "dashboard" | "cars" | "leads" | "automations" | "settings";
 
@@ -14,9 +17,41 @@ interface DashboardProps {
 
 const Dashboard = ({ onTabChange }: DashboardProps) => {
   const { tx, locale } = useLanguage();
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
-  const [cars, setCars] = useState<CarType[]>(mockCars);
-  const [statuses, setStatuses] = useState(mockStatuses);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: leadsData } = useQuery({
+    queryKey: ["leads"],
+    queryFn: () => listLeads({ limit: 200 }),
+  });
+  const { data: statusesData } = useQuery({
+    queryKey: ["lead-statuses"],
+    queryFn: () => listLeadStatuses(),
+  });
+  const { data: carsData } = useQuery({
+    queryKey: ["cars"],
+    queryFn: async () => {
+      try {
+        return await listCars();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          return { cars: [] };
+        }
+        throw e;
+      }
+    },
+  });
+
+  const statuses = useMemo(
+    () => statusesData?.statuses.map(mapStatusFromApi) ?? [],
+    [statusesData],
+  );
+  const leads = useMemo(() => {
+    if (!leadsData?.leads) return [];
+    return leadsData.leads.map((r) => mapLeadFromApi(r, statuses));
+  }, [leadsData, statuses]);
+  const cars = useMemo(() => carsData?.cars.map(mapCarFromApi) ?? [], [carsData]);
+
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
 
@@ -44,29 +79,30 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
   }, [leads, cars]);
 
   const hour = new Date().getHours();
-  const greeting = hour < 12
-    ? tx("Good morning", "Buenos dias")
-    : hour < 18
-      ? tx("Good afternoon", "Buenas tardes")
-      : tx("Good evening", "Buenas noches");
+  const greeting =
+    hour < 12
+      ? tx("Good morning", "Buenos dias")
+      : hour < 18
+        ? tx("Good afternoon", "Buenas tardes")
+        : tx("Good evening", "Buenas noches");
+
+  const displayName = user?.name?.trim() || tx("there", "hola");
 
   return (
     <div className="px-5 pt-12 pb-24 max-w-[430px] mx-auto animate-fade-in">
-      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight">
             {greeting},
             <br />
-            {mockUser.name}
+            {displayName}
           </h1>
         </div>
         <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-lg font-bold mt-1">
-          {mockUser.name.charAt(0)}
+          {displayName.charAt(0)}
         </div>
       </div>
 
-      {/* Active Leads card */}
       <button
         type="button"
         onClick={() => onTabChange("leads")}
@@ -78,13 +114,18 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
         </div>
         <p className="text-4xl font-extrabold tabular-nums mb-1">{totalLeads}</p>
         <div className="flex gap-4 mt-3">
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-pending/15 text-badge-pending">{pendingLeads} {tx("pending", "pendientes")}</span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-buyer/15 text-badge-buyer">{buyers} {tx("buyers", "compradores")}</span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-seller/15 text-badge-seller">{sellers} {tx("sellers", "vendedores")}</span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-pending/15 text-badge-pending">
+            {pendingLeads} {tx("pending", "pendientes")}
+          </span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-buyer/15 text-badge-buyer">
+            {buyers} {tx("buyers", "compradores")}
+          </span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-seller/15 text-badge-seller">
+            {sellers} {tx("sellers", "vendedores")}
+          </span>
         </div>
       </button>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button type="button" onClick={() => onTabChange("cars")} className="rounded-md border border-border bg-card p-4 text-left">
           <div className="flex items-center justify-between mb-2">
@@ -111,70 +152,74 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
         </button>
       </div>
 
-      {/* Recent activity */}
       <div className="rounded-md border border-border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-muted-foreground font-medium">{tx("Recent activity", "Actividad reciente")}</p>
           <Clock size={14} className="text-muted-foreground" />
         </div>
-        {recentActivity.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            onClick={() => {
-              if (entry.kind === "lead") setEditingLead(entry.item);
-              else setEditingCar(entry.item);
-            }}
-            className="w-full flex items-center justify-between py-2.5 border-b border-border last:border-b-0 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                {entry.kind === "lead"
-                  ? (entry.item.name?.charAt(0) || "?")
-                  : entry.item.brand.charAt(0)}
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
+        {recentActivity.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">{tx("No activity yet", "Sin actividad aun")}</p>
+        ) : (
+          recentActivity.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => {
+                if (entry.kind === "lead") setEditingLead(entry.item);
+                else setEditingCar(entry.item);
+              }}
+              className="w-full flex items-center justify-between py-2.5 border-b border-border last:border-b-0 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
                   {entry.kind === "lead"
-                    ? (entry.item.name || tx("Unknown", "Desconocido"))
-                    : `${entry.item.year} ${entry.item.brand} ${entry.item.model}`}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {entry.kind === "lead"
-                    ? `${tx("Lead", "Lead")} · ${new Date(entry.item.updated_at || entry.item.created_at).toLocaleDateString(locale)}`
-                    : `${tx("Car", "Auto")} · ${new Date(entry.item.updated_at || entry.item.created_at).toLocaleDateString(locale)}`}
-                </p>
+                    ? (entry.item.name?.charAt(0) || "?")
+                    : entry.item.brand.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">
+                    {entry.kind === "lead"
+                      ? (entry.item.name || tx("Unknown", "Desconocido"))
+                      : `${entry.item.year} ${entry.item.brand} ${entry.item.model}`}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {entry.kind === "lead"
+                      ? `${tx("Lead", "Lead")} · ${new Date(entry.item.updated_at || entry.item.created_at).toLocaleDateString(locale)}`
+                      : `${tx("Car", "Auto")} · ${new Date(entry.item.updated_at || entry.item.created_at).toLocaleDateString(locale)}`}
+                  </p>
+                </div>
               </div>
-            </div>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              {entry.kind === "lead" ? tx("Lead", "Lead") : tx("Car", "Auto")}
-            </span>
-          </button>
-        ))}
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {entry.kind === "lead" ? tx("Lead", "Lead") : tx("Car", "Auto")}
+              </span>
+            </button>
+          ))
+        )}
       </div>
 
       <AddLeadSheet
         open={!!editingLead}
         onClose={() => setEditingLead(null)}
-        onSave={(lead) => setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)))}
+        onSaved={async () => {
+          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+        }}
         statuses={statuses}
         initialLead={editingLead}
-        onAddStatus={(name) => {
-          const next = {
-            id: `s_${Date.now()}`,
+        onAddStatus={async (name) => {
+          const created = await createLeadStatus({
             name,
             display_order: statuses.length,
-            color: null,
-            is_default: false,
-          };
-          setStatuses((prev) => [...prev, next]);
-          return next;
+          });
+          await queryClient.invalidateQueries({ queryKey: ["lead-statuses"] });
+          return mapStatusFromApi(created);
         }}
       />
       <AddCarSheet
         open={!!editingCar}
         onClose={() => setEditingCar(null)}
-        onSave={(car) => setCars((prev) => prev.map((c) => (c.id === car.id ? car : c)))}
+        onSaved={async () => {
+          await queryClient.invalidateQueries({ queryKey: ["cars"] });
+        }}
         initialCar={editingCar}
       />
     </div>

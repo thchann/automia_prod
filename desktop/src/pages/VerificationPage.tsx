@@ -1,18 +1,53 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import {
+  ApiError,
+  getApiBaseUrl,
+  getExpectedRegistrationCode,
+  getHealth,
+  normalizeAccessCode,
+} from "@automia/api";
+import { toast } from "@/components/ui/sonner";
 import VerificationForm from "@/components/VerificationForm";
-import { getAccessToken, verifyAccessCode } from "@/lib/accessAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { setRegistrationAccessGranted } from "@/lib/registrationAccess";
 
 export default function VerificationPage() {
   const navigate = useNavigate();
-  const [alreadyVerified] = useState(() => Boolean(getAccessToken()));
+  const { user, isLoading } = useAuth();
+  const [pinging, setPinging] = useState(false);
+
+  const handlePingBackend = async () => {
+    setPinging(true);
+    try {
+      await getHealth();
+      toast.success("Backend reachable");
+    } catch (e) {
+      if (e instanceof ApiError) {
+        toast.error(e.message || "Request failed");
+      } else {
+        toast.error("Could not reach backend");
+      }
+    } finally {
+      setPinging(false);
+    }
+  };
 
   useEffect(() => {
-    if (alreadyVerified) navigate("/dashboard", { replace: true });
-  }, [alreadyVerified, navigate]);
+    if (!isLoading && user) navigate("/dashboard", { replace: true });
+  }, [user, isLoading, navigate]);
 
-  if (alreadyVerified) return null;
+  if (isLoading) return null;
+  if (user) return null;
+
+  const handleVerify = async (code: string) => {
+    if (normalizeAccessCode(code) !== getExpectedRegistrationCode()) {
+      toast.error("Invalid access code");
+      return;
+    }
+    setRegistrationAccessGranted();
+    navigate("/register", { replace: true });
+  };
 
   return (
     <div className="flex min-h-screen bg-background items-center justify-center px-6 py-4">
@@ -22,12 +57,21 @@ export default function VerificationPage() {
           <span className="text-3xl font-bold text-black">Automia</span>
         </div>
         <VerificationForm
-          onVerify={async (code) => {
-            const { ok } = await verifyAccessCode(code);
-            if (ok) navigate("/dashboard", { replace: true });
-          }}
+          onVerify={handleVerify}
+          onBack={() => navigate("/sign-in")}
           onRequestLogin={() => navigate("/sign-in")}
         />
+        <div className="flex w-full flex-col gap-2 pt-2">
+          <button
+            type="button"
+            disabled={pinging}
+            onClick={() => void handlePingBackend()}
+            className="w-full rounded-xl border border-border bg-background py-3 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40"
+          >
+            {pinging ? "Calling backend…" : "Test backend connection"}
+          </button>
+          <p className="text-center text-[11px] text-muted-foreground break-all px-1">{getApiBaseUrl()}</p>
+        </div>
       </div>
     </div>
   );

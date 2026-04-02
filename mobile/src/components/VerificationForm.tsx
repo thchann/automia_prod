@@ -6,9 +6,11 @@ const CODE_LENGTH = 5;
 export default function VerificationForm({
   onVerify,
   onRequestLogin,
+  onBack,
 }: {
   onVerify: (code: string) => Promise<void> | void;
   onRequestLogin?: () => void;
+  onBack?: () => void;
 }) {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +82,16 @@ export default function VerificationForm({
         {isSubmitting ? "Verifying…" : "Continue →"}
       </button>
 
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back to sign in
+        </button>
+      ) : null}
+
       {onRequestLogin ? (
         <button
           type="button"
@@ -92,4 +104,3 @@ export default function VerificationForm({
     </form>
   );
 }
-

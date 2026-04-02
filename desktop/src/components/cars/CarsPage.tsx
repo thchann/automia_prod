@@ -1,31 +1,61 @@
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ApiError,
+  createCar,
+  deleteCar,
+  listCars,
+  listLeads,
+  updateCar,
+  updateLead,
+  type CarCreate,
+} from "@automia/api";
 import { CarsTable } from "./CarsTable";
-import { mockCars, mockLeads } from "@/data/mockLeads";
 import { Car, Lead } from "@/types/leads";
-import { CURRENT_USER_ID } from "@/lib/currentUser";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { mapCarFromApi, mapLeadFromApi, carToUpdatePayload, leadToUpdatePayload } from "@/lib/apiMappers";
 
 export function CarsPage() {
-  const [cars, setCars] = useState<Car[]>(mockCars);
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const { tx } = useLanguage();
+  const queryClient = useQueryClient();
 
-  const handleUpdateCar = (updated: Car) => {
-    setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  const { data: carsData } = useQuery({
+    queryKey: ["cars"],
+    queryFn: async () => {
+      try {
+        return await listCars();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          return { cars: [] };
+        }
+        throw e;
+      }
+    },
+  });
+  const { data: leadsData } = useQuery({
+    queryKey: ["leads"],
+    queryFn: () => listLeads({ limit: 200 }),
+  });
+
+  const cars = carsData?.cars.map(mapCarFromApi) ?? [];
+  const leads = leadsData?.leads.map((r) => mapLeadFromApi(r)) ?? [];
+
+  const handleUpdateCar = async (updated: Car) => {
+    await updateCar(updated.id, carToUpdatePayload(updated));
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 
-  const handleDeleteCar = (id: string) => {
-    setCars((prev) => prev.filter((c) => c.id !== id));
+  const handleDeleteCar = async (id: string) => {
+    await deleteCar(id);
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 
-  const handleUpdateLead = (updated: Lead) => {
-    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  const handleUpdateLead = async (updated: Lead) => {
+    await updateLead(updated.id, leadToUpdatePayload(updated));
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
-  const handleAddCar = () => {
-    const newCar: Car = {
-      id: `c_${Date.now()}`,
-      user_id: CURRENT_USER_ID,
+  const handleAddCar = async (): Promise<Car> => {
+    const body: CarCreate = {
       brand: tx("New", "Nuevo"),
       model: tx("Car", "Auto"),
       year: new Date().getFullYear(),
@@ -33,15 +63,14 @@ export function CarsPage() {
       price: 0,
       desired_price: null,
       car_type: "sedan",
-      listed_at: null,
+      listed_at: new Date().toISOString(),
       owner_type: "owned",
       status: "available",
       attachments: null,
-      created_at: new Date().toISOString(),
-      updated_at: null,
     };
-    setCars((prev) => [newCar, ...prev]);
-    return newCar;
+    const created = await createCar(body);
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
+    return mapCarFromApi(created);
   };
 
   return (

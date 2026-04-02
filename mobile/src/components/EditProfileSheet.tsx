@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DetailSheet from "@/components/DetailSheet";
 import { Camera } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageProvider";
@@ -7,7 +7,7 @@ interface EditProfileSheetProps {
   open: boolean;
   onClose: () => void;
   user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null };
-  onSave: (user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null }) => void;
+  onSave: (user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null }) => void | Promise<void>;
 }
 
 const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps) => {
@@ -17,6 +17,15 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
   const [description, setDescription] = useState(user.client_description);
   const [website, setWebsite] = useState(user.website);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar_url);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(user.name);
+    setEmail(user.email);
+    setDescription(user.client_description);
+    setWebsite(user.website);
+    setAvatarPreview(user.avatar_url);
+  }, [open, user]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,8 +37,9 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
   };
 
   const handleSave = () => {
-    onSave({ name, email, client_description: description, website, avatar_url: avatarPreview });
-    onClose();
+    void Promise.resolve(onSave({ name, email, client_description: description, website, avatar_url: avatarPreview })).then(
+      () => onClose(),
+    );
   };
 
   return (
@@ -54,7 +64,16 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
         </div>
 
         <Field label={tx("Name", "Nombre")} value={name} onChange={setName} placeholder={tx("Your name", "Tu nombre")} />
-        <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" type="email" />
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+          <input
+            type="email"
+            value={email}
+            readOnly
+            disabled
+            className="w-full bg-muted/60 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground cursor-not-allowed"
+          />
+        </div>
 
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">{tx("Bio / Description", "Bio / Descripcion")}</label>

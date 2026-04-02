@@ -12,7 +12,7 @@ interface CarEditDialogProps {
   car: Car | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (car: Car) => void;
+  onSave: (car: Car) => void | Promise<void>;
 }
 
 export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialogProps) {
@@ -77,9 +77,9 @@ export function CarEditDialog({ car, open, onOpenChange, onSave }: CarEditDialog
   };
 
   const handleSave = () => {
-    // Override attachments with local state so “remove all” correctly sends `null` to backend.
-    onSave({ ...car, ...form, attachments } as Car);
-    onOpenChange(false);
+    void Promise.resolve(
+      onSave({ ...car, ...form, attachments } as Car),
+    ).then(() => onOpenChange(false));
   };
 
   const listedAtInputValue = form.listed_at

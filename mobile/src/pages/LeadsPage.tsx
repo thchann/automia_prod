@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { mockLeads as initialLeads, mockStatuses, mockCars } from "@/data/mock";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, createLeadStatus, listCars, listLeadStatuses, listLeads } from "@automia/api";
 import type { Lead, LeadStatus, LeadType } from "@/types/models";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
 import AddLeadSheet from "@/components/AddLeadSheet";
@@ -16,12 +17,45 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronRight, Plus } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi } from "@/lib/apiMappers";
 
 const LeadsPage = () => {
   const { tx, locale } = useLanguage();
+  const queryClient = useQueryClient();
   const fmt = (n: number | null) => (n != null ? `$${n.toLocaleString(locale)}` : "—");
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [statuses, setStatuses] = useState<LeadStatus[]>(mockStatuses);
+
+  const { data: leadsData } = useQuery({
+    queryKey: ["leads"],
+    queryFn: () => listLeads({ limit: 200 }),
+  });
+  const { data: statusesData } = useQuery({
+    queryKey: ["lead-statuses"],
+    queryFn: () => listLeadStatuses(),
+  });
+  const { data: carsData } = useQuery({
+    queryKey: ["cars"],
+    queryFn: async () => {
+      try {
+        return await listCars();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          return { cars: [] };
+        }
+        throw e;
+      }
+    },
+  });
+
+  const statuses = useMemo(
+    () => statusesData?.statuses.map(mapStatusFromApi) ?? [],
+    [statusesData],
+  );
+  const leads = useMemo(() => {
+    if (!leadsData?.leads) return [];
+    return leadsData.leads.map((r) => mapLeadFromApi(r, statuses));
+  }, [leadsData, statuses]);
+  const cars = useMemo(() => carsData?.cars.map(mapCarFromApi) ?? [], [carsData]);
+
   const [selected, setSelected] = useState<Lead | null>(null);
   const [showMatches, setShowMatches] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -53,7 +87,7 @@ const LeadsPage = () => {
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
-        const car = mockCars.find((c) => c.id === lead.car_id);
+        const car = cars.find((c) => c.id === lead.car_id);
         const hay = buildLeadSearchHaystackForColumns(
           lead,
           car,
@@ -64,7 +98,7 @@ const LeadsPage = () => {
       }
       return true;
     });
-  }, [leads, statusFilterIds, leadTypeFilters, searchQuery, searchColumns, statuses]);
+  }, [leads, statusFilterIds, leadTypeFilters, searchQuery, searchColumns, statuses, cars]);
 
   const clearFilters = () => {
     setStatusFilterIds(new Set());
@@ -102,8 +136,8 @@ const LeadsPage = () => {
     return `https://instagram.com/${normalized}`;
   };
   const matchedCars = useMemo(
-    () => (selected && selected.lead_type === "buyer" ? matchLeadToCars(selected, mockCars) : []),
-    [selected],
+    () => (selected && selected.lead_type === "buyer" ? matchLeadToCars(selected, cars) : []),
+    [selected, cars],
   );
 
   return (
@@ -366,25 +400,18 @@ const LeadsPage = () => {
           setShowAdd(false);
           setEditingLead(null);
         }}
-        onSave={(lead) => {
-          setLeads((prev) => {
-            const exists = prev.some((l) => l.id === lead.id);
-            if (exists) return prev.map((l) => (l.id === lead.id ? lead : l));
-            return [lead, ...prev];
-          });
+        onSaved={async () => {
+          await queryClient.invalidateQueries({ queryKey: ["leads"] });
         }}
         statuses={statuses}
         initialLead={editingLead}
-        onAddStatus={(name) => {
-          const next: LeadStatus = {
-            id: `s_${Date.now()}`,
+        onAddStatus={async (name) => {
+          const created = await createLeadStatus({
             name,
             display_order: statuses.length,
-            color: null,
-            is_default: false,
-          };
-          setStatuses((prev) => [...prev, next]);
-          return next;
+          });
+          await queryClient.invalidateQueries({ queryKey: ["lead-statuses"] });
+          return mapStatusFromApi(created);
         }}
       />
     </div>

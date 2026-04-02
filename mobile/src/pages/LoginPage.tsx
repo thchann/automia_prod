@@ -2,28 +2,42 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import LoginForm from "@/components/LoginForm";
-import { getAccessToken } from "@/lib/accessAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@automia/api";
 
-/** Public login screen (email/password UI). Entry with access code remains on `/verification`. */
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [alreadyAuthed] = useState(() => Boolean(getAccessToken()));
+  const { login, user, isLoading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (alreadyAuthed) navigate("/dashboard", { replace: true });
-  }, [alreadyAuthed, navigate]);
+    if (!isLoading && user) navigate("/dashboard", { replace: true });
+  }, [user, isLoading, navigate]);
 
-  if (alreadyAuthed) return null;
+  if (isLoading || user) return null;
 
   return (
     <div className="flex min-h-screen bg-background items-center justify-center px-6 py-4">
-      <div className="w-full max-w-md flex flex-col items-center gap-4 -translate-y-4">
+      <div className="flex w-full max-w-md flex-col items-center gap-4 -translate-y-4">
         <div className="flex items-center gap-3">
           <img src="/automia-logo.png" alt="Automia logo" className="h-10 w-10 object-contain" />
           <span className="text-3xl font-bold text-black">Automia</span>
         </div>
+        {error ? <p className="w-full text-center text-sm text-destructive">{error}</p> : null}
         <LoginForm
-          onLogin={() => navigate("/verification")}
+          onLogin={async ({ email, password }) => {
+            setError(null);
+            try {
+              await login(email.trim(), password);
+              navigate("/dashboard", { replace: true });
+            } catch (e) {
+              if (e instanceof ApiError) {
+                setError(typeof e.detail === "string" ? e.detail : e.message);
+              } else {
+                setError("Login failed");
+              }
+            }
+          }}
           onCreateAccount={() => navigate("/verification")}
         />
       </div>
