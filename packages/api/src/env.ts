@@ -1,5 +1,5 @@
-/** Public URL for the verification “Test connection” button — not the JSON API base (avoids localhost when VITE_API_URL is unset). */
-const DEFAULT_HEALTH_CHECK_URL = "https://www.automiacars.com/";
+/** Default GET target for the verification “Test connection” button (Railway API /health). Override with VITE_HEALTH_CHECK_URL. */
+const DEFAULT_HEALTH_CHECK_URL = "https://main-backend-production-5ce9.up.railway.app/health";
 
 export function getHealthCheckPingUrl(): string {
   const raw = import.meta.env.VITE_HEALTH_CHECK_URL;
