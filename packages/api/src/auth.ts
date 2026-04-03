@@ -1,6 +1,12 @@
 import { apiRequest } from "./client";
 import { clearAuthTokens, setAuthTokens } from "./tokens";
-import type { AccessCodeValidateResponse, TokenResponse, UserMeResponse, UserProfilePatch } from "./types";
+import type {
+  AccessCodeValidateResponse,
+  RegisterRequestBody,
+  TokenResponse,
+  UserMeResponse,
+  UserProfilePatch,
+} from "./types";
 
 export async function login(body: { email: string; password: string }): Promise<TokenResponse> {
   const data = await apiRequest<TokenResponse>("/auth/login", {
@@ -20,12 +26,7 @@ export async function validateAccessCode(body: { access_code: string }): Promise
   });
 }
 
-export async function register(body: {
-  name: string;
-  email: string;
-  password: string;
-  access_code: string;
-}): Promise<TokenResponse> {
+export async function register(body: RegisterRequestBody): Promise<TokenResponse> {
   const data = await apiRequest<TokenResponse>("/auth/register", {
     method: "POST",
     body: JSON.stringify(body),

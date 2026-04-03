@@ -7,6 +7,14 @@ export interface TokenResponse {
   token_type?: string;
 }
 
+/** JSON body for POST /auth/register — matches FastAPI `RegisterRequest`. */
+export interface RegisterRequestBody {
+  name: string;
+  email: string;
+  password: string;
+  access_code: string;
+}
+
 export interface AccessCodeValidateResponse {
   valid: boolean;
 }
