@@ -7,6 +7,10 @@ export interface TokenResponse {
   token_type?: string;
 }
 
+export interface AccessCodeValidateResponse {
+  valid: boolean;
+}
+
 export interface UserMeResponse {
   id: string;
   name: string;

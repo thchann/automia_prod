@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ApiError,
-  getExpectedRegistrationCode,
-  getHealthCheckPingUrl,
-  normalizeAccessCode,
-  pingSiteHealth,
-} from "@automia/api";
+import { ApiError, getHealthCheckPingUrl, pingSiteHealth, validateAccessCode } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
 import VerificationForm from "@/components/VerificationForm";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,12 +35,17 @@ export default function VerificationPage() {
   if (user) return null;
 
   const handleVerify = async (code: string) => {
-    if (normalizeAccessCode(code) !== getExpectedRegistrationCode()) {
-      toast.error("Invalid access code");
-      return;
+    try {
+      await validateAccessCode({ access_code: code });
+      setRegistrationAccessGranted(code);
+      navigate("/register", { replace: true });
+    } catch (e) {
+      if (e instanceof ApiError) {
+        toast.error(e.message || "Invalid access code");
+      } else {
+        toast.error("Could not verify access code");
+      }
     }
-    setRegistrationAccessGranted();
-    navigate("/register", { replace: true });
   };
 
   return (

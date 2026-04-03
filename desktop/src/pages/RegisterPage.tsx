@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   clearRegistrationAccessGranted,
+  getPendingRegistrationAccessCode,
   hasRegistrationAccess,
 } from "@/lib/registrationAccess";
 
@@ -32,12 +33,13 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!hasRegistrationAccess() || !name.trim() || !email.trim() || password.length < 8) return;
+    const accessCode = getPendingRegistrationAccessCode();
+    if (!hasRegistrationAccess() || !accessCode || !name.trim() || !email.trim() || password.length < 8) return;
     setSubmitting(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), email.trim(), password, accessCode);
       clearRegistrationAccessGranted();
-      navigate("/dashboard", { replace: true });
+      navigate("/setup-website", { replace: true });
     } catch (e) {
       if (e instanceof ApiError) {
         toast.error(typeof e.detail === "string" ? e.detail : e.message);

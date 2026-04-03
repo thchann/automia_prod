@@ -11,6 +11,7 @@ import LandingRedirect from "./pages/LandingRedirect.tsx";
 import VerificationPage from "./pages/VerificationPage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
+import SetupWebsitePage from "./pages/SetupWebsitePage.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -32,6 +33,14 @@ const App = () => (
                 <Route path="/verification" element={<VerificationPage />} />
                 <Route path="/sign-in" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route
+                  path="/setup-website"
+                  element={
+                    <ProtectedRoute>
+                      <SetupWebsitePage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/dashboard"
                   element={

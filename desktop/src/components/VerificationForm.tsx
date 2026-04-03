@@ -1,7 +1,5 @@
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
-
-const CODE_LENGTH = 5;
+import { useState } from "react";
 
 export default function VerificationForm({
   onVerify,
@@ -12,37 +10,16 @@ export default function VerificationForm({
   onRequestLogin?: () => void;
   onBack?: () => void;
 }) {
-  const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-
-  const isFilled = useMemo(() => code.every((d) => d !== ""), [code]);
-  const fullCode = useMemo(() => code.join(""), [code]);
-
-  const handleChange = (index: number, value: string) => {
-    const letter = value.replace(/[^a-zA-Z]/g, "").slice(-1).toUpperCase();
-    setCode((prev) => {
-      const next = [...prev];
-      next[index] = letter;
-      return next;
-    });
-    if (letter && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, key: string) => {
-    if (key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isFilled || isSubmitting) return;
+    const trimmed = code.trim();
+    if (!trimmed || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onVerify(fullCode);
+      await onVerify(trimmed);
     } finally {
       setIsSubmitting(false);
     }
@@ -55,28 +32,24 @@ export default function VerificationForm({
         <p className="text-sm text-muted-foreground text-center mt-1">Enter your access code to continue</p>
       </div>
 
-      <div className="flex gap-3 justify-center">
-        {code.map((digit, i) => (
-          <input
-            key={i}
-            ref={(el) => {
-              inputRefs.current[i] = el;
-            }}
-            type="text"
-            inputMode="text"
-            maxLength={1}
-            value={digit}
-            onChange={(e) => handleChange(i, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(i, e.key)}
-            className="w-16 h-16 rounded-xl border border-border bg-secondary/50 text-center text-2xl font-bold text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            aria-label={`Letter ${i + 1}`}
-          />
-        ))}
+      <div className="w-full">
+        <input
+          type="text"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={255}
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="e.g. AUTM-XXXX-001"
+          className="w-full rounded-xl border border-border bg-secondary/50 px-4 py-3.5 text-center text-base font-semibold tracking-wide text-foreground outline-none placeholder:text-muted-foreground placeholder:font-normal focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          aria-label="Access code"
+        />
       </div>
 
       <button
         type="submit"
-        disabled={!isFilled || isSubmitting}
+        disabled={!code.trim() || isSubmitting}
         className="w-full rounded-xl bg-primary py-4 text-primary-foreground font-semibold text-base hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {isSubmitting ? "Verifying…" : "Continue →"}
