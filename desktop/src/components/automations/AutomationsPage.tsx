@@ -1,9 +1,9 @@
 import { ExternalLink, Instagram } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  getInstagramAuthorizeUrl,
   listAutomations,
   listAutomationTypes,
+  startInstagramOAuth,
   updateAutomation,
 } from "@automia/api";
 import type { AutomationItem, AutomationTypeItem } from "@automia/api";
@@ -36,8 +36,7 @@ export function AutomationsPage() {
 
   const connectInstagram = async () => {
     try {
-      const { url } = await getInstagramAuthorizeUrl();
-      window.location.href = url;
+      await startInstagramOAuth();
     } catch {
       toast.error(tx("Could not start Instagram connection", "No se pudo conectar Instagram"));
     }
