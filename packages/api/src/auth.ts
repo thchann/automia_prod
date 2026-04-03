@@ -2,6 +2,7 @@ import { apiRequest } from "./client";
 import { clearAuthTokens, setAuthTokens } from "./tokens";
 import type {
   AccessCodeValidateResponse,
+  ProfileUpdateRequest,
   RegisterRequestBody,
   TokenResponse,
   UserMeResponse,
@@ -50,6 +51,13 @@ export async function fetchMe(): Promise<UserMeResponse> {
 
 export async function patchMe(body: UserProfilePatch): Promise<UserMeResponse> {
   return apiRequest<UserMeResponse>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function patchProfile(body: ProfileUpdateRequest): Promise<UserMeResponse> {
+  return apiRequest<UserMeResponse>("/auth/profile", {
     method: "PATCH",
     body: JSON.stringify(body),
   });

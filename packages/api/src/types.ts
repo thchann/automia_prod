@@ -36,6 +36,12 @@ export interface UserProfilePatch {
   avatar_url?: string | null;
 }
 
+/** Body for PATCH /auth/profile — matches FastAPI `ProfileUpdateRequest`. */
+export interface ProfileUpdateRequest {
+  client_description?: string | null;
+  website?: string | null;
+}
+
 export interface LeadResponse {
   id: string;
   user_id: string;
