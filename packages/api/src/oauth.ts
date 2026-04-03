@@ -51,9 +51,11 @@ export type StartInstagramOAuthOptions = {
 };
 
 /**
- * Instagram connect: prefer **JSON** (`Accept: application/json`) so we get `authorize_url` in the
- * body — cross-origin `fetch` often **cannot** read `Location` on a 302, which left popups on `about:blank`.
- * Fallback: `redirect: manual` + `Location` when the API only returns 302.
+ * Instagram OAuth: **always** use `redirect: "manual"` on fetch.
+ * If the API returns 302 to Instagram and fetch *follows* (default), the browser loads Instagram
+ * *inside* fetch → CORS error. We only assign the Instagram URL to `popup.location.href` (real navigation).
+ *
+ * Flow: one request with Bearer + `Accept: application/json` → 200 JSON `authorize_url`, or 302 + `Location`.
  */
 export async function startInstagramOAuth(options?: StartInstagramOAuthOptions): Promise<void> {
   const accessToken = getAccessToken();
@@ -66,20 +68,20 @@ export async function startInstagramOAuth(options?: StartInstagramOAuthOptions):
       : null;
 
   const apiBase = getApiBaseUrl();
-  const authHeaders = { Authorization: `Bearer ${accessToken}` };
 
-  // 1) Preferred: 200 JSON { authorize_url } (backend must honor Accept: application/json)
-  const resJson = await fetch(joinBasePath(apiBase, OAUTH_INSTAGRAM_AUTHORIZE), {
+  const res = await fetch(joinBasePath(apiBase, OAUTH_INSTAGRAM_AUTHORIZE), {
     headers: {
-      ...authHeaders,
+      Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
     },
+    redirect: "manual",
   });
 
-  const ct = resJson.headers.get("content-type") || "";
-  if (resJson.ok && ct.includes("application/json")) {
+  const ct = res.headers.get("content-type") || "";
+
+  if (res.ok && ct.includes("application/json")) {
     try {
-      const data = (await resJson.json()) as OAuthAuthorizeUrlResponse & { url?: string };
+      const data = (await res.json()) as OAuthAuthorizeUrlResponse & { url?: string };
       const target = data.authorize_url ?? data.url;
       if (target?.trim()) {
         navigateToInstagram(target, w);
@@ -93,19 +95,10 @@ export async function startInstagramOAuth(options?: StartInstagramOAuthOptions):
     return;
   }
 
-  // 2) Fallback: 302 + Location (only works if API exposes Location to CORS)
-  const resRedirect = await fetch(joinBasePath(apiBase, OAUTH_INSTAGRAM_AUTHORIZE), {
-    headers: authHeaders,
-    redirect: "manual",
-  });
-
   const isRedirect =
-    resRedirect.status === 301 ||
-    resRedirect.status === 302 ||
-    resRedirect.status === 307 ||
-    resRedirect.status === 308;
+    res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308;
   if (isRedirect) {
-    const loc = resRedirect.headers.get("Location");
+    const loc = res.headers.get("Location");
     if (loc) {
       navigateToInstagram(resolveLocation(loc, apiBase), w);
       return;
