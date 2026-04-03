@@ -215,5 +215,5 @@ export interface AutomationConfigUpdateRequest {
 }
 
 export interface OAuthAuthorizeUrlResponse {
-  url: string;
+  authorize_url: string;
 }
