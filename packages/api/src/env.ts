@@ -1,6 +1,9 @@
 /** Default GET target for the verification “Test connection” button (Railway API /health). Override with VITE_HEALTH_CHECK_URL. */
 const DEFAULT_HEALTH_CHECK_URL = "https://main-backend-production-5ce9.up.railway.app/health";
 
+/** Default API origin when VITE_API_URL / VITE_API_BASE_URL are unset (e.g. production deploy without env injection). */
+const DEFAULT_API_BASE_URL = "https://main-backend-production-5ce9.up.railway.app";
+
 export function getHealthCheckPingUrl(): string {
   const raw = import.meta.env.VITE_HEALTH_CHECK_URL;
   if (typeof raw === "string" && raw.trim()) {
@@ -16,7 +19,7 @@ export function getHealthCheckPingUrl(): string {
 /** Base origin only, no trailing slash. */
 export function getApiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL;
-  let url = "https://www.automiacars.com/";
+  let url = DEFAULT_API_BASE_URL;
   if (typeof raw === "string" && raw.trim()) {
     url = raw.trim().replace(/\/$/, "");
   }
