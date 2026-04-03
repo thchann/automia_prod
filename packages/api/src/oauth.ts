@@ -8,7 +8,6 @@ export async function startInstagramOAuth() {
   const res = await fetch(
     `${getApiBaseUrl().replace(/\/$/, "")}/oauth/instagram/authorize`,
     {
-      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -19,11 +18,35 @@ export async function startInstagramOAuth() {
     throw new Error("Failed to get Instagram authorization URL");
   }
 
-  const data = await res.json();
+  const { authorization_url } = await res.json();
 
-  if (!data.authorization_url) {
+  if (!authorization_url) {
     throw new Error("No authorization URL returned");
   }
 
-  window.location.href = data.authorization_url;
+  // 📦 Open popup
+  const width = 500;
+  const height = 700;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+
+  const popup = window.open(
+    authorization_url,
+    "instagram_oauth",
+    `width=${width},height=${height},left=${left},top=${top}`
+  );
+
+  if (!popup) {
+    throw new Error("Popup blocked");
+  }
+
+  // 👀 Detect when popup closes
+  return new Promise<void>((resolve, reject) => {
+    const interval = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 500);
+  });
 }
