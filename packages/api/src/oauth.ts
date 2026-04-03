@@ -1,7 +1,7 @@
-import { ApiError } from "./client";
+import { ApiError, apiRequest } from "./client";
 import { getApiBaseUrl } from "./env";
 import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from "./tokens";
-import type { TokenResponse } from "./types";
+import type { OAuthAuthorizeUrlResponse, TokenResponse } from "./types";
 
 function joinUrl(base: string, path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -40,7 +40,7 @@ async function fetchInstagramAuthorizeResponse(accessToken: string): Promise<Res
   return fetch(joinUrl(base, "/oauth/instagram/authorize"), {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
-    redirect: "manual",
+    redirect: "follow",
   });
 }
 
@@ -52,10 +52,21 @@ function resolveRedirectTarget(location: string, apiBase: string): string {
   }
 }
 
+async function navigateViaAuthorizeUrlJson(): Promise<void> {
+  const { url } = await apiRequest<OAuthAuthorizeUrlResponse>("/oauth/instagram/authorize-url");
+  if (!url?.trim()) {
+    throw new Error("Missing Instagram authorize URL");
+  }
+  if (typeof globalThis !== "undefined" && "location" in globalThis && globalThis.location) {
+    globalThis.location.assign(url.trim());
+  }
+}
+
 /**
  * Authenticated GET /oauth/instagram/authorize (302 → Instagram).
- * Uses fetch with redirect: "manual" so the browser can read `Location` and navigate.
- * Backend CORS must expose the `Location` header (see CORSMiddleware expose_headers).
+ * Uses fetch with redirect: "manual" when `Location` is readable.
+ * Falls back to GET /oauth/instagram/authorize-url (JSON) if the redirect route is missing (404),
+ * or if `Location` is hidden by CORS without expose_headers.
  */
 export async function startInstagramOAuth(): Promise<void> {
   let token = getAccessToken();
@@ -83,9 +94,13 @@ export async function startInstagramOAuth(): Promise<void> {
         return;
       }
     }
-    throw new Error(
-      "Instagram OAuth redirect missing Location header. Ensure the API exposes Location in CORS (expose_headers).",
-    );
+    await navigateViaAuthorizeUrlJson();
+    return;
+  }
+
+  if (res.status === 404) {
+    await navigateViaAuthorizeUrlJson();
+    return;
   }
 
   if (!res.ok) {
