@@ -61,8 +61,12 @@ export function DashboardHeader() {
           {open && (
             <div className="absolute right-0 top-10 w-56 bg-popover border border-border rounded-xl shadow-lg p-4 z-50">
               <div className="mb-1">
-                <div className="text-sm font-semibold text-foreground">Theodore Chan</div>
-                <div className="text-xs text-muted-foreground">tchan@trinity.edu</div>
+                <div className="text-sm font-semibold text-foreground truncate" title={user?.name}>
+                  {user?.name ?? "—"}
+                </div>
+                <div className="text-xs text-muted-foreground truncate" title={user?.email}>
+                  {user?.email ?? "—"}
+                </div>
               </div>
               {/* Theme toggle */}
               <div className="flex items-center gap-0 bg-surface rounded-full p-1 my-3 w-fit">

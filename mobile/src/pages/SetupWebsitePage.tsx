@@ -14,6 +14,11 @@ export default function SetupWebsitePage() {
   const [clientDescription, setClientDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const goToDashboardAfterProfile = async () => {
+    await refreshUser();
+    navigate("/dashboard", { replace: true });
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const w = website.trim();
@@ -28,8 +33,23 @@ export default function SetupWebsitePage() {
         ...(w ? { website: w } : {}),
         ...(d ? { client_description: d } : {}),
       });
-      await refreshUser();
-      navigate("/dashboard", { replace: true });
+      await goToDashboardAfterProfile();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        toast.error(typeof e.detail === "string" ? e.detail : e.message);
+      } else {
+        toast.error("Could not save your profile");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    setSubmitting(true);
+    try {
+      await patchProfile({ website: null, client_description: null });
+      await goToDashboardAfterProfile();
     } catch (e) {
       if (e instanceof ApiError) {
         toast.error(typeof e.detail === "string" ? e.detail : e.message);
@@ -85,8 +105,9 @@ export default function SetupWebsitePage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate("/dashboard", { replace: true })}
-            className="text-center text-sm text-muted-foreground"
+            disabled={submitting}
+            onClick={() => void handleSkip()}
+            className="text-center text-sm text-muted-foreground disabled:opacity-40"
           >
             Skip for now
           </button>
