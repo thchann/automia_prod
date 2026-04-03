@@ -1,35 +1,48 @@
 import { getApiBaseUrl } from "./env";
 import { getAccessToken } from "./tokens";
 
-const OAUTH_INSTAGRAM_AUTHORIZE_URL = "/oauth/instagram/authorize-url";
+const OAUTH_INSTAGRAM_AUTHORIZE = "/oauth/instagram/authorize";
 
 function joinBasePath(base: string, path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${base.replace(/\/$/, "")}${p}`;
 }
 
+function resolveLocation(location: string, apiBase: string): string {
+  try {
+    return new URL(location.trim(), apiBase).href;
+  } catch {
+    return location.trim();
+  }
+}
+
 /**
- * Connect Instagram: GET authorize-url with Bearer → JSON → full-page navigation.
+ * Connect Instagram: GET /oauth/instagram/authorize with Bearer + redirect: manual.
+ * On 302, read Location and send the user there (full page). Backend unchanged.
  */
 export async function startInstagramOAuth(): Promise<void> {
   const accessToken = getAccessToken();
-  if (!accessToken) throw new Error("Not authenticated");
+  if (!accessToken) return;
 
-  const res = await fetch(joinBasePath(getApiBaseUrl(), OAUTH_INSTAGRAM_AUTHORIZE_URL), {
+  const apiBase = getApiBaseUrl();
+  const res = await fetch(joinBasePath(apiBase, OAUTH_INSTAGRAM_AUTHORIZE), {
     headers: { Authorization: `Bearer ${accessToken}` },
+    redirect: "manual",
   });
 
-  if (!res.ok) {
-    throw new Error(`Instagram connect failed (${res.status})`);
+  const isRedirect =
+    res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308;
+  if (isRedirect) {
+    const loc = res.headers.get("Location");
+    if (loc && typeof globalThis !== "undefined" && "location" in globalThis && globalThis.location) {
+      globalThis.location.href = resolveLocation(loc, apiBase);
+      return;
+    }
   }
 
-  const data = (await res.json()) as { authorize_url?: string; url?: string };
-  const authorizeUrl = data.authorize_url ?? data.url; // url: older API responses
-  if (!authorizeUrl?.trim()) {
-    throw new Error("Missing authorize_url in response");
+  if (res.type === "opaqueredirect" || res.status === 0) {
+    return;
   }
 
-  if (typeof globalThis !== "undefined" && "location" in globalThis && globalThis.location) {
-    globalThis.location.href = authorizeUrl.trim();
-  }
+  if (!res.ok) return;
 }
