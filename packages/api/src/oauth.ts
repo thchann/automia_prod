@@ -6,6 +6,20 @@ const OAUTH_INSTAGRAM_AUTHORIZE = "/oauth/instagram/authorize";
 
 const TAG = "[Instagram OAuth]";
 
+/** Why `startInstagramOAuth` did not navigate to Instagram. */
+export type InstagramOAuthFailureReason =
+  | "no_token"
+  | "fetch_failed"
+  | "not_json"
+  | "no_authorize_url"
+  | "redirect_no_location"
+  | "opaque_redirect"
+  | "http_error";
+
+export type InstagramOAuthResult =
+  | { ok: true }
+  | { ok: false; reason: InstagramOAuthFailureReason; detail?: string };
+
 function oauthDebugEnabled(): boolean {
   return (
     Boolean(import.meta.env?.DEV) ||
@@ -22,21 +36,24 @@ function dlog(...args: unknown[]): void {
   }
 }
 
-function dwarn(...args: unknown[]): void {
+/** Always visible in console (production too) so failures are not silent. */
+function fail(reason: InstagramOAuthFailureReason, detail?: string): InstagramOAuthResult {
+  const msg = detail ? `${reason}: ${detail}` : reason;
+  console.warn(TAG, msg);
   if (oauthDebugEnabled()) {
-    console.warn(TAG, ...args);
+    console.warn(TAG, "(verbose logs: set localStorage automia_debug_oauth=1 or VITE_DEBUG_OAUTH=true)");
   }
+  return { ok: false, reason, detail };
 }
 
 /**
  * Instagram OAuth: open Meta login in this tab.
  * `redirect: "manual"` — if the API returns 302 to Instagram, fetch must not follow (CORS).
  */
-export async function startInstagramOAuth(): Promise<void> {
+export async function startInstagramOAuth(): Promise<InstagramOAuthResult> {
   const accessToken = getAccessToken();
   if (!accessToken || typeof window === "undefined") {
-    dwarn("aborted: no access token or not in browser");
-    return;
+    return fail("no_token");
   }
 
   const apiBase = getApiBaseUrl().replace(/\/$/, "");
@@ -54,8 +71,7 @@ export async function startInstagramOAuth(): Promise<void> {
       redirect: "manual",
     });
   } catch (e) {
-    dwarn("fetch failed (network / blocked?)", e);
-    return;
+    return fail("fetch_failed", e instanceof Error ? e.message : String(e));
   }
 
   const ct = res.headers.get("content-type") ?? "";
@@ -79,17 +95,18 @@ export async function startInstagramOAuth(): Promise<void> {
       try {
         data = JSON.parse(text) as { authorize_url?: string; url?: string };
       } catch {
-        dwarn("200 but body is not JSON (first 200 chars)", text.slice(0, 200));
-        return;
+        if (oauthDebugEnabled()) {
+          console.warn(TAG, "200 but body is not JSON (first 200 chars)", text.slice(0, 200));
+        }
+        return fail("not_json", text.slice(0, 120));
       }
       dlog("JSON keys", Object.keys(data));
       target = data.authorize_url ?? data.url ?? null;
       if (!target?.trim()) {
-        dwarn("JSON missing authorize_url / url", data);
+        return fail("no_authorize_url");
       }
     } catch (e) {
-      dwarn("failed to read response body", e);
-      return;
+      return fail("fetch_failed", e instanceof Error ? e.message : String(e));
     }
   } else if ([301, 302, 307, 308].includes(res.status)) {
     if (locationHeader) {
@@ -100,29 +117,25 @@ export async function startInstagramOAuth(): Promise<void> {
       }
       dlog("using Location from redirect", target);
     } else {
-      dwarn(
-        "redirect status but no Location header readable (cross-origin fetch often hides Location unless Access-Control-Expose-Headers includes Location, or response may be opaque)",
-        { status: res.status, type: res.type },
-      );
+      return fail("redirect_no_location", `status=${res.status} type=${res.type}`);
     }
   } else if (res.status === 0 || res.type === "opaqueredirect") {
-    dwarn(
-      "opaque redirect (status 0 / opaqueredirect): browser will not expose redirect URL to JS — backend should return 200 JSON { authorize_url } instead of 302 for this flow",
-      { type: res.type, status: res.status },
-    );
+    return fail("opaque_redirect", `type=${res.type}`);
   } else {
+    let preview = "";
     try {
-      const errText = await res.clone().text();
-      dwarn("unexpected status", { status: res.status, bodyPreview: errText.slice(0, 300) });
+      preview = (await res.clone().text()).slice(0, 200);
     } catch {
-      dwarn("unexpected status", res.status);
+      /* ignore */
     }
+    return fail("http_error", `${res.status} ${preview}`);
   }
 
   if (target?.trim()) {
     dlog("navigating", target.trim());
     window.location.href = target.trim();
-  } else {
-    dwarn("no navigation URL — fix backend JSON or CORS+Expose-Headers for Location");
+    return { ok: true };
   }
+
+  return fail("no_authorize_url");
 }
