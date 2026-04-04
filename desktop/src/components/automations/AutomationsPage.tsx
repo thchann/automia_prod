@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { ExternalLink, Instagram } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,7 +12,6 @@ import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
 
 function findAutomationForType(
   automations: AutomationItem[],
@@ -20,9 +20,12 @@ function findAutomationForType(
   return automations.find((a) => a.automation_type_id === typeId);
 }
 
+type AutomationsTab = "all" | "connected";
+
 export function AutomationsPage() {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<AutomationsTab>("all");
 
   const { data: typesData, isLoading: loadingTypes } = useQuery({
     queryKey: ["automation-types"],
@@ -35,6 +38,16 @@ export function AutomationsPage() {
 
   const types = typesData?.types ?? [];
   const automations = automationsData?.automations ?? [];
+
+  const visibleTypes = useMemo(() => {
+    if (tab !== "connected") return types;
+    return types.filter((t) => findAutomationForType(automations, t.id));
+  }, [tab, types, automations]);
+
+  const tabs: { key: AutomationsTab; label: string }[] = [
+    { key: "all", label: tx("All", "Todas") },
+    { key: "connected", label: tx("Connected", "Conectadas") },
+  ];
 
   const instagramOAuthMessage = (reason: InstagramOAuthFailureReason): string => {
     const m: Record<InstagramOAuthFailureReason, [string, string]> = {
@@ -61,10 +74,10 @@ export function AutomationsPage() {
     }
   };
 
-  const setAutomationStatus = async (row: AutomationItem, status: "active" | "paused") => {
-    if (row.status === status) return;
+  const toggleAutomation = async (row: AutomationItem) => {
+    const next = row.status === "active" ? "paused" : "active";
     try {
-      await updateAutomation(row.id, { status });
+      await updateAutomation(row.id, { status: next });
       await queryClient.invalidateQueries({ queryKey: ["automations"] });
     } catch {
       toast.error(tx("Update failed", "Error al actualizar"));
@@ -72,105 +85,111 @@ export function AutomationsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-6 py-3 text-[20px] font-semibold leading-8">
-        <span className="text-foreground">{tx("Automations", "Automatizaciones")}</span>
-      </header>
+    <div className="flex h-full min-h-0 flex-col gap-4 text-foreground">
+      <div className="flex items-center gap-0 border-b border-border shrink-0">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+            {tab === t.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        ))}
+      </div>
 
-      <div className="flex-1 min-h-0 px-6 pt-8 pb-5">
-        <div className="h-[calc(100vh-190px)] overflow-y-scroll pr-1">
-          {loadingTypes || loadingAuto ? (
-            <p className="text-sm text-muted-foreground">{tx("Loading…", "Cargando…")}</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {types.map((t: AutomationTypeItem) => {
-                const conn = findAutomationForType(automations, t.id);
-                const isIg = t.platform === "instagram";
-                const isActive = Boolean(conn && conn.status === "active");
-                return (
-                  <div
-                    key={t.id}
-                    className="h-[186px] rounded-xl border border-border bg-card p-4 shadow-sm"
-                  >
-                    <div className="flex h-full flex-col">
-                      <div className="mb-3 flex items-center justify-between pr-1">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
-                          {isIg ? (
-                            <Instagram className="h-4 w-4 text-[#E1306C]" />
-                          ) : (
-                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">{t.name}</div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {t.description ?? t.code}
-                        </p>
-                      </div>
-                      <div className="mt-auto flex h-8 items-center justify-between pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        {loadingTypes || loadingAuto ? (
+          <p className="text-sm text-muted-foreground">{tx("Loading…", "Cargando…")}</p>
+        ) : visibleTypes.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8">
+            {tab === "connected"
+              ? tx("No connected automations yet.", "Aun no hay automatizaciones conectadas.")
+              : tx("No automations available.", "No hay automatizaciones disponibles.")}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 pb-4">
+            {visibleTypes.map((t: AutomationTypeItem) => {
+              const conn = findAutomationForType(automations, t.id);
+              const isIg = t.platform === "instagram";
+              const isActive = Boolean(conn && conn.status === "active");
+              return (
+                <div
+                  key={t.id}
+                  className="h-[186px] rounded-xl border border-border bg-card p-4 shadow-sm"
+                >
+                  <div className="flex h-full flex-col">
+                    <div className="mb-3 flex items-center justify-between pr-1">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
                         {isIg ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-full px-4"
-                            onClick={() => void connectInstagram()}
-                            disabled={!t.is_active}
-                            title={
-                              !t.is_active
-                                ? tx(
-                                    "This automation is not available yet.",
-                                    "Esta automatización aún no está disponible.",
-                                  )
-                                : undefined
-                            }
-                          >
-                            {conn ? tx("Reconnect", "Reconectar") : tx("Connect", "Conectar")}
-                          </Button>
+                          <Instagram className="h-4 w-4 text-[#E1306C]" />
                         ) : (
-                          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-4" disabled>
-                            {tx("Soon", "Pronto")}
-                          </Button>
-                        )}
-                        {conn ? (
-                          <div
-                            className="grid w-[9.5rem] shrink-0 grid-cols-2 rounded-md border border-border p-1"
-                            role="group"
-                            aria-label={tx("Automation status", "Estado de automatizacion")}
-                          >
-                            <button
-                              type="button"
-                              className={cn(
-                                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                                isActive ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                              )}
-                              onClick={() => void setAutomationStatus(conn, "active")}
-                            >
-                              {tx("Active", "Activo")}
-                            </button>
-                            <button
-                              type="button"
-                              className={cn(
-                                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                                !isActive ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                              )}
-                              onClick={() => void setAutomationStatus(conn, "paused")}
-                            >
-                              {tx("Paused", "Pausado")}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
                     </div>
+                    <div>
+                      <div className="font-semibold">{t.name}</div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {t.description ?? t.code}
+                      </p>
+                    </div>
+                    <div className="mt-auto flex h-8 items-center justify-between pr-1">
+                      {isIg ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-full px-4"
+                          onClick={() => void connectInstagram()}
+                          disabled={!t.is_active}
+                          title={
+                            !t.is_active
+                              ? tx(
+                                  "This automation is not available yet.",
+                                  "Esta automatización aún no está disponible.",
+                                )
+                              : undefined
+                          }
+                        >
+                          {conn ? tx("Reconnect", "Reconectar") : tx("Connect", "Conectar")}
+                        </Button>
+                      ) : (
+                        <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-4" disabled>
+                          {tx("Soon", "Pronto")}
+                        </Button>
+                      )}
+                      {conn ? (
+                        <button
+                          type="button"
+                          aria-label={isActive ? tx("Active", "Activo") : tx("Paused", "Pausado")}
+                          onClick={() => void toggleAutomation(conn)}
+                          className={`relative h-6 w-10 shrink-0 overflow-hidden rounded-full transition-colors ${
+                            isActive ? "bg-primary" : "bg-muted"
+                          }`}
+                        >
+                          <span
+                            className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                              isActive ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
