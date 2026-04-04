@@ -17,7 +17,7 @@ import { Lead, LeadStatus } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi, leadToUpdatePayload } from "@/lib/apiMappers";
 
-type Tab = "table" | "funnel" | "coming_soon";
+type Tab = "table" | "funnel";
 
 export function LeadsPage() {
   const { tx } = useLanguage();
@@ -103,7 +103,6 @@ export function LeadsPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "table", label: tx("Table", "Tabla") },
     { key: "funnel", label: tx("Funnel", "Embudo") },
-    { key: "coming_soon", label: tx("Coming soon", "Proximamente") },
   ];
 
   return (
@@ -112,13 +111,9 @@ export function LeadsPage() {
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => t.key !== "coming_soon" && setTab(t.key)}
+            onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              tab === t.key
-                ? "text-foreground"
-                : t.key === "coming_soon"
-                  ? "text-muted-foreground cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground"
+              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
@@ -148,11 +143,6 @@ export function LeadsPage() {
             onUpdateLead={handleUpdateLead}
             onUpdateStatuses={handleUpdateStatuses}
           />
-        )}
-        {tab === "coming_soon" && (
-          <div className="flex items-center justify-center h-64 text-muted-foreground">
-            {tx("Coming soon", "Proximamente")}
-          </div>
         )}
       </div>
     </div>

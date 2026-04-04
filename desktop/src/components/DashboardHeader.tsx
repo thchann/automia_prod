@@ -35,22 +35,9 @@ export function DashboardHeader() {
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          {tx("Coming soon", "Proximamente")}
-        </button>
-        <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <span className="text-sm font-medium text-foreground">
           {tx("Dashboard", "Panel")}
-        </button>
-        <button className="text-sm font-medium border border-border rounded-full px-4 py-1.5 text-foreground hover:bg-surface-hover transition-colors">
-          {tx("Start building", "Empezar")}
-        </button>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {tx("Log out", "Cerrar sesion")}
-        </button>
+        </span>
         <div className="relative" ref={ref}>
           <button
             onClick={() => setOpen(!open)}
