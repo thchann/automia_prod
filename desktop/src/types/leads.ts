@@ -61,6 +61,8 @@ export interface Lead {
   desired_make: string | null;
   desired_model: string | null;
   desired_car_type: string | null;
+  /** Lead files (same shape as car attachments; persisted when API supports it). */
+  attachments?: CarAttachment[] | null;
   // joined
   status?: LeadStatus;
   car?: Car;

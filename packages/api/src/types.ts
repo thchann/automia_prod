@@ -64,6 +64,7 @@ export interface LeadResponse {
   desired_make: string | null;
   desired_model: string | null;
   desired_car_type: string | null;
+  attachments?: CarAttachmentsJson | null;
 }
 
 export interface LeadsListResponse {
@@ -106,6 +107,7 @@ export interface LeadUpdate {
   desired_make?: string | null;
   desired_model?: string | null;
   desired_car_type?: string | null;
+  attachments?: CarAttachmentsJson | null;
 }
 
 export interface LeadStatusResponse {

@@ -74,6 +74,9 @@ export function mapLeadFromApi(
     desired_make: r.desired_make,
     desired_model: r.desired_model,
     desired_car_type: r.desired_car_type,
+    ...(r.attachments !== undefined && r.attachments !== null
+      ? { attachments: r.attachments as Lead["attachments"] }
+      : {}),
     status,
   };
 }
@@ -95,7 +98,7 @@ export function carToUpdatePayload(car: Car): CarUpdate {
 }
 
 export function leadToUpdatePayload(lead: Lead): LeadUpdate {
-  return {
+  const payload: LeadUpdate = {
     lead_type: lead.lead_type,
     status_id: lead.status_id,
     car_id: lead.car_id,
@@ -112,4 +115,8 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
     desired_model: lead.desired_model,
     desired_car_type: lead.desired_car_type,
   };
+  if (lead.attachments !== undefined) {
+    payload.attachments = lead.attachments as LeadUpdate["attachments"];
+  }
+  return payload;
 }
