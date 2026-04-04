@@ -352,58 +352,54 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
               </p>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
-              <div className="w-1/2 max-w-full min-w-0 mx-auto shrink-0">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      fileInputRef.current?.click();
-                    }
-                  }}
-                  onDragEnter={(e) => {
+              <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setFileDropActive(true);
+                    fileInputRef.current?.click();
+                  }
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setFileDropActive(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDropActive(false);
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={onFilesDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={[
+                  "flex flex-1 min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 transition-colors",
+                  fileDropActive ? "border-primary bg-primary/5" : "border-border bg-background/80 hover:bg-background",
+                ].join(" ")}
+              >
+                <Upload className="h-8 w-8 text-muted-foreground mb-2" aria-hidden />
+                <p className="text-sm font-medium text-foreground">{tx("Drop files to attach", "Suelta archivos para adjuntar")}</p>
+                <p className="text-xs text-muted-foreground mt-1 text-center">
+                  {tx("or click to browse", "o haz clic para buscar")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {attachmentList.length}/{MAX_ATTACHMENTS}
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="*/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFilesSelected(e.target.files);
+                    e.currentTarget.value = "";
                   }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDropActive(false);
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={onFilesDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={[
-                    "flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 transition-colors",
-                    fileDropActive ? "border-primary bg-primary/5" : "border-border bg-background/80 hover:bg-background",
-                  ].join(" ")}
-                >
-                  <Upload className="h-7 w-7 text-muted-foreground mb-1.5" aria-hidden />
-                  <p className="text-sm font-medium text-foreground text-center">
-                    {tx("Drop files to attach", "Suelta archivos para adjuntar")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 text-center px-1">
-                    {tx("or click to browse", "o haz clic para buscar")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    {attachmentList.length}/{MAX_ATTACHMENTS}
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="*/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      handleFilesSelected(e.target.files);
-                      e.currentTarget.value = "";
-                    }}
-                  />
-                </div>
+                />
               </div>
 
               {attachmentList.length > 0 && (
-                <div className="space-y-2 w-full min-w-0">
+                <div className="space-y-2">
                   {attachmentList.map((att, idx) => (
                     <div
                       key={`${att.url}-${idx}`}

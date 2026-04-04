@@ -11,6 +11,7 @@ import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
 function findAutomationForType(
   automations: AutomationItem[],
@@ -60,10 +61,10 @@ export function AutomationsPage() {
     }
   };
 
-  const toggleAutomation = async (row: AutomationItem) => {
-    const next = row.status === "active" ? "paused" : "active";
+  const setAutomationStatus = async (row: AutomationItem, status: "active" | "paused") => {
+    if (row.status === status) return;
     try {
-      await updateAutomation(row.id, { status: next });
+      await updateAutomation(row.id, { status });
       await queryClient.invalidateQueries({ queryKey: ["automations"] });
     } catch {
       toast.error(tx("Update failed", "Error al actualizar"));
@@ -85,7 +86,7 @@ export function AutomationsPage() {
               {types.map((t: AutomationTypeItem) => {
                 const conn = findAutomationForType(automations, t.id);
                 const isIg = t.platform === "instagram";
-                const isConnected = Boolean(conn && conn.status === "active");
+                const isActive = Boolean(conn && conn.status === "active");
                 return (
                   <div
                     key={t.id}
@@ -133,20 +134,32 @@ export function AutomationsPage() {
                           </Button>
                         )}
                         {conn ? (
-                          <button
-                            type="button"
-                            aria-label={isConnected ? "Connected" : "Paused"}
-                            onClick={() => void toggleAutomation(conn)}
-                            className={`relative h-6 w-10 overflow-hidden rounded-full transition-colors ${
-                              isConnected ? "bg-primary" : "bg-muted"
-                            }`}
+                          <div
+                            className="grid w-[9.5rem] shrink-0 grid-cols-2 rounded-md border border-border p-1"
+                            role="group"
+                            aria-label={tx("Automation status", "Estado de automatizacion")}
                           >
-                            <span
-                              className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-                                isConnected ? "translate-x-4" : "translate-x-0"
-                              }`}
-                            />
-                          </button>
+                            <button
+                              type="button"
+                              className={cn(
+                                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                                isActive ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                              )}
+                              onClick={() => void setAutomationStatus(conn, "active")}
+                            >
+                              {tx("Active", "Activo")}
+                            </button>
+                            <button
+                              type="button"
+                              className={cn(
+                                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                                !isActive ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+                              )}
+                              onClick={() => void setAutomationStatus(conn, "paused")}
+                            >
+                              {tx("Paused", "Pausado")}
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
