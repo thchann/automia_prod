@@ -1,8 +1,9 @@
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 import type {
   AutomationConfigUpdateRequest,
   AutomationItem,
   AutomationListResponse,
+  AutomationMessagesListResponse,
   AutomationTypesListResponse,
   AutomationUpdateRequest,
 } from "./types";
@@ -17,6 +18,18 @@ export async function listAutomations(): Promise<AutomationListResponse> {
 
 export async function getAutomation(id: string): Promise<AutomationItem> {
   return apiRequest<AutomationItem>(`/automations/${id}`);
+}
+
+/** Message history for an automation. Returns an empty list if the server has no such route yet. */
+export async function listAutomationMessages(automationId: string): Promise<AutomationMessagesListResponse> {
+  try {
+    return await apiRequest<AutomationMessagesListResponse>(`/automations/${automationId}/messages`);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 501)) {
+      return { messages: [] };
+    }
+    throw e;
+  }
 }
 
 export async function updateAutomation(id: string, body: AutomationUpdateRequest): Promise<AutomationItem> {

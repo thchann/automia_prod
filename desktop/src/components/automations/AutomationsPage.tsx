@@ -12,6 +12,7 @@ import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
+import { AutomationManageDialog } from "./AutomationManageDialog";
 
 function findAutomationForType(
   automations: AutomationItem[],
@@ -26,6 +27,10 @@ export function AutomationsPage() {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<AutomationsTab>("all");
+  const [manageTarget, setManageTarget] = useState<{
+    type: AutomationTypeItem;
+    automation: AutomationItem;
+  } | null>(null);
 
   const { data: typesData, isLoading: loadingTypes } = useQuery({
     queryKey: ["automation-types"],
@@ -119,6 +124,51 @@ export function AutomationsPage() {
               const conn = findAutomationForType(automations, t.id);
               const isIg = t.platform === "instagram";
               const isActive = Boolean(conn && conn.status === "active");
+              const isAllTab = tab === "all";
+
+              const primaryAction = (() => {
+                if (isAllTab && conn) {
+                  return (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full px-4"
+                      onClick={() => setManageTarget({ type: t, automation: conn })}
+                    >
+                      {tx("Manage", "Gestionar")}
+                    </Button>
+                  );
+                }
+                if (!isIg) {
+                  return (
+                    <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-4" disabled>
+                      {tx("Soon", "Pronto")}
+                    </Button>
+                  );
+                }
+                return (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-full px-4"
+                    onClick={() => void connectInstagram()}
+                    disabled={!t.is_active}
+                    title={
+                      !t.is_active
+                        ? tx(
+                            "This automation is not available yet.",
+                            "Esta automatización aún no está disponible.",
+                          )
+                        : undefined
+                    }
+                  >
+                    {conn ? tx("Reconnect", "Reconectar") : tx("Connect", "Conectar")}
+                  </Button>
+                );
+              })();
+
               return (
                 <div
                   key={t.id}
@@ -141,31 +191,10 @@ export function AutomationsPage() {
                       </p>
                     </div>
                     <div className="mt-auto flex h-8 items-center justify-between pr-1">
-                      {isIg ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-full px-4"
-                          onClick={() => void connectInstagram()}
-                          disabled={!t.is_active}
-                          title={
-                            !t.is_active
-                              ? tx(
-                                  "This automation is not available yet.",
-                                  "Esta automatización aún no está disponible.",
-                                )
-                              : undefined
-                          }
-                        >
-                          {conn ? tx("Reconnect", "Reconectar") : tx("Connect", "Conectar")}
-                        </Button>
-                      ) : (
-                        <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-4" disabled>
-                          {tx("Soon", "Pronto")}
-                        </Button>
-                      )}
-                      {conn ? (
+                      {primaryAction}
+                      {isAllTab ? (
+                        <span className="inline-block h-6 w-10 shrink-0" aria-hidden />
+                      ) : conn ? (
                         <button
                           type="button"
                           aria-label={isActive ? tx("Active", "Activo") : tx("Paused", "Pausado")}
@@ -191,6 +220,16 @@ export function AutomationsPage() {
           </div>
         )}
       </div>
+
+      {manageTarget ? (
+        <AutomationManageDialog
+          open
+          onOpenChange={(open) => !open && setManageTarget(null)}
+          typeItem={manageTarget.type}
+          automation={manageTarget.automation}
+          onReconnectInstagram={() => void connectInstagram()}
+        />
+      ) : null}
     </div>
   );
 }

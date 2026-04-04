@@ -208,6 +208,18 @@ export interface AutomationListResponse {
   automations: AutomationItem[];
 }
 
+/** Log line / DM sent by an automation (when API exposes `/automations/:id/messages`). */
+export interface AutomationMessageItem {
+  id: string;
+  body: string | null;
+  direction: string | null;
+  created_at: string;
+}
+
+export interface AutomationMessagesListResponse {
+  messages: AutomationMessageItem[];
+}
+
 export interface AutomationUpdateRequest {
   status: string;
 }
