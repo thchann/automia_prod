@@ -12,7 +12,7 @@ import { getAutomation, listAutomationMessages, updateAutomation } from "@automi
 import type { AutomationItem, AutomationMessageItem, AutomationTypeItem } from "@automia/api";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
-import { ChevronDown, FileText } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -128,7 +128,7 @@ export function AutomationManageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-none gap-0 p-0 sm:max-w-[min(1180px,calc(100vw-1.5rem))] overflow-hidden">
+      <DialogContent className="flex flex-col max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-none gap-0 p-0 sm:max-w-[min(960px,calc(100vw-1.5rem))] overflow-hidden">
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
             <DialogTitle className="text-left">
@@ -137,7 +137,7 @@ export function AutomationManageDialog({
           </DialogHeader>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-2 md:divide-x md:divide-y-0">
           {/* Column 1 — details + controls */}
           <div className="flex min-h-[280px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
@@ -192,25 +192,7 @@ export function AutomationManageDialog({
             </div>
           </div>
 
-          {/* Column 2 — placeholder (mirrors lead file column) */}
-          <div className="flex min-h-[220px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))] bg-muted/20">
-            <div className="shrink-0 px-4 pt-3 pb-2">
-              <p className="text-sm font-semibold text-foreground">{tx("Media", "Medios")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {tx("Files and exports for this automation.", "Archivos y exportaciones de esta automatizacion.")}
-              </p>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 flex items-center justify-center">
-              <div className="flex min-h-[200px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background/80 px-4 py-8 text-center">
-                <FileText className="h-8 w-8 text-muted-foreground mb-2" aria-hidden />
-                <p className="text-sm text-muted-foreground">
-                  {tx("No media linked yet.", "Aun no hay medios vinculados.")}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 3 — messages (read-only, lead-style notes column) */}
+          {/* Column 2 — messages */}
           <div className="flex min-h-[320px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-base font-semibold text-foreground">{tx("Messages", "Mensajes")}</p>
