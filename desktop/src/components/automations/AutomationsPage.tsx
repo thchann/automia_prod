@@ -29,22 +29,21 @@ const BOT_ORDER: BotCatalogKey[] = ["instagram_dm", "instagram_comment"];
 /** Product flag: hide connect for comment bot until the backend is ready. */
 const COMMENT_BOT_CONNECT_ENABLED = false;
 
-/** Classify API automation types so counts map to the right catalog card (avoids double-counting when DM/comment share one type). */
+/**
+ * Map API automation types to catalog buckets.
+ * Comment must be explicit on `code` only — matching "comment" in `name` false-positives
+ * (e.g. marketing copy) was counting DM connections on the Comment Bot card.
+ */
 function classifyInstagramType(t: AutomationTypeItem): "dm" | "comment" {
   const code = t.code.toLowerCase();
   const name = t.name.toLowerCase();
-  if (
-    code === "instagram_comment" ||
-    code === "instagram_comments" ||
-    /\bcomment\b/.test(code) ||
-    /\bcomment\b/.test(name)
-  ) {
+  if (code === "instagram_comment" || code === "instagram_comments") {
     return "comment";
   }
   if (code === "instagram_dm" || /\bdm\b/.test(code) || /\bdm\b/.test(name)) {
     return "dm";
   }
-  // Single legacy "Instagram" type: treat as DM inventory only.
+  // Single legacy "Instagram" type: DM inventory only, never comment.
   return "dm";
 }
 
@@ -64,6 +63,9 @@ function countAutomationsForCatalog(
   types: AutomationTypeItem[],
   key: BotCatalogKey,
 ): number {
+  if (key === "instagram_comment" && !COMMENT_BOT_CONNECT_ENABLED) {
+    return 0;
+  }
   const ids = typeIdsForCatalogKey(types, key);
   if (ids.size === 0) return 0;
   return automations.filter((a) => ids.has(a.automation_type_id)).length;
