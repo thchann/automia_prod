@@ -20,8 +20,8 @@ const Index = () => {
         return <AutomationsPage />;
       case "Settings":
         return <SettingsPage />;
-      default:
-        return <HomeOverview />;
+        default:
+        return <HomeOverview onNavigate={(target) => setActiveItem(target)} />;
     }
   };
 
