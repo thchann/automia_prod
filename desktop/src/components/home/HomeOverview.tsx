@@ -97,7 +97,6 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   });
 
   const displayName = user?.name?.trim() || tx("there", "Usuario");
-  const initial = displayName.charAt(0).toUpperCase() || "?";
 
   const totalLeads = leads.length;
   const pendingLeads = leads.filter((l) => l.lead_type === "pending").length;
@@ -131,21 +130,13 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
 
   return (
     <section className="space-y-6 pb-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight text-foreground">
-            {greeting},
-            <br />
-            {displayName}
-          </h1>
-          <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">{today}</p>
-        </div>
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted text-lg font-bold text-foreground"
-          aria-hidden
-        >
-          {initial}
-        </div>
+      <div>
+        <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight text-foreground">
+          {greeting},
+          <br />
+          {displayName}
+        </h1>
+        <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">{today}</p>
       </div>
 
       <button
