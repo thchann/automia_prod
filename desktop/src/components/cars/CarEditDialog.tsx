@@ -133,7 +133,7 @@ export function CarEditDialog({
           </DialogHeader>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-[minmax(0,5fr)_minmax(0,2fr)_minmax(0,5fr)] md:divide-x md:divide-y-0">
           <div className="flex min-h-[280px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-sm font-semibold text-foreground">{tx("Car details", "Detalles del auto")}</p>
