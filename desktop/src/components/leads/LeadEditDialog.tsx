@@ -410,7 +410,7 @@ export function LeadEditDialog({
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-base font-semibold text-foreground">{tx("Notes", "Notas")}</p>
             </div>
-            <div className="min-h-0 flex-1 flex flex-col px-4 pb-4">
+            <div className="flex min-h-[min(70vh,28rem)] flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
               <LeadNotesEditor
                 key={lead.id}
                 leadId={lead.id}

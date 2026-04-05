@@ -18,15 +18,19 @@ import { toast } from "@/components/ui/sonner";
 import {
   Bold,
   FileDown,
+  Heading1,
+  Heading2,
   ImageIcon,
   Italic,
   List,
   ListOrdered,
   ListTodo,
+  Pilcrow,
   Redo2,
   TableIcon,
   Undo2,
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const AUTOSAVE_MS = 2000;
 
@@ -143,13 +147,16 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
 
   const editor = useEditor(
     {
-      immediatelyRender: false,
+      // Client-only app: render on first paint so the doc surface is visible (no SSR).
+      immediatelyRender: true,
+      // Toolbar toggles read `isActive()`; re-render when selection/format changes.
+      shouldRerenderOnTransaction: true,
       extensions,
       content: initialContent,
       editorProps: {
         attributes: {
           class:
-            "tiptap focus:outline-none min-h-[320px] px-6 py-6 text-sm text-foreground leading-relaxed",
+            "tiptap focus:outline-none min-h-[min(70vh,36rem)] w-full max-w-none px-10 py-10 text-[15px] text-foreground leading-[1.6] antialiased",
         },
       },
       onCreate: ({ editor: ed }) => {
@@ -185,15 +192,48 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
 
   if (!editor) {
     return (
-      <div className="flex min-h-[360px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[min(70vh,28rem)] items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
         {tx("Loading editor…", "Cargando editor…")}
       </div>
     );
   }
 
   return (
-    <div className="lead-notes-editor flex min-h-0 flex-1 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1 border-b border-border pb-2">
+    <div className="lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border bg-muted/30">
+      <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 border-b border-border bg-muted/80 px-2 py-2 backdrop-blur-sm">
+        <span className="hidden sm:inline text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-2">
+          {tx("Document", "Documento")}
+        </span>
+        <Separator orientation="vertical" className="hidden sm:block h-6" />
+        <Toggle
+          size="sm"
+          pressed={
+            !editor.isActive("heading", { level: 1 }) &&
+            !editor.isActive("heading", { level: 2 }) &&
+            !editor.isActive("heading", { level: 3 })
+          }
+          onPressedChange={() => editor.chain().focus().setParagraph().run()}
+          aria-label={tx("Normal text", "Texto normal")}
+        >
+          <Pilcrow className="h-4 w-4" />
+        </Toggle>
+        <Toggle
+          size="sm"
+          pressed={editor.isActive("heading", { level: 1 })}
+          onPressedChange={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          aria-label={tx("Heading 1", "Titulo 1")}
+        >
+          <Heading1 className="h-4 w-4" />
+        </Toggle>
+        <Toggle
+          size="sm"
+          pressed={editor.isActive("heading", { level: 2 })}
+          onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          aria-label={tx("Heading 2", "Titulo 2")}
+        >
+          <Heading2 className="h-4 w-4" />
+        </Toggle>
+        <Separator orientation="vertical" className="h-6" />
         <Toggle
           size="sm"
           pressed={editor.isActive("bold")}
@@ -210,6 +250,7 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
         >
           <Italic className="h-4 w-4" />
         </Toggle>
+        <Separator orientation="vertical" className="h-6" />
         <Toggle
           size="sm"
           pressed={editor.isActive("bulletList")}
@@ -234,6 +275,7 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
         >
           <ListTodo className="h-4 w-4" />
         </Toggle>
+        <Separator orientation="vertical" className="h-6" />
         <Button
           type="button"
           variant="ghost"
@@ -259,6 +301,7 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
           <ImageIcon className="h-4 w-4 mr-1" />
           {tx("Image", "Imagen")}
         </Button>
+        <Separator orientation="vertical" className="h-6" />
         <Button
           type="button"
           variant="ghost"
@@ -291,13 +334,13 @@ export function LeadNotesEditor({ leadId, notesDocument, legacyNotes, onPersist 
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto flex justify-center px-2 pb-4">
-        <div className="w-full max-w-[800px] rounded-lg border border-border bg-card shadow-md">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[hsl(50_25%_91%)] px-3 py-4 dark:bg-zinc-900/80">
+        <div className="mx-auto w-full max-w-[816px] rounded-sm border border-black/[0.08] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_28px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-zinc-950 dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
           <EditorContent editor={editor} />
         </div>
       </div>
 
-      <p className="text-[10px] text-muted-foreground px-1">
+      <p className="shrink-0 border-t border-border bg-muted/20 px-3 py-2 text-[10px] text-muted-foreground">
         {tx("Notes auto-save after you stop typing for 2 seconds.", "Las notas se guardan solas tras 2 s sin escribir.")}
       </p>
     </div>

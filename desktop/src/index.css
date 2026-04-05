@@ -138,7 +138,18 @@
 }
 
 @layer components {
-  /* Tiptap / ProseMirror (lead notes editor) */
+  /* Tiptap / ProseMirror (lead notes editor — mini “doc” surface) */
+  .lead-notes-editor .tiptap p.is-empty::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: hsl(var(--muted-foreground));
+    font-style: italic;
+  }
+  .lead-notes-editor .tiptap ::selection {
+    background: hsl(var(--primary) / 0.22);
+  }
   .lead-notes-editor .tiptap p {
     margin: 0.5em 0;
   }
