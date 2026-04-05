@@ -41,15 +41,28 @@ export function LeadEditDialog({
   const [fileDropActive, setFileDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const notesDocRef = useRef<unknown>(undefined);
+  const hydratedLeadIdRef = useRef<string | null>(null);
+  const attachmentsRef = useRef<CarAttachment[]>([]);
+  attachmentsRef.current = attachments;
   const { tx } = useLanguage();
 
+  // Only hydrate from `lead` when opening or switching leads — not when the parent passes a new object reference (e.g. React Query refetch) or blob previews get wiped.
   useEffect(() => {
-    if (lead) {
-      setForm({ ...lead });
-      setAttachments(lead.attachments ?? []);
-      notesDocRef.current = lead.notes_document;
+    if (!open || !lead) return;
+    if (hydratedLeadIdRef.current === lead.id) return;
+    hydratedLeadIdRef.current = lead.id;
+    setForm({ ...lead });
+    setAttachments(lead.attachments ?? []);
+    notesDocRef.current = lead.notes_document;
+  }, [open, lead]);
+
+  useEffect(() => {
+    if (open) return;
+    hydratedLeadIdRef.current = null;
+    for (const att of attachmentsRef.current) {
+      if (att.url.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
-  }, [lead]);
+  }, [open]);
 
   if (!lead) return null;
 

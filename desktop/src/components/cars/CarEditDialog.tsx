@@ -36,19 +36,31 @@ export function CarEditDialog({
   const [fileDropActive, setFileDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const notesDocRef = useRef<unknown>(undefined);
+  const hydratedCarIdRef = useRef<string | null>(null);
+  const attachmentsListRef = useRef<CarAttachment[]>([]);
   const { tx } = useLanguage();
 
+  const attachmentList = attachments ?? [];
+  attachmentsListRef.current = attachmentList;
+
   useEffect(() => {
-    if (car) {
-      setForm({ ...car });
-      setAttachments(car.attachments ?? null);
-      notesDocRef.current = car.notes_document;
+    if (!open || !car) return;
+    if (hydratedCarIdRef.current === car.id) return;
+    hydratedCarIdRef.current = car.id;
+    setForm({ ...car });
+    setAttachments(car.attachments ?? null);
+    notesDocRef.current = car.notes_document;
+  }, [open, car]);
+
+  useEffect(() => {
+    if (open) return;
+    hydratedCarIdRef.current = null;
+    for (const att of attachmentsListRef.current) {
+      if (att.url.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
-  }, [car]);
+  }, [open]);
 
   if (!car) return null;
-
-  const attachmentList = attachments ?? [];
 
   const handleFilesSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;

@@ -6,8 +6,23 @@ import type {
   LeadStatusResponse,
   LeadUpdate,
 } from "@automia/api";
-import type { Car, Lead, LeadStatus } from "@/types/leads";
+import type { Car, CarAttachment, Lead, LeadStatus } from "@/types/leads";
 
+/**
+ * Browser `blob:` URLs are not persistable. Sending them to the API can break backends or store junk.
+ * - `null` / `[]` → persist as null (clear remote).
+ * - only `blob:` entries → omit `attachments` on the payload (leave remote unchanged).
+ * - mix → send only non-blob entries.
+ */
+function attachmentsForApiPayload(
+  attachments: CarAttachment[] | null | undefined,
+): CarAttachment[] | null | undefined {
+  if (attachments === undefined) return undefined;
+  if (attachments === null || attachments.length === 0) return null;
+  const remote = attachments.filter((a) => !a.url.startsWith("blob:"));
+  if (remote.length === 0) return undefined;
+  return remote;
+}
 
 function num(v: number | string | null | undefined): number | null {
   if (v === null || v === undefined) return null;
@@ -99,8 +114,11 @@ export function carToUpdatePayload(car: Car): CarUpdate {
     listed_at: car.listed_at,
     owner_type: car.owner_type,
     status: car.status,
-    attachments: car.attachments as CarUpdate["attachments"],
   };
+  const att = attachmentsForApiPayload(car.attachments);
+  if (att !== undefined) {
+    payload.attachments = att as CarUpdate["attachments"];
+  }
   if (car.notes !== undefined) {
     payload.notes = car.notes;
   }
@@ -129,7 +147,10 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
     desired_car_type: lead.desired_car_type,
   };
   if (lead.attachments !== undefined) {
-    payload.attachments = lead.attachments as LeadUpdate["attachments"];
+    const att = attachmentsForApiPayload(lead.attachments);
+    if (att !== undefined) {
+      payload.attachments = att as LeadUpdate["attachments"];
+    }
   }
   if (lead.notes_document !== undefined) {
     payload.notes_document = lead.notes_document as LeadUpdate["notes_document"];
