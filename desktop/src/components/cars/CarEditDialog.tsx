@@ -34,7 +34,6 @@ export function CarEditDialog({
   const [form, setForm] = useState<Partial<Car>>({});
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
   const [fileDropActive, setFileDropActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const notesDocRef = useRef<unknown>(undefined);
   const hydratedCarIdRef = useRef<string | null>(null);
   const attachmentsListRef = useRef<CarAttachment[]>([]);
@@ -129,12 +128,6 @@ export function CarEditDialog({
         }
       })()
     : "";
-
-  const onFilesDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setFileDropActive(false);
-    handleFilesSelected(e.dataTransfer.files);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -332,53 +325,51 @@ export function CarEditDialog({
 
             <div className="shrink-0 border-t border-border/70 bg-muted/10 px-4 pb-4 pt-3">
               <div
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    fileInputRef.current?.click();
-                  }
-                }}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  setFileDropActive(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDropActive(false);
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={onFilesDrop}
-                onClick={() => fileInputRef.current?.click()}
                 className={[
-                  "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-7 transition-colors",
+                  "relative flex flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-7 transition-colors",
                   fileDropActive
                     ? "border-primary bg-primary/5"
                     : "border-border/80 bg-background shadow-sm hover:bg-muted/40",
                 ].join(" ")}
               >
-                <Upload className="mb-3 h-7 w-7 text-muted-foreground" aria-hidden />
-                <p className="text-center text-sm font-semibold text-foreground">
-                  {tx("Drop files to attach", "Suelta archivos para adjuntar")}
-                </p>
-                <p className="mt-1 text-center text-xs font-normal text-muted-foreground">
-                  {tx("or click to browse", "o haz clic para buscar")}
-                </p>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {attachmentList.length}/{MAX_ATTACHMENTS}
-                </p>
                 <input
-                  ref={fileInputRef}
                   type="file"
                   multiple
                   accept="*/*"
-                  className="hidden"
+                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                  aria-label={tx("Attach files", "Adjuntar archivos")}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    setFileDropActive(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDropActive(false);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setFileDropActive(false);
+                    handleFilesSelected(e.dataTransfer.files);
+                    e.currentTarget.value = "";
+                  }}
                   onChange={(e) => {
                     handleFilesSelected(e.target.files);
                     e.currentTarget.value = "";
                   }}
                 />
+                <div className="pointer-events-none flex flex-col items-center">
+                  <Upload className="mb-3 h-7 w-7 text-muted-foreground" aria-hidden />
+                  <p className="text-center text-sm font-semibold text-foreground">
+                    {tx("Drop files to attach", "Suelta archivos para adjuntar")}
+                  </p>
+                  <p className="mt-1 text-center text-xs font-normal text-muted-foreground">
+                    {tx("or click to browse", "o haz clic para buscar")}
+                  </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {attachmentList.length}/{MAX_ATTACHMENTS}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
