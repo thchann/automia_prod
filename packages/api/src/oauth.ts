@@ -1,18 +1,28 @@
 import { getAccessToken } from "./tokens";
 import { getApiBaseUrl } from "./env";
 
-export async function startInstagramOAuth() {
+export type StartInstagramOAuthOptions = {
+  /** When the API supports it, ties the new OAuth flow to an automation type (DM vs comment, etc.). */
+  automationTypeId?: string;
+  /** Fallback hint when `automationTypeId` is not known (e.g. catalog slug before types load). */
+  automationTypeCode?: string;
+};
+
+export async function startInstagramOAuth(options?: StartInstagramOAuthOptions) {
   const token = getAccessToken();
   if (!token) throw new Error("No access token");
 
-  const res = await fetch(
-    `${getApiBaseUrl().replace(/\/$/, "")}/oauth/instagram/authorize`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const params = new URLSearchParams();
+  if (options?.automationTypeId) params.set("automation_type_id", options.automationTypeId);
+  if (options?.automationTypeCode) params.set("automation_type_code", options.automationTypeCode);
+  const qs = params.toString();
+  const path = `${getApiBaseUrl().replace(/\/$/, "")}/oauth/instagram/authorize${qs ? `?${qs}` : ""}`;
+
+  const res = await fetch(path, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   if (!res.ok) {
     throw new Error("Failed to get Instagram authorization URL");

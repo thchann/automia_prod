@@ -19,7 +19,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   typeItem: AutomationTypeItem;
   automation: AutomationItem;
-  onReconnectInstagram: () => void;
+  /** Re-run Instagram OAuth for this automation type (new account or token refresh). */
+  onRefreshInstagramAccess: () => void;
 };
 
 function formatWhen(iso: string | null | undefined): string {
@@ -44,7 +45,7 @@ export function AutomationManageDialog({
   onOpenChange,
   typeItem,
   automation,
-  onReconnectInstagram,
+  onRefreshInstagramAccess,
 }: Props) {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
@@ -185,8 +186,14 @@ export function AutomationManageDialog({
                 <p className="text-sm text-foreground">{formatWhen(detail.updated_at)}</p>
               </div>
               {isIg ? (
-                <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onReconnectInstagram}>
-                  {tx("Reconnect Instagram", "Reconectar Instagram")}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={onRefreshInstagramAccess}
+                >
+                  {tx("Refresh Instagram connection", "Actualizar conexión de Instagram")}
                 </Button>
               ) : null}
             </div>
