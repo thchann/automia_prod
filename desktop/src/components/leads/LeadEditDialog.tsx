@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,59 +10,45 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import {
-  ChevronDown,
-  Code2,
-  Download,
-  ExternalLink,
-  FileText,
-  Send,
-  Star,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Download, ExternalLink, Trash2, Upload } from "lucide-react";
+import { LeadNotesEditor } from "./LeadNotesEditor";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (lead: Lead) => void | Promise<void>;
+  /** Debounced Tiptap JSON autosave (optional; wire to `updateLead(id, { notes_document })`). */
+  onNotesDocumentAutosave?: (leadId: string, document: Record<string, unknown>) => void | Promise<void>;
   statuses: LeadStatus[];
   cars: Car[];
 }
 
 const MAX_ATTACHMENTS = 12;
 
-function splitNotesIntoCards(notes: string | null | undefined): string[] {
-  if (!notes?.trim()) return [];
-  return notes
-    .split(/\n{2,}/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, cars }: LeadEditDialogProps) {
+export function LeadEditDialog({
+  lead,
+  open,
+  onOpenChange,
+  onSave,
+  onNotesDocumentAutosave,
+  statuses,
+  cars,
+}: LeadEditDialogProps) {
   const [form, setForm] = useState<Partial<Lead>>({});
   const [attachments, setAttachments] = useState<CarAttachment[]>([]);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [noteKind, setNoteKind] = useState<"internal" | "general">("internal");
-  const [starred, setStarred] = useState<Record<number, boolean>>({});
   const [fileDropActive, setFileDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const notesDocRef = useRef<unknown>(undefined);
   const { tx } = useLanguage();
 
   useEffect(() => {
     if (lead) {
       setForm({ ...lead });
       setAttachments(lead.attachments ?? []);
-      setNoteDraft("");
+      notesDocRef.current = lead.notes_document;
     }
   }, [lead]);
-
-  const noteCards = useMemo(() => {
-    const parts = splitNotesIntoCards(form.notes);
-    return [...parts].reverse();
-  }, [form.notes]);
 
   if (!lead) return null;
 
@@ -78,6 +64,7 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
         ...lead,
         ...form,
         ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
+        ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
         updated_at: new Date().toISOString(),
       } as Lead),
     ).then(() => onOpenChange(false));
@@ -123,54 +110,11 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
     a.remove();
   };
 
-  const appendNote = () => {
-    const text = noteDraft.trim();
-    if (!text) return;
-    const prefix =
-      noteKind === "internal"
-        ? `[${tx("Internal", "Interno")}]`
-        : `[${tx("General", "General")}]`;
-    const stamp = new Date().toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-    const block = `${prefix} · ${stamp}\n${text}`;
-    setForm((prev) => ({
-      ...prev,
-      notes: prev.notes?.trim() ? `${prev.notes.trim()}\n\n${block}` : block,
-    }));
-    setNoteDraft("");
-  };
-
-  const deleteNoteAtReversedIndex = (reversedIndex: number) => {
-    const parts = splitNotesIntoCards(form.notes);
-    if (parts.length === 0) return;
-    const originalIndex = parts.length - 1 - reversedIndex;
-    if (originalIndex < 0 || originalIndex >= parts.length) return;
-    const next = parts.filter((_, idx) => idx !== originalIndex);
-    setForm((prev) => ({
-      ...prev,
-      notes: next.length > 0 ? next.join("\n\n") : null,
-    }));
-    setStarred({});
-  };
-
   const onFilesDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setFileDropActive(false);
     handleFilesSelected(e.dataTransfer.files);
   };
-
-  const filterPill = (label: string) => (
-    <button
-      key={label}
-      type="button"
-      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-    >
-      {label}
-      <ChevronDown className="h-3 w-3 opacity-60" aria-hidden />
-    </button>
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -461,112 +405,22 @@ export function LeadEditDialog({ lead, open, onOpenChange, onSave, statuses, car
             </div>
           </div>
 
-          {/* Column 3 — notes (feed + composer) */}
+          {/* Column 3 — Tiptap notes */}
           <div className="flex min-h-[320px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-base font-semibold text-foreground">{tx("Notes", "Notas")}</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {filterPill(tx("All Activity", "Toda la actividad"))}
-                {filterPill(tx("Tags", "Etiquetas"))}
-                {filterPill(tx("Time range", "Periodo"))}
-              </div>
             </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 space-y-3 pb-3">
-              {noteCards.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">{tx("No notes yet.", "Aun no hay notas.")}</p>
-              ) : (
-                noteCards.map((body, i) => {
-                  const looksLikeCode = body.includes("className") || body.includes("function ");
-                  return (
-                    <div
-                      key={`${i}-${body.slice(0, 24)}`}
-                      className="group relative rounded-xl border border-border bg-background p-3 shadow-sm"
-                    >
-                      <div className="absolute right-2 top-2 z-10 flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          className="rounded p-1 text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          aria-label={tx("Delete note", "Eliminar nota")}
-                          title={tx("Delete note", "Eliminar nota")}
-                          onClick={() => deleteNoteAtReversedIndex(i)}
-                        >
-                          <Trash2 className="h-4 w-4" strokeWidth={2} />
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded p-1 text-muted-foreground hover:text-amber-500"
-                          aria-label={tx("Favorite", "Favorito")}
-                          onClick={() => setStarred((s) => ({ ...s, [i]: !s[i] }))}
-                        >
-                          <Star className={`h-4 w-4 ${starred[i] ? "fill-amber-400 text-amber-500" : ""}`} />
-                        </button>
-                      </div>
-                      {looksLikeCode ? (
-                        <div className="pr-[4.25rem]">
-                          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-                            <Code2 className="h-3.5 w-3.5" />
-                            {tx("Snippet", "Fragmento")}
-                          </div>
-                          <pre className="text-xs bg-muted/70 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words">
-                            {body.length > 280 ? `${body.slice(0, 280)}…` : body}
-                          </pre>
-                          {body.length > 280 && (
-                            <button type="button" className="text-xs text-primary mt-1 hover:underline">
-                              {tx("see more", "ver mas")}
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="pr-[4.25rem] whitespace-pre-wrap text-sm text-foreground leading-relaxed">{body}</div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="shrink-0 border-t bg-muted/30 px-4 py-3">
-              <div className="rounded-xl bg-muted/80 p-2 space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <select
-                    className="text-xs font-medium bg-transparent border-none cursor-pointer focus:outline-none focus:ring-0 py-0 pl-0 pr-6"
-                    value={noteKind}
-                    onChange={(e) => setNoteKind(e.target.value as "internal" | "general")}
-                  >
-                    <option value="internal">{tx("Internal note", "Nota interna")}</option>
-                    <option value="general">{tx("General note", "Nota general")}</option>
-                  </select>
-                </div>
-                <div className="flex gap-2 items-end rounded-lg border border-border bg-background p-2">
-                  <textarea
-                    className="flex-1 min-h-[44px] max-h-32 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground placeholder:italic"
-                    placeholder={tx("Add a note about this contact", "Anade una nota sobre este contacto")}
-                    value={noteDraft}
-                    onChange={(e) => setNoteDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                        e.preventDefault();
-                        appendNote();
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="shrink-0 h-9 w-9"
-                    aria-label={tx("Send note", "Enviar nota")}
-                    onClick={appendNote}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground px-1">
-                  {tx("Tip: Cmd/Ctrl+Enter to add", "Atajo: Cmd/Ctrl+Enter para anadir")}
-                </p>
-              </div>
+            <div className="min-h-0 flex-1 flex flex-col px-4 pb-4">
+              <LeadNotesEditor
+                key={lead.id}
+                leadId={lead.id}
+                notesDocument={lead.notes_document}
+                legacyNotes={lead.notes}
+                onPersist={async (json) => {
+                  notesDocRef.current = json;
+                  await onNotesDocumentAutosave?.(lead.id, json);
+                }}
+              />
             </div>
           </div>
         </div>

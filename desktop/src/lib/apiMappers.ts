@@ -1,6 +1,7 @@
 import type {
   CarResponse,
   CarUpdate,
+  LeadNotesDocumentJson,
   LeadResponse,
   LeadStatusResponse,
   LeadUpdate,
@@ -77,6 +78,7 @@ export function mapLeadFromApi(
     ...(r.attachments !== undefined && r.attachments !== null
       ? { attachments: r.attachments as Lead["attachments"] }
       : {}),
+    ...(r.notes_document !== undefined ? { notes_document: r.notes_document as LeadNotesDocumentJson | null } : {}),
     status,
   };
 }
@@ -117,6 +119,9 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
   };
   if (lead.attachments !== undefined) {
     payload.attachments = lead.attachments as LeadUpdate["attachments"];
+  }
+  if (lead.notes_document !== undefined) {
+    payload.notes_document = lead.notes_document as LeadUpdate["notes_document"];
   }
   return payload;
 }

@@ -37,6 +37,7 @@ interface LeadsTableProps {
   statuses: LeadStatus[];
   cars: Car[];
   onUpdateLead: (lead: Lead) => void | Promise<void>;
+  onNotesDocumentAutosave?: (leadId: string, document: Record<string, unknown>) => void | Promise<void>;
   onDeleteLead: (id: string) => void | Promise<void>;
   onAddLead: () => Lead | Promise<Lead>;
 }
@@ -78,7 +79,15 @@ function allLeadColumnsSelected(s: Set<LeadSearchColumnId>) {
   );
 }
 
-export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, onAddLead }: LeadsTableProps) {
+export function LeadsTable({
+  leads,
+  statuses,
+  cars,
+  onUpdateLead,
+  onNotesDocumentAutosave,
+  onDeleteLead,
+  onAddLead,
+}: LeadsTableProps) {
   const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -699,6 +708,7 @@ export function LeadsTable({ leads, statuses, cars, onUpdateLead, onDeleteLead, 
         open={!!editLead}
         onOpenChange={(open) => !open && setEditLead(null)}
         onSave={onUpdateLead}
+        onNotesDocumentAutosave={onNotesDocumentAutosave}
         statuses={statuses}
         cars={cars}
       />

@@ -51,6 +51,8 @@ export interface Lead {
   instagram_handle: string | null;
   phone: string | null;
   notes: string | null;
+  /** Tiptap document JSON from API (`JSONContent` shape). */
+  notes_document?: unknown | null;
   created_at: string;
   updated_at: string | null;
   desired_budget_min: number | null;

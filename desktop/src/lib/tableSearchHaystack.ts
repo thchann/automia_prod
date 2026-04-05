@@ -1,6 +1,29 @@
 import { format } from "date-fns";
 import type { Car, Lead } from "@/types/leads";
 
+/** Flatten Tiptap JSON (`notes_document`) for fuzzy search. */
+export function extractPlainTextFromNotesDocument(doc: unknown): string {
+  if (doc === null || doc === undefined) return "";
+  if (typeof doc === "string") return doc;
+  if (typeof doc !== "object" || Array.isArray(doc)) return "";
+
+  const parts: string[] = [];
+  const walk = (node: unknown) => {
+    if (node === null || node === undefined) return;
+    if (typeof node === "string") {
+      parts.push(node);
+      return;
+    }
+    if (typeof node !== "object" || Array.isArray(node)) return;
+    const o = node as Record<string, unknown>;
+    if (typeof o.text === "string") parts.push(o.text);
+    const content = o.content;
+    if (Array.isArray(content)) content.forEach(walk);
+  };
+  walk(doc);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 function formatShortDate(s: string | null) {
   if (!s) return "";
   try {
@@ -49,6 +72,12 @@ export function buildLeadSearchHaystack(
   statusName: string,
 ): string {
   const carLine = car ? `${car.year} ${car.brand} ${car.model}` : "";
+  const notesPlain = [
+    extractPlainTextFromNotesDocument(lead.notes_document),
+    lead.notes,
+  ]
+    .filter((p) => p != null && String(p).trim() !== "")
+    .join(" ");
   const parts = [
     lead.name,
     lead.instagram_handle,
@@ -56,7 +85,7 @@ export function buildLeadSearchHaystack(
     lead.lead_type,
     carLine,
     summarizeBuyerCriteria(lead),
-    lead.notes,
+    notesPlain,
     lead.source,
     statusName,
     formatShortDate(lead.created_at),
@@ -136,7 +165,11 @@ export function buildLeadSearchHaystackForColumns(
   }
   if (active.has("status") && statusName) parts.push(statusName);
   if (active.has("source") && lead.source) parts.push(lead.source);
-  if (active.has("notes") && lead.notes) parts.push(lead.notes);
+  if (active.has("notes")) {
+    const fromDoc = extractPlainTextFromNotesDocument(lead.notes_document);
+    if (fromDoc) parts.push(fromDoc);
+    if (lead.notes?.trim()) parts.push(lead.notes);
+  }
   if (active.has("created"))
     parts.push(formatShortDate(lead.created_at));
   if (active.has("updated"))

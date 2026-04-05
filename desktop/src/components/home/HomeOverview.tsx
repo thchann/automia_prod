@@ -237,6 +237,10 @@ export function HomeOverview() {
           await queryClient.invalidateQueries({ queryKey: ["leads"] });
           setEditLead(null);
         }}
+        onNotesDocumentAutosave={async (leadId, document) => {
+          await updateLead(leadId, { notes_document: document });
+          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+        }}
         statuses={statuses}
         cars={cars}
       />

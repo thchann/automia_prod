@@ -12,10 +12,18 @@ interface LeadsFunnelProps {
   statuses: LeadStatus[];
   cars: Car[];
   onUpdateLead: (lead: Lead) => void;
+  onNotesDocumentAutosave?: (leadId: string, document: Record<string, unknown>) => void | Promise<void>;
   onUpdateStatuses: (statuses: LeadStatus[]) => void;
 }
 
-export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatuses }: LeadsFunnelProps) {
+export function LeadsFunnel({
+  leads,
+  statuses,
+  cars,
+  onUpdateLead,
+  onNotesDocumentAutosave,
+  onUpdateStatuses,
+}: LeadsFunnelProps) {
   const { tx } = useLanguage();
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
@@ -254,6 +262,7 @@ export function LeadsFunnel({ leads, statuses, cars, onUpdateLead, onUpdateStatu
         open={!!editLead}
         onOpenChange={(open) => !open && setEditLead(null)}
         onSave={onUpdateLead}
+        onNotesDocumentAutosave={onNotesDocumentAutosave}
         statuses={statuses}
         cars={cars}
       />

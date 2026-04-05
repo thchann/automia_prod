@@ -67,6 +67,11 @@ export function LeadsPage() {
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
+  const handleNotesDocumentAutosave = async (leadId: string, document: Record<string, unknown>) => {
+    await updateLead(leadId, { notes_document: document });
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+  };
+
   const handleDeleteLead = async (id: string) => {
     await deleteLead(id);
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
@@ -131,6 +136,7 @@ export function LeadsPage() {
             statuses={statuses}
             cars={cars}
             onUpdateLead={handleUpdateLead}
+            onNotesDocumentAutosave={handleNotesDocumentAutosave}
             onDeleteLead={handleDeleteLead}
             onAddLead={handleAddLead}
           />
@@ -141,6 +147,7 @@ export function LeadsPage() {
             statuses={statuses}
             cars={cars}
             onUpdateLead={handleUpdateLead}
+            onNotesDocumentAutosave={handleNotesDocumentAutosave}
             onUpdateStatuses={handleUpdateStatuses}
           />
         )}

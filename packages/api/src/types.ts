@@ -42,6 +42,14 @@ export interface ProfileUpdateRequest {
   website?: string | null;
 }
 
+/**
+ * Tiptap editor document (`JSONContent` shape).
+ *
+ * Backend: persist on the lead as JSON/JSONB (`notes_document`), include in list/detail responses,
+ * and accept optional `notes_document` on lead create/update. PDF/DOCX export contract: `exportLeadNotes` in leads.ts.
+ */
+export type LeadNotesDocumentJson = Record<string, unknown>;
+
 export interface LeadResponse {
   id: string;
   user_id: string;
@@ -54,6 +62,8 @@ export interface LeadResponse {
   instagram_handle: string | null;
   phone: string | null;
   notes: string | null;
+  /** Rich notes (Tiptap); optional until backend ships the column. */
+  notes_document?: LeadNotesDocumentJson | null;
   created_at: string;
   updated_at: string | null;
   desired_budget_min: number | string | null;
@@ -89,6 +99,7 @@ export interface LeadCreate {
   desired_make?: string | null;
   desired_model?: string | null;
   desired_car_type?: string | null;
+  notes_document?: LeadNotesDocumentJson | null;
 }
 
 export interface LeadUpdate {
@@ -108,6 +119,7 @@ export interface LeadUpdate {
   desired_model?: string | null;
   desired_car_type?: string | null;
   attachments?: CarAttachmentsJson | null;
+  notes_document?: LeadNotesDocumentJson | null;
 }
 
 export interface LeadStatusResponse {

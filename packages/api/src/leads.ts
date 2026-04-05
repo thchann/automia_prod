@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiRequestBlob } from "./client";
 import type { LeadCreate, LeadResponse, LeadsListResponse, LeadUpdate } from "./types";
 
 export type ListLeadsParams = {
@@ -42,4 +42,15 @@ export async function updateLead(id: string, body: LeadUpdate): Promise<LeadResp
 
 export async function deleteLead(id: string): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(`/leads/${id}`, { method: "DELETE" });
+}
+
+/**
+ * Backend contract (implement on your API):
+ * - `GET /leads/:id/notes/export?format=pdf|docx` with `Authorization: Bearer …`
+ * - Response: `Content-Disposition: attachment`, body = PDF or DOCX bytes.
+ * - Server should load `notes_document` JSON for the lead and run conversion (Tiptap Conversion, Puppeteer, etc.).
+ */
+export async function exportLeadNotes(leadId: string, format: "pdf" | "docx"): Promise<Blob> {
+  const sp = new URLSearchParams({ format });
+  return apiRequestBlob(`/leads/${leadId}/notes/export?${sp.toString()}`, { method: "GET" });
 }

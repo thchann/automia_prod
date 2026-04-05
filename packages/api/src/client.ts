@@ -112,3 +112,56 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
   return res.json() as Promise<T>;
 }
+
+/** Authenticated fetch returning a binary body (e.g. PDF export). */
+export async function apiRequestBlob(path: string, options: ApiRequestOptions = {}): Promise<Blob> {
+  const { skipAuth, _retry, ...init } = options;
+  const base = getApiBaseUrl();
+  const url = joinUrl(base, path);
+
+  const headers = new Headers(init.headers);
+  const body = init.body;
+  if (
+    body &&
+    typeof body === "string" &&
+    !headers.has("Content-Type") &&
+    !headers.has("content-type")
+  ) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (!skipAuth) {
+    const token = getAccessToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  const res = await fetch(url, { ...init, headers });
+
+  if (res.status === 401 && !skipAuth && !_retry) {
+    const isAuthPath =
+      path.includes("/auth/login") ||
+      path.includes("/auth/register") ||
+      path.includes("/auth/refresh");
+    if (!isAuthPath) {
+      try {
+        await refreshAccessToken();
+        return apiRequestBlob(path, { ...options, _retry: true });
+      } catch {
+        throw new ApiError(401, "Unauthorized", await parseBodyDetail(res));
+      }
+    }
+  }
+
+  if (!res.ok) {
+    const detail = await parseBodyDetail(res);
+    const msg =
+      typeof detail === "object" && detail !== null && "detail" in detail
+        ? String((detail as { detail: unknown }).detail)
+        : res.statusText;
+    throw new ApiError(res.status, msg || "Request failed", detail);
+  }
+
+  return res.blob();
+}

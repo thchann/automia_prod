@@ -14,7 +14,7 @@ export {
   setAuthTokens,
   setRefreshToken,
 } from "./tokens";
-export { ApiError, apiRequest } from "./client";
+export { ApiError, apiRequest, apiRequestBlob } from "./client";
 export type { ApiRequestOptions } from "./client";
 
 export * from "./types";
