@@ -28,6 +28,10 @@ export interface Car {
   owner_type: "owned" | "client" | "advisor";
   status: "available" | "sold";
   attachments: CarAttachment[] | null;
+  /** Legacy plain-text notes from API. */
+  notes?: string | null;
+  /** Tiptap document JSON from API. */
+  notes_document?: unknown | null;
   created_at: string;
   updated_at: string | null;
 }

@@ -225,6 +225,10 @@ export function HomeOverview() {
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
           setEditCar(null);
         }}
+        onNotesDocumentAutosave={async (carId, document) => {
+          await updateCar(carId, { notes_document: document });
+          await queryClient.invalidateQueries({ queryKey: ["cars"] });
+        }}
       />
       <LeadEditDialog
         lead={editLead}

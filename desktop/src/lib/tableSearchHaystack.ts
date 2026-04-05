@@ -95,6 +95,12 @@ export function buildLeadSearchHaystack(
 }
 
 export function buildCarSearchHaystack(car: Car): string {
+  const notesPlain = [
+    extractPlainTextFromNotesDocument(car.notes_document),
+    car.notes,
+  ]
+    .filter((p) => p != null && String(p).trim() !== "")
+    .join(" ");
   const parts = [
     car.brand,
     car.model,
@@ -107,6 +113,7 @@ export function buildCarSearchHaystack(car: Car): string {
     car.status,
     formatShortDate(car.listed_at),
     formatShortDate(car.created_at),
+    notesPlain,
   ];
   return parts.filter((p) => p != null && String(p).trim() !== "").join(" ");
 }
@@ -189,6 +196,7 @@ export const CAR_SEARCH_COLUMN_IDS = [
   "owner",
   "status",
   "added",
+  "notes",
 ] as const;
 export type CarSearchColumnId = (typeof CAR_SEARCH_COLUMN_IDS)[number];
 
@@ -204,6 +212,7 @@ export const CAR_SEARCH_COLUMN_LABELS: Record<CarSearchColumnId, string> = {
   owner: "Owner",
   status: "Status",
   added: "Added",
+  notes: "Notes",
 };
 
 export function defaultCarSearchColumns(): Set<CarSearchColumnId> {
@@ -231,5 +240,10 @@ export function buildCarSearchHaystackForColumns(
   if (active.has("status")) parts.push(car.status);
   if (active.has("added"))
     parts.push(formatShortDate(car.created_at));
+  if (active.has("notes")) {
+    const fromDoc = extractPlainTextFromNotesDocument(car.notes_document);
+    if (fromDoc) parts.push(fromDoc);
+    if (car.notes?.trim()) parts.push(car.notes);
+  }
   return parts.filter((p) => p.trim() !== "").join(" ");
 }

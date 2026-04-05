@@ -42,6 +42,10 @@ export function mapCarFromApi(c: CarResponse): Car {
     owner_type: c.owner_type as Car["owner_type"],
     status: c.status as Car["status"],
     attachments: (c.attachments as Car["attachments"]) ?? null,
+    ...(c.notes !== undefined ? { notes: c.notes } : {}),
+    ...(c.notes_document !== undefined
+      ? { notes_document: c.notes_document as LeadNotesDocumentJson | null }
+      : {}),
     created_at: c.created_at,
     updated_at: c.updated_at,
   };
@@ -84,7 +88,7 @@ export function mapLeadFromApi(
 }
 
 export function carToUpdatePayload(car: Car): CarUpdate {
-  return {
+  const payload: CarUpdate = {
     brand: car.brand,
     model: car.model,
     year: car.year,
@@ -97,6 +101,13 @@ export function carToUpdatePayload(car: Car): CarUpdate {
     status: car.status,
     attachments: car.attachments as CarUpdate["attachments"],
   };
+  if (car.notes !== undefined) {
+    payload.notes = car.notes;
+  }
+  if (car.notes_document !== undefined) {
+    payload.notes_document = car.notes_document as CarUpdate["notes_document"];
+  }
+  return payload;
 }
 
 export function leadToUpdatePayload(lead: Lead): LeadUpdate {

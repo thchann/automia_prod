@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiRequestBlob } from "./client";
 import type { CarCreate, CarResponse, CarsListResponse, CarUpdate } from "./types";
 
 export async function listCars(): Promise<CarsListResponse> {
@@ -25,4 +25,12 @@ export async function updateCar(id: string, body: CarUpdate): Promise<CarRespons
 
 export async function deleteCar(id: string): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(`/cars/${id}`, { method: "DELETE" });
+}
+
+/**
+ * Backend contract: `GET /cars/:id/notes/export?format=pdf|docx` — same idea as lead notes export.
+ */
+export async function exportCarNotes(carId: string, format: "pdf" | "docx"): Promise<Blob> {
+  const sp = new URLSearchParams({ format });
+  return apiRequestBlob(`/cars/${carId}/notes/export?${sp.toString()}`, { method: "GET" });
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, Trash2, Upload } from "lucide-react";
+import { exportLeadNotes } from "@automia/api";
 import { LeadNotesEditor } from "./LeadNotesEditor";
 
 interface LeadEditDialogProps {
@@ -413,9 +414,11 @@ export function LeadEditDialog({
             <div className="flex min-h-[min(70vh,28rem)] flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
               <LeadNotesEditor
                 key={lead.id}
-                leadId={lead.id}
+                recordId={lead.id}
                 notesDocument={lead.notes_document}
                 legacyNotes={lead.notes}
+                exportNotes={(format) => exportLeadNotes(lead.id, format)}
+                exportDownloadBasename={`lead-${lead.id}-notes`}
                 onPersist={async (json) => {
                   notesDocRef.current = json;
                   await onNotesDocumentAutosave?.(lead.id, json);

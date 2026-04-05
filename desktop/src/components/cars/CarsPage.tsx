@@ -44,6 +44,11 @@ export function CarsPage() {
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 
+  const handleCarNotesAutosave = async (carId: string, document: Record<string, unknown>) => {
+    await updateCar(carId, { notes_document: document });
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
+  };
+
   const handleDeleteCar = async (id: string) => {
     await deleteCar(id);
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
@@ -80,6 +85,7 @@ export function CarsPage() {
           cars={cars}
           leads={leads}
           onUpdateCar={handleUpdateCar}
+          onNotesDocumentAutosave={handleCarNotesAutosave}
           onUpdateLead={handleUpdateLead}
           onDeleteCar={handleDeleteCar}
           onAddCar={handleAddCar}

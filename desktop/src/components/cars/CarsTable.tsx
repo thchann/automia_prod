@@ -34,6 +34,7 @@ interface CarsTableProps {
   cars: Car[];
   leads: Lead[];
   onUpdateCar: (car: Car) => void | Promise<void>;
+  onNotesDocumentAutosave?: (carId: string, document: Record<string, unknown>) => void | Promise<void>;
   onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => Car | Promise<Car>;
@@ -77,7 +78,15 @@ function allCarColumnsSelected(s: Set<CarSearchColumnId>) {
   );
 }
 
-export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar, onAddCar }: CarsTableProps) {
+export function CarsTable({
+  cars,
+  leads,
+  onUpdateCar,
+  onNotesDocumentAutosave,
+  onUpdateLead,
+  onDeleteCar,
+  onAddCar,
+}: CarsTableProps) {
   const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -528,6 +537,7 @@ export function CarsTable({ cars, leads, onUpdateCar, onUpdateLead, onDeleteCar,
         open={!!editCar}
         onOpenChange={(open) => !open && setEditCar(null)}
         onSave={onUpdateCar}
+        onNotesDocumentAutosave={onNotesDocumentAutosave}
       />
 
       <Dialog open={!!bulkMatchCar} onOpenChange={(open) => !open && setBulkMatchCar(null)}>

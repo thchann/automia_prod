@@ -149,6 +149,10 @@ export interface CarResponse {
   owner_type: string;
   status: string;
   attachments: CarAttachmentsJson | null;
+  /** Legacy plain-text notes (optional migration source for rich notes). */
+  notes?: string | null;
+  /** Tiptap JSON document; same shape as lead `notes_document`. */
+  notes_document?: LeadNotesDocumentJson | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -165,20 +169,24 @@ export interface CarCreate {
   owner_type: string;
   status: string;
   attachments?: CarAttachmentsJson | null;
+  notes?: string | null;
+  notes_document?: LeadNotesDocumentJson | null;
 }
 
 export interface CarUpdate {
-  brand: string;
-  model: string;
-  year: number;
-  mileage: number | null;
-  price: number | null;
-  desired_price: number | null;
-  car_type: string | null;
-  listed_at: string | null;
-  owner_type: string;
-  status: string;
-  attachments: CarAttachmentsJson | null;
+  brand?: string;
+  model?: string;
+  year?: number;
+  mileage?: number | null;
+  price?: number | null;
+  desired_price?: number | null;
+  car_type?: string | null;
+  listed_at?: string | null;
+  owner_type?: string;
+  status?: string;
+  attachments?: CarAttachmentsJson | null;
+  notes?: string | null;
+  notes_document?: LeadNotesDocumentJson | null;
 }
 
 export interface CarsListResponse {
