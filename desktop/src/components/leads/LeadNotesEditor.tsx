@@ -120,6 +120,18 @@ function parseInitialContent(
   return legacyNotesToDoc(legacyNotes);
 }
 
+/** Stable key for editor init; must never throw (bad API data would otherwise white-screen the app). */
+function notesDocumentInitKey(
+  notesDocument: unknown | null | undefined,
+  legacyNotes: string | null | undefined,
+): string {
+  try {
+    return `${JSON.stringify(notesDocument ?? null)}\n${legacyNotes ?? ""}`;
+  } catch {
+    return `<unserializable_notes>\n${legacyNotes ?? ""}`;
+  }
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -249,7 +261,7 @@ export function LeadNotesEditor({
     [tx],
   );
 
-  const initKey = `${JSON.stringify(notesDocument ?? null)}\n${legacyNotes ?? ""}`;
+  const initKey = notesDocumentInitKey(notesDocument, legacyNotes);
   const initialContent = useMemo(
     () => parseInitialContent(notesDocument, legacyNotes),
     [initKey, notesDocument, legacyNotes],
@@ -257,8 +269,20 @@ export function LeadNotesEditor({
 
   const flushSave = useCallback(
     (editor: Editor) => {
-      const json = editor.getJSON() as Record<string, unknown>;
-      const serialized = JSON.stringify(json);
+      let json: Record<string, unknown>;
+      try {
+        json = editor.getJSON() as Record<string, unknown>;
+      } catch {
+        toast.error(tx("Could not save notes", "No se pudieron guardar las notas"));
+        return;
+      }
+      let serialized: string;
+      try {
+        serialized = JSON.stringify(json);
+      } catch {
+        toast.error(tx("Could not save notes", "No se pudieron guardar las notas"));
+        return;
+      }
       if (serialized === lastSerialized.current) return;
       lastSerialized.current = serialized;
       void Promise.resolve(onPersist(json)).catch(() => {
@@ -292,7 +316,11 @@ export function LeadNotesEditor({
         },
       },
       onCreate: ({ editor: ed }) => {
-        lastSerialized.current = JSON.stringify(ed.getJSON());
+        try {
+          lastSerialized.current = JSON.stringify(ed.getJSON());
+        } catch {
+          lastSerialized.current = "";
+        }
       },
       onUpdate: ({ editor: ed, transaction }) => {
         if (!transaction.docChanged) return;

@@ -55,7 +55,7 @@ export function CarEditDialog({
     if (open) return;
     hydratedCarIdRef.current = null;
     for (const att of attachmentsListRef.current) {
-      if (att.url.startsWith("blob:")) URL.revokeObjectURL(att.url);
+      if (att.url?.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
   }, [open]);
 
@@ -89,10 +89,12 @@ export function CarEditDialog({
   };
 
   const viewAttachment = (att: CarAttachment) => {
+    if (!att.url) return;
     window.open(att.url, "_blank", "noopener,noreferrer");
   };
 
   const downloadAttachment = (att: CarAttachment) => {
+    if (!att.url) return;
     const a = document.createElement("a");
     a.href = att.url;
     a.download = att.filename?.trim() || "attachment";
@@ -131,7 +133,10 @@ export function CarEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-none gap-0 p-0 sm:max-w-[min(1180px,calc(100vw-1.5rem))] overflow-hidden">
+      <DialogContent
+        className="flex flex-col max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-none gap-0 p-0 sm:max-w-[min(1180px,calc(100vw-1.5rem))] overflow-hidden"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
             <DialogTitle>{tx("Edit car details", "Editar detalles del auto")}</DialogTitle>
@@ -265,11 +270,11 @@ export function CarEditDialog({
                 ) : (
                   attachmentList.map((att, idx) => (
                     <div
-                      key={`${att.url}-${idx}`}
+                      key={`${att.url ?? "x"}-${idx}`}
                       className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-2"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {att.type === "image" ? (
+                        {att.type === "image" && att.url ? (
                           <img
                             src={att.url}
                             alt={att.filename ?? "attachment"}

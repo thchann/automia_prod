@@ -19,7 +19,9 @@ function attachmentsForApiPayload(
 ): CarAttachment[] | null | undefined {
   if (attachments === undefined) return undefined;
   if (attachments === null || attachments.length === 0) return null;
-  const remote = attachments.filter((a) => !a.url.startsWith("blob:"));
+  const remote = attachments.filter(
+    (a) => typeof a.url === "string" && a.url.length > 0 && !a.url.startsWith("blob:"),
+  );
   if (remote.length === 0) return undefined;
   return remote;
 }

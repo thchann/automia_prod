@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage.tsx";
 import SetupWebsitePage from "./pages/SetupWebsitePage.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { AppErrorBoundary } from "./components/AppErrorBoundary.tsx";
 
 const queryClient = new QueryClient();
 const routerBasename =
@@ -28,6 +29,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter basename={routerBasename}>
+              <AppErrorBoundary>
               <Routes>
                 <Route path="/" element={<LandingRedirect />} />
                 <Route path="/verification" element={<VerificationPage />} />
@@ -51,6 +53,7 @@ const App = () => (
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </AppErrorBoundary>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
