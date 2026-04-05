@@ -238,19 +238,7 @@ export function AutomationsPage() {
                             ? tx("1 account connected", "1 cuenta conectada")
                             : tx(`${count} accounts connected`, `${count} cuentas conectadas`)}
                       </span>
-                      {count === 1 && resolved ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-full px-4"
-                          onClick={() =>
-                            setManageTarget({ type: resolved, automation: conns[0]! })
-                          }
-                        >
-                          {tx("Manage", "Gestionar")}
-                        </Button>
-                      ) : count > 1 ? (
+                      {count > 1 ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -260,9 +248,7 @@ export function AutomationsPage() {
                         >
                           {tx("View connected", "Ver conectadas")}
                         </Button>
-                      ) : (
-                        <span className="inline-block h-8 min-w-[4rem] shrink-0" aria-hidden />
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
