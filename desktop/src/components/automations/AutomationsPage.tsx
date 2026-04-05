@@ -26,6 +26,49 @@ type BotCatalogKey = "instagram_dm" | "instagram_comment";
 
 const BOT_ORDER: BotCatalogKey[] = ["instagram_dm", "instagram_comment"];
 
+/** Product flag: hide connect for comment bot until the backend is ready. */
+const COMMENT_BOT_CONNECT_ENABLED = false;
+
+/** Classify API automation types so counts map to the right catalog card (avoids double-counting when DM/comment share one type). */
+function classifyInstagramType(t: AutomationTypeItem): "dm" | "comment" {
+  const code = t.code.toLowerCase();
+  const name = t.name.toLowerCase();
+  if (
+    code === "instagram_comment" ||
+    code === "instagram_comments" ||
+    /\bcomment\b/.test(code) ||
+    /\bcomment\b/.test(name)
+  ) {
+    return "comment";
+  }
+  if (code === "instagram_dm" || /\bdm\b/.test(code) || /\bdm\b/.test(name)) {
+    return "dm";
+  }
+  // Single legacy "Instagram" type: treat as DM inventory only.
+  return "dm";
+}
+
+function typeIdsForCatalogKey(types: AutomationTypeItem[], key: BotCatalogKey): Set<string> {
+  const ids = new Set<string>();
+  for (const t of types) {
+    if (t.platform !== "instagram") continue;
+    const bucket = classifyInstagramType(t);
+    if (key === "instagram_comment" && bucket === "comment") ids.add(t.id);
+    if (key === "instagram_dm" && bucket === "dm") ids.add(t.id);
+  }
+  return ids;
+}
+
+function countAutomationsForCatalog(
+  automations: AutomationItem[],
+  types: AutomationTypeItem[],
+  key: BotCatalogKey,
+): number {
+  const ids = typeIdsForCatalogKey(types, key);
+  if (ids.size === 0) return 0;
+  return automations.filter((a) => ids.has(a.automation_type_id)).length;
+}
+
 function botCatalogMeta(
   key: BotCatalogKey,
   tx: (en: string, es: string) => string,
@@ -54,21 +97,16 @@ function resolveTypeForBot(types: AutomationTypeItem[], key: BotCatalogKey): Aut
   const ig = types.filter((t) => t.platform === "instagram");
   if (key === "instagram_dm") {
     return (
-      ig.find((t) => t.code === "instagram_dm") ??
-      ig.find((t) => /\bdm\b/i.test(t.code) || /\bdm\b/i.test(t.name)) ??
+      ig.find((t) => classifyInstagramType(t) === "dm" && (t.code === "instagram_dm" || /\bdm\b/i.test(t.code))) ??
+      ig.find((t) => classifyInstagramType(t) === "dm") ??
       ig[0]
     );
   }
   return (
-    ig.find((t) => t.code === "instagram_comment" || t.code === "instagram_comments") ??
-    ig.find((t) => /\bcomment/i.test(t.code) || /\bcomment/i.test(t.name)) ??
-    ig[1] ??
-    ig[0]
+    ig.find((t) => classifyInstagramType(t) === "comment" && (t.code === "instagram_comment" || t.code === "instagram_comments")) ??
+    ig.find((t) => classifyInstagramType(t) === "comment") ??
+    undefined
   );
-}
-
-function automationsForType(automations: AutomationItem[], typeId: string): AutomationItem[] {
-  return automations.filter((a) => a.automation_type_id === typeId);
 }
 
 export function AutomationsPage() {
@@ -120,6 +158,9 @@ export function AutomationsPage() {
   };
 
   const connectBotFromCatalog = (key: BotCatalogKey) => {
+    if (key === "instagram_comment" && !COMMENT_BOT_CONNECT_ENABLED) {
+      return;
+    }
     const resolved = resolveTypeForBot(types, key);
     if (resolved && !resolved.is_active) {
       toast.error(
@@ -190,10 +231,16 @@ export function AutomationsPage() {
               {tx("Instagram DM Bot", "Bot de DM de Instagram")}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="cursor-pointer"
+              className={COMMENT_BOT_CONNECT_ENABLED ? "cursor-pointer" : "cursor-not-allowed opacity-50"}
+              disabled={!COMMENT_BOT_CONNECT_ENABLED}
               onClick={() => connectBotFromCatalog("instagram_comment")}
             >
               {tx("Instagram Comment Bot", "Bot de comentarios de Instagram")}
+              {!COMMENT_BOT_CONNECT_ENABLED ? (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {tx("(coming soon)", "(pronto)")}
+                </span>
+              ) : null}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -205,10 +252,8 @@ export function AutomationsPage() {
         ) : tab === "all" ? (
           <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
             {BOT_ORDER.map((botKey) => {
-              const resolved = resolveTypeForBot(types, botKey);
               const { title, description } = botCatalogMeta(botKey, tx);
-              const conns = resolved ? automationsForType(automations, resolved.id) : [];
-              const count = conns.length;
+              const count = countAutomationsForCatalog(automations, types, botKey);
               const isIg = true;
 
               return (
@@ -233,10 +278,10 @@ export function AutomationsPage() {
                     <div className="mt-auto flex h-8 flex-wrap items-center justify-between gap-2 pr-1">
                       <span className="text-xs text-muted-foreground">
                         {count === 0
-                          ? tx("No accounts connected", "Sin cuentas conectadas")
+                          ? tx("No bots connected", "Sin bots conectados")
                           : count === 1
-                            ? tx("1 account connected", "1 cuenta conectada")
-                            : tx(`${count} accounts connected`, `${count} cuentas conectadas`)}
+                            ? tx("1 bot connected", "1 bot conectado")
+                            : tx(`${count} bots connected`, `${count} bots conectados`)}
                       </span>
                       {count > 1 ? (
                         <Button
