@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
   createLead,
@@ -10,6 +10,7 @@ import {
   listLeads,
   updateLead,
   updateLeadStatus,
+  type LeadsListResponse,
 } from "@automia/api";
 import { LeadsTable } from "./LeadsTable";
 import { LeadsFunnel } from "./LeadsFunnel";
@@ -24,6 +25,7 @@ import {
 } from "@/lib/apiMappers";
 import { buildDraftLead } from "@/lib/draftLeadCar";
 import { isDraftRecordId } from "@/lib/draftIds";
+import { toast } from "@/components/ui/sonner";
 
 type Tab = "table" | "funnel";
 
@@ -69,6 +71,45 @@ export function LeadsPage() {
   );
 
   const [tab, setTab] = useState<Tab>("table");
+
+  const moveLeadStatusMutation = useMutation({
+    mutationFn: ({ leadId, statusId }: { leadId: string; statusId: string }) =>
+      updateLead(leadId, { status_id: statusId }),
+    onMutate: async ({ leadId, statusId }) => {
+      await queryClient.cancelQueries({ queryKey: ["leads"] });
+      const previous = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+      const now = new Date().toISOString();
+      queryClient.setQueryData<LeadsListResponse>(["leads"], (old) => {
+        if (!old?.leads) return old;
+        return {
+          ...old,
+          leads: old.leads.map((l) =>
+            l.id === leadId ? { ...l, status_id: statusId, updated_at: now } : l,
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["leads"], context.previous);
+      }
+      toast.error(tx("Could not move lead", "No se pudo mover el lead"));
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData<LeadsListResponse>(["leads"], (old) => {
+        if (!old?.leads) return old;
+        return {
+          ...old,
+          leads: old.leads.map((l) => (l.id === data.id ? data : l)),
+        };
+      });
+    },
+  });
+
+  const handleLeadStatusMove = (leadId: string, statusId: string) => {
+    moveLeadStatusMutation.mutate({ leadId, statusId });
+  };
 
   const handleUpdateLead = async (updated: Lead) => {
     if (isDraftRecordId(updated.id)) {
@@ -156,6 +197,7 @@ export function LeadsPage() {
             statuses={statuses}
             cars={cars}
             onUpdateLead={handleUpdateLead}
+            onMoveLeadToStatus={handleLeadStatusMove}
             onNotesDocumentAutosave={handleNotesDocumentAutosave}
             onUpdateStatuses={handleUpdateStatuses}
           />

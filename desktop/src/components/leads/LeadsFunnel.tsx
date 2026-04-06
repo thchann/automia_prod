@@ -15,6 +15,8 @@ interface LeadsFunnelProps {
   statuses: LeadStatus[];
   cars: Car[];
   onUpdateLead: (lead: Lead) => void;
+  /** Funnel column drop: optimistic move in parent; falls back to onUpdateLead if omitted. */
+  onMoveLeadToStatus?: (leadId: string, statusId: string) => void;
   onNotesDocumentAutosave?: (leadId: string, document: Record<string, unknown>) => void | Promise<void>;
   onUpdateStatuses: (statuses: LeadStatus[]) => void;
 }
@@ -24,6 +26,7 @@ export function LeadsFunnel({
   statuses,
   cars,
   onUpdateLead,
+  onMoveLeadToStatus,
   onNotesDocumentAutosave,
   onUpdateStatuses,
 }: LeadsFunnelProps) {
@@ -63,7 +66,7 @@ export function LeadsFunnel({
 
   const handleDragOver = (e: React.DragEvent, statusId: string) => {
     e.preventDefault();
-    setDragOverStatusId(statusId);
+    setDragOverStatusId((prev) => (prev === statusId ? prev : statusId));
   };
 
   const handleDrop = (e: React.DragEvent, targetStatusId: string) => {
@@ -71,7 +74,11 @@ export function LeadsFunnel({
     if (!draggedLeadId) return;
     const lead = leads.find((l) => l.id === draggedLeadId);
     if (lead && lead.status_id !== targetStatusId) {
-      onUpdateLead({ ...lead, status_id: targetStatusId });
+      if (onMoveLeadToStatus) {
+        onMoveLeadToStatus(lead.id, targetStatusId);
+      } else {
+        onUpdateLead({ ...lead, status_id: targetStatusId });
+      }
     }
     setDraggedLeadId(null);
     setDragOverStatusId(null);
