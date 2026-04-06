@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -12,6 +13,7 @@ import { Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import {
+  ApiError,
   exportCarNotes,
   presignCarAttachmentDownload,
   uploadCarAttachmentsToBucket,
@@ -173,10 +175,19 @@ export function CarEditDialog({
             content_type: u.content_type,
             size_bytes: u.size_bytes,
           }));
-        } catch {
-          toast.error(
-            tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
-          );
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 503) {
+            toast.error(
+              tx(
+                "File uploads are unavailable: server storage is not configured.",
+                "Las subidas no estan disponibles: el almacenamiento del servidor no esta configurado.",
+              ),
+            );
+          } else {
+            toast.error(
+              tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
+            );
+          }
           return;
         }
       }
@@ -221,6 +232,12 @@ export function CarEditDialog({
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
             <DialogTitle>{tx("Edit car details", "Editar detalles del auto")}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {tx(
+                "Edit car fields, attachments, and rich notes.",
+                "Editar campos del auto, adjuntos y notas.",
+              )}
+            </DialogDescription>
           </DialogHeader>
         </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -11,7 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
-import { exportLeadNotes, presignLeadAttachmentDownload, uploadLeadAttachmentsToBucket } from "@automia/api";
+import {
+  ApiError,
+  exportLeadNotes,
+  presignLeadAttachmentDownload,
+  uploadLeadAttachmentsToBucket,
+} from "@automia/api";
 import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
@@ -93,10 +99,19 @@ export function LeadEditDialog({
             content_type: u.content_type,
             size_bytes: u.size_bytes,
           }));
-        } catch {
-          toast.error(
-            tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
-          );
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 503) {
+            toast.error(
+              tx(
+                "File uploads are unavailable: server storage is not configured.",
+                "Las subidas no estan disponibles: el almacenamiento del servidor no esta configurado.",
+              ),
+            );
+          } else {
+            toast.error(
+              tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
+            );
+          }
           return;
         }
       }
@@ -211,6 +226,12 @@ export function LeadEditDialog({
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
             <DialogTitle>{tx("Edit lead details", "Editar detalles del lead")}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {tx(
+                "Edit lead fields, linked car, attachments, and rich notes.",
+                "Editar campos del lead, auto vinculado, adjuntos y notas.",
+              )}
+            </DialogDescription>
           </DialogHeader>
         </div>
 
