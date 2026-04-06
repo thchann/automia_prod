@@ -12,7 +12,7 @@ import { Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { exportCarNotes } from "@automia/api";
-import { LeadNotesEditor } from "@/components/leads/LeadNotesEditor";
+import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
 
 const MAX_ATTACHMENTS = 12;
 
@@ -35,6 +35,7 @@ export function CarEditDialog({
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
   const [fileDropActive, setFileDropActive] = useState(false);
   const notesDocRef = useRef<unknown>(undefined);
+  const notesEditorRef = useRef<LeadNotesEditorHandle | null>(null);
   const hydratedCarIdRef = useRef<string | null>(null);
   const attachmentsListRef = useRef<CarAttachment[]>([]);
   const { tx } = useLanguage();
@@ -108,15 +109,18 @@ export function CarEditDialog({
     const resolvedAttachments =
       attachmentList.length > 0 ? attachmentList : car.attachments !== undefined ? null : undefined;
 
-    void Promise.resolve(
-      onSave({
-        ...car,
-        ...form,
-        ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
-        ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
-        updated_at: new Date().toISOString(),
-      } as Car),
-    ).then(() => onOpenChange(false));
+    void (async () => {
+      await notesEditorRef.current?.flushPendingSave();
+      await Promise.resolve(
+        onSave({
+          ...car,
+          ...form,
+          ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
+          ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
+          updated_at: new Date().toISOString(),
+        } as Car),
+      ).then(() => onOpenChange(false));
+    })();
   };
 
   const listedAtInputValue = form.listed_at
@@ -385,6 +389,7 @@ export function CarEditDialog({
             </div>
             <div className="flex min-h-[min(70vh,28rem)] flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
               <LeadNotesEditor
+                ref={notesEditorRef}
                 key={car.id}
                 recordId={car.id}
                 notesDocument={car.notes_document}

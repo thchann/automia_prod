@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Car as CarIcon, Clock, Layers, Plug, TrendingUp, Users } from "lucide-react";
-import { ApiError, listCars, listLeadStatuses, listLeads, updateCar, updateLead } from "@automia/api";
+import { ApiError, getCar, getLead, listCars, listLeadStatuses, listLeads, updateCar, updateLead } from "@automia/api";
 import { Car as CarType, Lead } from "@/types/leads";
 import { CarEditDialog } from "@/components/cars/CarEditDialog";
 import { LeadEditDialog } from "@/components/leads/LeadEditDialog";
@@ -81,6 +81,28 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
     if (!leadsData?.leads) return [];
     return leadsData.leads.map((r) => mapLeadFromApi(r, statuses));
   }, [leadsData, statuses]);
+
+  const beginEditLead = (l: Lead) => {
+    void (async () => {
+      try {
+        const r = await getLead(l.id);
+        setEditLead(mapLeadFromApi(r, statuses));
+      } catch {
+        setEditLead(l);
+      }
+    })();
+  };
+
+  const beginEditCar = (c: CarType) => {
+    void (async () => {
+      try {
+        const r = await getCar(c.id);
+        setEditCar(mapCarFromApi(r));
+      } catch {
+        setEditCar(c);
+      }
+    })();
+  };
 
   const hour = new Date().getHours();
   const greeting =
@@ -241,7 +263,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
               <button
                 key={`car-${entry.id}`}
                 type="button"
-                onClick={() => setEditCar(entry.item)}
+                onClick={() => beginEditCar(entry.item)}
                 className="flex w-full items-center justify-between border-b border-border py-2.5 text-left last:border-b-0 hover:bg-muted/30"
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -274,7 +296,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
               <button
                 key={`lead-${entry.id}`}
                 type="button"
-                onClick={() => setEditLead(entry.item)}
+                onClick={() => beginEditLead(entry.item)}
                 className="flex w-full items-center justify-between border-b border-border py-2.5 text-left last:border-b-0 hover:bg-muted/30"
               >
                 <div className="flex min-w-0 items-center gap-3">

@@ -198,31 +198,16 @@ export function AutomationsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 text-foreground">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border">
-        <div className="flex items-center gap-0">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-                tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-              {tab === t.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-          ))}
-        </div>
-
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-foreground">
+          {tx("All Automations", "Todas las automatizaciones")}
+        </h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 rounded-md px-3">
+            <Button type="button" size="sm" className="shrink-0 gap-1.5">
               <Plus className="h-4 w-4" aria-hidden />
               {tx("Connect bot", "Conectar bot")}
-              <ChevronDown className="h-4 w-4 opacity-70" aria-hidden />
+              <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[14rem]">
@@ -246,6 +231,24 @@ export function AutomationsPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+            {tab === t.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FunnelColumnColorMenu } from "./FunnelColumnColorMenu";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { getLead } from "@automia/api";
+import { mapLeadFromApi } from "@/lib/apiMappers";
 
 interface LeadsFunnelProps {
   leads: Lead[];
@@ -26,6 +28,17 @@ export function LeadsFunnel({
 }: LeadsFunnelProps) {
   const { tx } = useLanguage();
   const [editLead, setEditLead] = useState<Lead | null>(null);
+
+  const beginEditLead = (l: Lead) => {
+    void (async () => {
+      try {
+        const r = await getLead(l.id);
+        setEditLead(mapLeadFromApi(r, statuses));
+      } catch {
+        setEditLead(l);
+      }
+    })();
+  };
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [colorMenuOpenId, setColorMenuOpenId] = useState<string | null>(null);
@@ -203,7 +216,7 @@ export function LeadsFunnel({
                       className={`bg-card border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
                         draggedLeadId === lead.id ? "opacity-50" : ""
                       }`}
-                      onClick={() => setEditLead(lead)}
+                      onClick={() => beginEditLead(lead)}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">

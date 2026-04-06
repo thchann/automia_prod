@@ -12,7 +12,7 @@ import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { exportLeadNotes } from "@automia/api";
-import { LeadNotesEditor } from "./LeadNotesEditor";
+import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
@@ -40,6 +40,7 @@ export function LeadEditDialog({
   const [attachments, setAttachments] = useState<CarAttachment[]>([]);
   const [fileDropActive, setFileDropActive] = useState(false);
   const notesDocRef = useRef<unknown>(undefined);
+  const notesEditorRef = useRef<LeadNotesEditorHandle | null>(null);
   const hydratedLeadIdRef = useRef<string | null>(null);
   const attachmentsRef = useRef<CarAttachment[]>([]);
   attachmentsRef.current = attachments;
@@ -72,15 +73,18 @@ export function LeadEditDialog({
     const resolvedAttachments =
       attachmentList.length > 0 ? attachmentList : lead.attachments !== undefined ? null : undefined;
 
-    void Promise.resolve(
-      onSave({
-        ...lead,
-        ...form,
-        ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
-        ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
-        updated_at: new Date().toISOString(),
-      } as Lead),
-    ).then(() => onOpenChange(false));
+    void (async () => {
+      await notesEditorRef.current?.flushPendingSave();
+      await Promise.resolve(
+        onSave({
+          ...lead,
+          ...form,
+          ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
+          ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
+          updated_at: new Date().toISOString(),
+        } as Lead),
+      ).then(() => onOpenChange(false));
+    })();
   };
 
   const numOrNull = (v: string) => (v === "" ? null : Number(v));
@@ -433,6 +437,7 @@ export function LeadEditDialog({
             </div>
             <div className="flex min-h-[min(70vh,28rem)] flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
               <LeadNotesEditor
+                ref={notesEditorRef}
                 key={lead.id}
                 recordId={lead.id}
                 notesDocument={lead.notes_document}

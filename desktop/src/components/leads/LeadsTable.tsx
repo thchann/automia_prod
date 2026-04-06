@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { matchLeadToCars } from "@/lib/matchLeadToCars";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { getLead } from "@automia/api";
+import { mapLeadFromApi } from "@/lib/apiMappers";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -92,6 +94,17 @@ export function LeadsTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editLead, setEditLead] = useState<Lead | null>(null);
+
+  const beginEditLead = (l: Lead) => {
+    void (async () => {
+      try {
+        const r = await getLead(l.id);
+        setEditLead(mapLeadFromApi(r, statuses));
+      } catch {
+        setEditLead(l);
+      }
+    })();
+  };
   const [matchLead, setMatchLead] = useState<Lead | null>(null);
   const [carsToMatch, setCarsToMatch] = useState<Set<string>>(new Set());
   const [bulkMatchLead, setBulkMatchLead] = useState<Lead | null>(null);
@@ -357,7 +370,7 @@ export function LeadsTable({
                   className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
                   onClick={() => {
                     void Promise.resolve(onAddLead()).then((created) => {
-                      setEditLead(created);
+                      beginEditLead(created);
                       setShowGenerateMenu(false);
                     });
                   }}
@@ -566,7 +579,7 @@ export function LeadsTable({
                 <TableRow
                   key={lead.id}
                   className="group cursor-pointer hover:bg-surface-hover"
-                  onClick={() => setEditLead(lead)}
+                  onClick={() => beginEditLead(lead)}
                 >
                   <TableCell
                     className={stickyCheckboxCell}
@@ -625,7 +638,7 @@ export function LeadsTable({
                           <Link2 className="h-4 w-4" />
                         </button>
                       ) : null}
-                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditLead(lead)}>
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => beginEditLead(lead)}>
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteLead(lead.id)}>

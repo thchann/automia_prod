@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor, JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -215,14 +215,15 @@ type Props = {
   exportDownloadBasename?: string;
 };
 
-export function LeadNotesEditor({
-  recordId,
-  notesDocument,
-  legacyNotes,
-  onPersist,
-  exportNotes,
-  exportDownloadBasename,
-}: Props) {
+export type LeadNotesEditorHandle = {
+  /** Clears debounce and persists the latest editor JSON (e.g. before dialog Save). */
+  flushPendingSave: () => Promise<void>;
+};
+
+export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function LeadNotesEditor(
+  { recordId, notesDocument, legacyNotes, onPersist, exportNotes, exportDownloadBasename },
+  ref,
+) {
   const { tx } = useLanguage();
   const [moreFormattingOpen, setMoreFormattingOpen] = useState(false);
   const lastSerialized = useRef<string>("");
@@ -328,6 +329,39 @@ export function LeadNotesEditor({
       },
     },
     [recordId, extensions, initialContent],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flushPendingSave: async () => {
+        if (saveTimer.current) {
+          clearTimeout(saveTimer.current);
+          saveTimer.current = null;
+        }
+        const ed = editor;
+        if (!ed) return;
+        let json: Record<string, unknown>;
+        try {
+          json = ed.getJSON() as Record<string, unknown>;
+        } catch {
+          toast.error(tx("Could not save notes", "No se pudieron guardar las notas"));
+          return;
+        }
+        let serialized: string;
+        try {
+          serialized = JSON.stringify(json);
+        } catch {
+          toast.error(tx("Could not save notes", "No se pudieron guardar las notas"));
+          return;
+        }
+        lastSerialized.current = serialized;
+        await Promise.resolve(onPersist(json)).catch(() => {
+          toast.error(tx("Could not save notes", "No se pudieron guardar las notas"));
+        });
+      },
+    }),
+    [editor, onPersist, tx],
   );
 
   useEffect(() => {
@@ -779,4 +813,6 @@ export function LeadNotesEditor({
       </p>
     </div>
   );
-}
+});
+
+LeadNotesEditor.displayName = "LeadNotesEditor";

@@ -18,6 +18,8 @@ import {
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { getCar } from "@automia/api";
+import { mapCarFromApi } from "@/lib/apiMappers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -91,6 +93,18 @@ export function CarsTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [editCar, setEditCar] = useState<Car | null>(null);
+
+  const beginEditCar = (c: Car) => {
+    void (async () => {
+      try {
+        const r = await getCar(c.id);
+        setEditCar(mapCarFromApi(r));
+      } catch {
+        setEditCar(c);
+      }
+    })();
+  };
+
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
   const [bulkMatchCar, setBulkMatchCar] = useState<Car | null>(null);
   const [bulkMatchCarIds, setBulkMatchCarIds] = useState<string[] | null>(null);
@@ -245,7 +259,7 @@ export function CarsTable({
           <Button
             size="sm"
             onClick={() => {
-              void Promise.resolve(onAddCar()).then((created) => setEditCar(created));
+              void Promise.resolve(onAddCar()).then((created) => beginEditCar(created));
             }}
           >
             + {tx("Add Car", "Agregar auto")}
@@ -406,7 +420,7 @@ export function CarsTable({
                 <TableRow
                   key={car.id}
                   className="group cursor-pointer hover:bg-surface-hover"
-                  onClick={() => setEditCar(car)}
+                  onClick={() => beginEditCar(car)}
                 >
                   <TableCell
                     className={stickyCheckboxCell}
@@ -439,7 +453,7 @@ export function CarsTable({
                   {visibleColumns.includes("added") && <TableCell>{formatShortDate(car.created_at, locale)}</TableCell>}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => setEditCar(car)}>
+                      <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => beginEditCar(car)}>
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteCar(car.id)}>
