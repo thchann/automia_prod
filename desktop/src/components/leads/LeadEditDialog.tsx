@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
-import { exportLeadNotes } from "@automia/api";
+import { exportLeadNotes, presignLeadAttachmentDownload, uploadLeadAttachmentsToBucket } from "@automia/api";
+import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
 
@@ -26,7 +27,8 @@ interface LeadEditDialogProps {
   cars: Car[];
 }
 
-const MAX_ATTACHMENTS = 12;
+const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 export function LeadEditDialog({
   lead,
@@ -71,11 +73,41 @@ export function LeadEditDialog({
   const attachmentList = attachments;
 
   const handleSave = () => {
-    const resolvedAttachments =
-      attachmentList.length > 0 ? attachmentList : lead.attachments !== undefined ? null : undefined;
-
     void (async () => {
       await notesEditorRef.current?.flushPendingSave();
+
+      let nextAttachments: CarAttachment[] | null = attachmentList.length > 0 ? attachmentList : null;
+      if (
+        nextAttachments &&
+        nextAttachments.length > 0 &&
+        !isDraftRecordId(lead.id) &&
+        nextAttachments.some((a) => a.url?.startsWith("blob:"))
+      ) {
+        try {
+          const uploaded = await uploadLeadAttachmentsToBucket(lead.id, nextAttachments);
+          nextAttachments = uploaded.map((u) => ({
+            type: u.type,
+            ...(u.url ? { url: u.url } : {}),
+            ...(u.storage_key ? { storage_key: u.storage_key } : {}),
+            filename: u.filename,
+            content_type: u.content_type,
+            size_bytes: u.size_bytes,
+          }));
+        } catch {
+          toast.error(
+            tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
+          );
+          return;
+        }
+      }
+
+      const resolvedAttachments =
+        nextAttachments && nextAttachments.length > 0
+          ? nextAttachments
+          : lead.attachments !== undefined
+            ? null
+            : undefined;
+
       await Promise.resolve(
         onSave({
           ...lead,
@@ -96,12 +128,22 @@ export function LeadEditDialog({
     if (remaining <= 0) return;
 
     const picked = Array.from(files).slice(0, remaining);
+    for (const file of picked) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(
+          tx("Each file must be 15 MB or smaller.", "Cada archivo debe pesar 15 MB o menos."),
+        );
+        return;
+      }
+    }
     const added: CarAttachment[] = picked.map((file) => {
       const isImage = file.type?.startsWith("image/");
       return {
         type: isImage ? "image" : "document",
         url: URL.createObjectURL(file),
         filename: file.name,
+        content_type: file.type || undefined,
+        size_bytes: file.size,
       };
     });
 
@@ -115,19 +157,49 @@ export function LeadEditDialog({
   };
 
   const viewAttachment = (att: CarAttachment) => {
-    if (!att.url) return;
-    window.open(att.url, "_blank", "noopener,noreferrer");
+    void (async () => {
+      if (att.url) {
+        window.open(att.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (att.storage_key && !isDraftRecordId(lead.id)) {
+        try {
+          const { download_url } = await presignLeadAttachmentDownload(lead.id, att.storage_key);
+          window.open(download_url, "_blank", "noopener,noreferrer");
+        } catch {
+          toast.error(tx("Could not open attachment.", "No se pudo abrir el adjunto."));
+        }
+      }
+    })();
   };
 
   const downloadAttachment = (att: CarAttachment) => {
-    if (!att.url) return;
-    const a = document.createElement("a");
-    a.href = att.url;
-    a.download = att.filename?.trim() || "attachment";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    void (async () => {
+      if (att.url) {
+        const a = document.createElement("a");
+        a.href = att.url;
+        a.download = att.filename?.trim() || "attachment";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+      if (att.storage_key && !isDraftRecordId(lead.id)) {
+        try {
+          const { download_url } = await presignLeadAttachmentDownload(lead.id, att.storage_key);
+          const a = document.createElement("a");
+          a.href = download_url;
+          a.download = att.filename?.trim() || "attachment";
+          a.rel = "noopener noreferrer";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } catch {
+          toast.error(tx("Could not download attachment.", "No se pudo descargar el adjunto."));
+        }
+      }
+    })();
   };
 
   return (
@@ -322,7 +394,7 @@ export function LeadEditDialog({
                 ) : (
                   attachmentList.map((att, idx) => (
                     <div
-                      key={`${att.url ?? "x"}-${idx}`}
+                      key={`${att.storage_key ?? att.url ?? "row"}-${idx}`}
                       className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-2"
                     >
                       <div className="flex items-center gap-3 min-w-0">

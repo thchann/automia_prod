@@ -11,11 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
-import { exportCarNotes } from "@automia/api";
+import {
+  exportCarNotes,
+  presignCarAttachmentDownload,
+  uploadCarAttachmentsToBucket,
+} from "@automia/api";
+import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
 
-const MAX_ATTACHMENTS = 12;
+const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 interface CarEditDialogProps {
   car: Car | null;
@@ -69,12 +75,22 @@ export function CarEditDialog({
     if (remaining <= 0) return;
 
     const picked = Array.from(files).slice(0, remaining);
+    for (const file of picked) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(
+          tx("Each file must be 15 MB or smaller.", "Cada archivo debe pesar 15 MB o menos."),
+        );
+        return;
+      }
+    }
     const added: CarAttachment[] = picked.map((file) => {
       const isImage = file.type?.startsWith("image/");
       return {
         type: isImage ? "image" : "document",
         url: URL.createObjectURL(file),
         filename: file.name,
+        content_type: file.type || undefined,
+        size_bytes: file.size,
       };
     });
 
@@ -91,27 +107,87 @@ export function CarEditDialog({
   };
 
   const viewAttachment = (att: CarAttachment) => {
-    if (!att.url) return;
-    window.open(att.url, "_blank", "noopener,noreferrer");
+    void (async () => {
+      if (att.url) {
+        window.open(att.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (att.storage_key && !isDraftRecordId(car.id)) {
+        try {
+          const { download_url } = await presignCarAttachmentDownload(car.id, att.storage_key);
+          window.open(download_url, "_blank", "noopener,noreferrer");
+        } catch {
+          toast.error(tx("Could not open attachment.", "No se pudo abrir el adjunto."));
+        }
+      }
+    })();
   };
 
   const downloadAttachment = (att: CarAttachment) => {
-    if (!att.url) return;
-    const a = document.createElement("a");
-    a.href = att.url;
-    a.download = att.filename?.trim() || "attachment";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    void (async () => {
+      if (att.url) {
+        const a = document.createElement("a");
+        a.href = att.url;
+        a.download = att.filename?.trim() || "attachment";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+      if (att.storage_key && !isDraftRecordId(car.id)) {
+        try {
+          const { download_url } = await presignCarAttachmentDownload(car.id, att.storage_key);
+          const a = document.createElement("a");
+          a.href = download_url;
+          a.download = att.filename?.trim() || "attachment";
+          a.rel = "noopener noreferrer";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } catch {
+          toast.error(tx("Could not download attachment.", "No se pudo descargar el adjunto."));
+        }
+      }
+    })();
   };
 
   const handleSave = () => {
-    const resolvedAttachments =
-      attachmentList.length > 0 ? attachmentList : car.attachments !== undefined ? null : undefined;
-
     void (async () => {
       await notesEditorRef.current?.flushPendingSave();
+
+      let nextAttachments: CarAttachment[] | null = attachmentList.length > 0 ? attachmentList : null;
+      if (
+        nextAttachments &&
+        nextAttachments.length > 0 &&
+        !isDraftRecordId(car.id) &&
+        nextAttachments.some((a) => a.url?.startsWith("blob:"))
+      ) {
+        try {
+          const uploaded = await uploadCarAttachmentsToBucket(car.id, nextAttachments);
+          nextAttachments = uploaded.map((u) => ({
+            type: u.type,
+            ...(u.url ? { url: u.url } : {}),
+            ...(u.storage_key ? { storage_key: u.storage_key } : {}),
+            filename: u.filename,
+            content_type: u.content_type,
+            size_bytes: u.size_bytes,
+          }));
+        } catch {
+          toast.error(
+            tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
+          );
+          return;
+        }
+      }
+
+      const resolvedAttachments =
+        nextAttachments && nextAttachments.length > 0
+          ? nextAttachments
+          : car.attachments !== undefined
+            ? null
+            : undefined;
+
       await Promise.resolve(
         onSave({
           ...car,
@@ -275,7 +351,7 @@ export function CarEditDialog({
                 ) : (
                   attachmentList.map((att, idx) => (
                     <div
-                      key={`${att.url ?? "x"}-${idx}`}
+                      key={`${att.storage_key ?? att.url ?? "row"}-${idx}`}
                       className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-2"
                     >
                       <div className="flex items-center gap-3 min-w-0">

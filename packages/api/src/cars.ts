@@ -1,26 +1,36 @@
 import { apiRequest, apiRequestBlob } from "./client";
+import {
+  carCreateToWire,
+  carResponseFromWire,
+  carsListFromWire,
+  carUpdateToWire,
+} from "./notesWire";
 import type { CarCreate, CarResponse, CarsListResponse, CarUpdate } from "./types";
 
 export async function listCars(): Promise<CarsListResponse> {
-  return apiRequest<CarsListResponse>("/cars");
+  const raw = await apiRequest<CarsListResponse>("/cars");
+  return carsListFromWire(raw);
 }
 
 export async function getCar(id: string): Promise<CarResponse> {
-  return apiRequest<CarResponse>(`/cars/${id}`);
+  const raw = await apiRequest<CarResponse>(`/cars/${id}`);
+  return carResponseFromWire(raw);
 }
 
 export async function createCar(body: CarCreate): Promise<CarResponse> {
-  return apiRequest<CarResponse>("/cars", {
+  const raw = await apiRequest<CarResponse>("/cars", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(carCreateToWire(body)),
   });
+  return carResponseFromWire(raw);
 }
 
 export async function updateCar(id: string, body: CarUpdate): Promise<CarResponse> {
-  return apiRequest<CarResponse>(`/cars/${id}`, {
+  const raw = await apiRequest<CarResponse>(`/cars/${id}`, {
     method: "PUT",
-    body: JSON.stringify(body),
+    body: JSON.stringify(carUpdateToWire(body)),
   });
+  return carResponseFromWire(raw);
 }
 
 export async function deleteCar(id: string): Promise<{ message: string }> {

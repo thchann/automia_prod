@@ -9,8 +9,12 @@ export interface LeadStatus {
 
 export interface CarAttachment {
   type: "image" | "document";
-  url: string;
+  /** Public or blob preview URL; omit when only `storage_key` is set (private bucket). */
+  url?: string;
+  storage_key?: string;
   filename?: string;
+  content_type?: string;
+  size_bytes?: number;
 }
 
 export interface Car {

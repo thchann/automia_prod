@@ -47,8 +47,8 @@ export type UserProfilePatch = ProfileUpdateRequest;
 /**
  * Tiptap editor document (`JSONContent` shape).
  *
- * Backend: persist on the lead as JSON/JSONB (`notes_document`), include in list/detail responses,
- * and accept optional `notes_document` on lead create/update. PDF/DOCX export contract: `exportLeadNotes` in leads.ts.
+ * Wire format uses `notes_json`; `@automia/api` maps to/from `notes_document` for app code (see `notesWire.ts`).
+ * PDF/DOCX export: `exportLeadNotes` / `exportCarNotes`.
  */
 export type LeadNotesDocumentJson = Record<string, unknown>;
 

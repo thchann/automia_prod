@@ -1,4 +1,10 @@
 import { apiRequest, apiRequestBlob } from "./client";
+import {
+  leadCreateToWire,
+  leadResponseFromWire,
+  leadsListFromWire,
+  leadUpdateToWire,
+} from "./notesWire";
 import type { LeadCreate, LeadResponse, LeadsListResponse, LeadUpdate } from "./types";
 
 export type ListLeadsParams = {
@@ -19,25 +25,29 @@ export async function listLeads(params: ListLeadsParams = {}): Promise<LeadsList
   if (params.limit != null) sp.set("limit", String(params.limit));
   if (params.offset != null) sp.set("offset", String(params.offset));
   const q = sp.toString();
-  return apiRequest<LeadsListResponse>(`/leads${q ? `?${q}` : ""}`);
+  const raw = await apiRequest<LeadsListResponse>(`/leads${q ? `?${q}` : ""}`);
+  return leadsListFromWire(raw);
 }
 
 export async function getLead(id: string): Promise<LeadResponse> {
-  return apiRequest<LeadResponse>(`/leads/${id}`);
+  const raw = await apiRequest<LeadResponse>(`/leads/${id}`);
+  return leadResponseFromWire(raw);
 }
 
 export async function createLead(body: LeadCreate): Promise<LeadResponse> {
-  return apiRequest<LeadResponse>("/leads", {
+  const raw = await apiRequest<LeadResponse>("/leads", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(leadCreateToWire(body)),
   });
+  return leadResponseFromWire(raw);
 }
 
 export async function updateLead(id: string, body: LeadUpdate): Promise<LeadResponse> {
-  return apiRequest<LeadResponse>(`/leads/${id}`, {
+  const raw = await apiRequest<LeadResponse>(`/leads/${id}`, {
     method: "PUT",
-    body: JSON.stringify(body),
+    body: JSON.stringify(leadUpdateToWire(body)),
   });
+  return leadResponseFromWire(raw);
 }
 
 export async function deleteLead(id: string): Promise<{ message: string }> {
@@ -48,7 +58,7 @@ export async function deleteLead(id: string): Promise<{ message: string }> {
  * Backend contract (implement on your API):
  * - `GET /leads/:id/notes/export?format=pdf|docx` with `Authorization: Bearer …`
  * - Response: `Content-Disposition: attachment`, body = PDF or DOCX bytes.
- * - Server should load `notes_document` JSON for the lead and run conversion (Tiptap Conversion, Puppeteer, etc.).
+ * - Server should load rich notes JSON (`notes_json` / Tiptap) for the lead and run conversion.
  */
 export async function exportLeadNotes(leadId: string, format: "pdf" | "docx"): Promise<Blob> {
   const sp = new URLSearchParams({ format });
