@@ -186,13 +186,13 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
       <button
         type="button"
         onClick={() => onNavigate?.("Leads")}
-        className={cn("w-full p-5 mb-1", cardBase, statCardInteractive)}
+        className={cn("w-full p-4 mb-1", cardBase, statCardInteractive)}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{tx("Active leads", "Leads activos")}</p>
-          <Users size={16} className="text-muted-foreground" aria-hidden />
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground">{tx("Active leads", "Leads activos")}</p>
+          <Users size={14} className="text-muted-foreground" aria-hidden />
         </div>
-        <p className="mb-1 text-4xl font-extrabold tabular-nums text-foreground">{totalLeads}</p>
+        <p className="text-2xl font-extrabold tabular-nums text-foreground">{totalLeads}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-badge-pending/15 px-2 py-0.5 text-xs font-medium text-badge-pending">
             {pendingLeads} {tx("pending", "pendientes")}

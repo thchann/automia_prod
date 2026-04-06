@@ -106,13 +106,13 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
       <button
         type="button"
         onClick={() => onTabChange("leads")}
-        className="w-full rounded-md border border-border bg-card p-5 mb-4 text-left"
+        className="w-full rounded-md border border-border bg-card p-4 mb-4 text-left"
       >
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-muted-foreground font-medium">{tx("Active leads", "Leads activos")}</p>
-          <Users size={16} className="text-muted-foreground" />
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-muted-foreground font-medium">{tx("Active leads", "Leads activos")}</p>
+          <Users size={14} className="text-muted-foreground" />
         </div>
-        <p className="text-4xl font-extrabold tabular-nums mb-1">{totalLeads}</p>
+        <p className="text-2xl font-extrabold tabular-nums text-foreground">{totalLeads}</p>
         <div className="flex gap-4 mt-3">
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badge-pending/15 text-badge-pending">
             {pendingLeads} {tx("pending", "pendientes")}
@@ -132,7 +132,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
             <p className="text-xs text-muted-foreground font-medium">{tx("Inventory", "Inventario")}</p>
             <Car size={14} className="text-muted-foreground" />
           </div>
-          <p className="text-2xl font-extrabold tabular-nums">{availableCars}</p>
+          <p className="text-2xl font-extrabold tabular-nums text-foreground">{availableCars}</p>
           <p className="text-xs text-muted-foreground mt-1">{tx("available", "disponibles")}</p>
           <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-primary" style={{ width: `${(availableCars / Math.max(cars.length, 1)) * 100}%` }} />
@@ -144,7 +144,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
             <p className="text-xs text-muted-foreground font-medium">{tx("Sold", "Vendidos")}</p>
             <TrendingUp size={14} className="text-stat-positive" />
           </div>
-          <p className="text-2xl font-extrabold tabular-nums">{soldCars}</p>
+          <p className="text-2xl font-extrabold tabular-nums text-foreground">{soldCars}</p>
           <p className="text-xs text-muted-foreground mt-1">{tx("this period", "este periodo")}</p>
           <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-stat-positive" style={{ width: `${(soldCars / Math.max(cars.length, 1)) * 100}%` }} />

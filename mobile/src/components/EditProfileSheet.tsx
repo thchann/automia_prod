@@ -7,21 +7,17 @@ interface EditProfileSheetProps {
   open: boolean;
   onClose: () => void;
   user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null };
-  onSave: (user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null }) => void | Promise<void>;
+  onSave: (patch: { client_description: string; website: string; avatar_url: string | null }) => void | Promise<void>;
 }
 
 const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps) => {
   const { tx } = useLanguage();
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
   const [description, setDescription] = useState(user.client_description);
   const [website, setWebsite] = useState(user.website);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar_url);
 
   useEffect(() => {
     if (!open) return;
-    setName(user.name);
-    setEmail(user.email);
     setDescription(user.client_description);
     setWebsite(user.website);
     setAvatarPreview(user.avatar_url);
@@ -37,8 +33,8 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
   };
 
   const handleSave = () => {
-    void Promise.resolve(onSave({ name, email, client_description: description, website, avatar_url: avatarPreview })).then(
-      () => onClose(),
+    void Promise.resolve(onSave({ client_description: description, website, avatar_url: avatarPreview })).then(() =>
+      onClose(),
     );
   };
 
@@ -52,7 +48,7 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
               {avatarPreview ? (
                 <img src={avatarPreview} alt={tx("Avatar", "Avatar")} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl font-bold text-muted-foreground">{name.charAt(0)}</span>
+                <span className="text-2xl font-bold text-muted-foreground">{user.name.charAt(0)}</span>
               )}
             </div>
             <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
@@ -63,12 +59,21 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
           <p className="text-xs text-primary font-medium">{tx("Edit picture", "Editar foto")}</p>
         </div>
 
-        <Field label={tx("Name", "Nombre")} value={name} onChange={setName} placeholder={tx("Your name", "Tu nombre")} />
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">{tx("Name", "Nombre")}</label>
+          <input
+            type="text"
+            value={user.name}
+            readOnly
+            disabled
+            className="w-full bg-muted/60 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground cursor-not-allowed"
+          />
+        </div>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Email</label>
           <input
             type="email"
-            value={email}
+            value={user.email}
             readOnly
             disabled
             className="w-full bg-muted/60 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground cursor-not-allowed"
@@ -95,12 +100,27 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
 
 export default EditProfileSheet;
 
-const Field = ({ label, value, onChange, placeholder, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string;
+const Field = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  type?: string;
 }) => (
   <div>
     <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
-    <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full bg-muted rounded-md px-3 py-2.5 text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-muted rounded-md px-3 py-2.5 text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+    />
   </div>
 );

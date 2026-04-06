@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LogOut, Trash2 } from "lucide-react";
 import { getSettings, patchSettings } from "@automia/api";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,7 +78,6 @@ function AccountSettingsForm() {
   const navigate = useNavigate();
   const { tx } = useLanguage();
   const { user, logout, refreshUser } = useAuth();
-  const [name, setName] = useState("");
   const [clientDescription, setClientDescription] = useState("");
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
@@ -86,12 +86,10 @@ function AccountSettingsForm() {
     if (!user) return;
     void getSettings()
       .then((u) => {
-        setName(u.name);
         setClientDescription(u.client_description ?? "");
         setWebsite(u.website ?? "");
       })
       .catch(() => {
-        setName(user.name);
         setClientDescription(user.client_description ?? "");
         setWebsite(user.website ?? "");
       });
@@ -107,7 +105,6 @@ function AccountSettingsForm() {
     setSaving(true);
     try {
       await patchSettings({
-        name: name.trim(),
         client_description: clientDescription.trim() || null,
         website: website.trim() || null,
       });
@@ -132,9 +129,9 @@ function AccountSettingsForm() {
               <Label htmlFor="settings-name">{tx("Name", "Nombre")}</Label>
               <Input
                 id="settings-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 rounded-lg"
+                value={user?.name ?? ""}
+                readOnly
+                className="h-10 rounded-lg bg-muted/50"
               />
             </div>
             <div className="space-y-2">
@@ -149,11 +146,13 @@ function AccountSettingsForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-bio">{tx("About", "Acerca de")}</Label>
-              <Input
+              <Textarea
                 id="settings-bio"
                 value={clientDescription}
                 onChange={(e) => setClientDescription(e.target.value)}
-                className="h-10 rounded-lg"
+                rows={5}
+                className="min-h-[120px] rounded-lg resize-y"
+                placeholder={tx("Tell people about yourself or your business…", "Cuenta sobre ti o tu negocio…")}
               />
             </div>
             <div className="space-y-2">

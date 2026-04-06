@@ -74,8 +74,7 @@ export default function LoginForm({
         </button>
       </div>
 
-      {/* Remember me / Forgot password */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox
             checked={remember}
@@ -84,9 +83,6 @@ export default function LoginForm({
           />
           <span className="text-sm text-foreground">Remember me</span>
         </label>
-        <button type="button" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
-          Forgot password
-        </button>
       </div>
 
       {/* Login button */}
