@@ -1,7 +1,18 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Car as CarIcon, Clock, Layers, Plug, TrendingUp, Users } from "lucide-react";
-import { ApiError, getCar, getLead, listCars, listLeadStatuses, listLeads, updateCar, updateLead } from "@automia/api";
+import {
+  ApiError,
+  createCar,
+  createLead,
+  getCar,
+  getLead,
+  listCars,
+  listLeadStatuses,
+  listLeads,
+  updateCar,
+  updateLead,
+} from "@automia/api";
 import { Car as CarType, Lead } from "@/types/leads";
 import { CarEditDialog } from "@/components/cars/CarEditDialog";
 import { LeadEditDialog } from "@/components/leads/LeadEditDialog";
@@ -12,9 +23,12 @@ import {
   mapCarFromApi,
   mapLeadFromApi,
   mapStatusFromApi,
+  carToCreatePayload,
   carToUpdatePayload,
+  leadToCreatePayload,
   leadToUpdatePayload,
 } from "@/lib/apiMappers";
+import { isDraftRecordId } from "@/lib/draftIds";
 import {
   DASHBOARD_PLACEHOLDER_WIDGETS,
   type DashboardNavTarget,
@@ -83,6 +97,10 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   }, [leadsData, statuses]);
 
   const beginEditLead = (l: Lead) => {
+    if (isDraftRecordId(l.id)) {
+      setEditLead(l);
+      return;
+    }
     void (async () => {
       try {
         const r = await getLead(l.id);
@@ -94,6 +112,10 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   };
 
   const beginEditCar = (c: CarType) => {
+    if (isDraftRecordId(c.id)) {
+      setEditCar(c);
+      return;
+    }
     void (async () => {
       try {
         const r = await getCar(c.id);
@@ -352,11 +374,16 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           if (!open) setEditCar(null);
         }}
         onSave={async (updated) => {
-          await updateCar(updated.id, carToUpdatePayload(updated));
+          if (isDraftRecordId(updated.id)) {
+            await createCar(carToCreatePayload(updated));
+          } else {
+            await updateCar(updated.id, carToUpdatePayload(updated));
+          }
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
           setEditCar(null);
         }}
         onNotesDocumentAutosave={async (carId, document) => {
+          if (isDraftRecordId(carId)) return;
           await updateCar(carId, { notes_document: document });
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
         }}
@@ -368,11 +395,21 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           if (!open) setEditLead(null);
         }}
         onSave={async (updated) => {
-          await updateLead(updated.id, leadToUpdatePayload(updated));
+          if (isDraftRecordId(updated.id)) {
+            const created = await createLead(leadToCreatePayload(updated));
+            const mapped = mapLeadFromApi(created, statuses);
+            const extra = leadToUpdatePayload(updated);
+            if (extra.attachments !== undefined) {
+              await updateLead(mapped.id, { attachments: extra.attachments });
+            }
+          } else {
+            await updateLead(updated.id, leadToUpdatePayload(updated));
+          }
           await queryClient.invalidateQueries({ queryKey: ["leads"] });
           setEditLead(null);
         }}
         onNotesDocumentAutosave={async (leadId, document) => {
+          if (isDraftRecordId(leadId)) return;
           await updateLead(leadId, { notes_document: document });
           await queryClient.invalidateQueries({ queryKey: ["leads"] });
         }}

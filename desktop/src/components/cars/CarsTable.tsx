@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { getCar } from "@automia/api";
 import { mapCarFromApi } from "@/lib/apiMappers";
+import { isDraftRecordId } from "@/lib/draftIds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -95,6 +96,10 @@ export function CarsTable({
   const [editCar, setEditCar] = useState<Car | null>(null);
 
   const beginEditCar = (c: Car) => {
+    if (isDraftRecordId(c.id)) {
+      setEditCar(c);
+      return;
+    }
     void (async () => {
       try {
         const r = await getCar(c.id);

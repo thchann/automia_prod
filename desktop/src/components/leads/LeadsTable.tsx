@@ -33,6 +33,7 @@ import { matchLeadToCars } from "@/lib/matchLeadToCars";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
+import { isDraftRecordId } from "@/lib/draftIds";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -96,6 +97,10 @@ export function LeadsTable({
   const [editLead, setEditLead] = useState<Lead | null>(null);
 
   const beginEditLead = (l: Lead) => {
+    if (isDraftRecordId(l.id)) {
+      setEditLead(l);
+      return;
+    }
     void (async () => {
       try {
         const r = await getLead(l.id);

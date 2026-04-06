@@ -1,6 +1,8 @@
 import type {
+  CarCreate,
   CarResponse,
   CarUpdate,
+  LeadCreate,
   LeadNotesDocumentJson,
   LeadResponse,
   LeadStatusResponse,
@@ -156,6 +158,58 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
   }
   if (lead.notes_document !== undefined) {
     payload.notes_document = lead.notes_document as LeadUpdate["notes_document"];
+  }
+  return payload;
+}
+
+export function leadToCreatePayload(lead: Lead): LeadCreate {
+  const lt = lead.lead_type;
+  return {
+    lead_type: lt === "buyer" || lt === "seller" ? lt : "pending",
+    source: lead.source || "manual",
+    platform_sender_id: lead.platform_sender_id?.trim() || `manual-${crypto.randomUUID()}`,
+    status_id: lead.status_id,
+    car_id: lead.car_id,
+    name: lead.name,
+    instagram_handle: lead.instagram_handle,
+    phone: lead.phone,
+    notes: lead.notes,
+    desired_budget_min: lead.desired_budget_min,
+    desired_budget_max: lead.desired_budget_max,
+    desired_mileage_max: lead.desired_mileage_max,
+    desired_year_min: lead.desired_year_min,
+    desired_year_max: lead.desired_year_max,
+    desired_make: lead.desired_make,
+    desired_model: lead.desired_model,
+    desired_car_type: lead.desired_car_type,
+    ...(lead.notes_document !== undefined
+      ? { notes_document: lead.notes_document as LeadCreate["notes_document"] }
+      : {}),
+  };
+}
+
+export function carToCreatePayload(car: Car): CarCreate {
+  const payload: CarCreate = {
+    brand: car.brand,
+    model: car.model,
+    year: car.year,
+    mileage: car.mileage,
+    price: car.price,
+    desired_price: car.desired_price,
+    car_type: car.car_type,
+    listed_at: car.listed_at,
+    owner_type: car.owner_type,
+    status: car.status,
+  };
+  const att = attachmentsForApiPayload(car.attachments);
+  if (att !== undefined) {
+    payload.attachments = att as CarCreate["attachments"];
+  }
+  if (car.notes !== undefined) {
+    payload.notes = car.notes;
+  }
+  if (car.notes_document !== undefined) {
+    payload.notes_document = car.notes_document as CarCreate["notes_document"];
   }
   return payload;
 }

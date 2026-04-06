@@ -7,12 +7,19 @@ import {
   listLeads,
   updateCar,
   updateLead,
-  type CarCreate,
 } from "@automia/api";
 import { CarsTable } from "./CarsTable";
 import { Car, Lead } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { mapCarFromApi, mapLeadFromApi, carToUpdatePayload, leadToUpdatePayload } from "@/lib/apiMappers";
+import {
+  mapCarFromApi,
+  mapLeadFromApi,
+  carToCreatePayload,
+  carToUpdatePayload,
+  leadToUpdatePayload,
+} from "@/lib/apiMappers";
+import { buildDraftCar } from "@/lib/draftLeadCar";
+import { isDraftRecordId } from "@/lib/draftIds";
 
 export function CarsPage() {
   const { tx } = useLanguage();
@@ -40,11 +47,16 @@ export function CarsPage() {
   const leads = leadsData?.leads.map((r) => mapLeadFromApi(r)) ?? [];
 
   const handleUpdateCar = async (updated: Car) => {
-    await updateCar(updated.id, carToUpdatePayload(updated));
+    if (isDraftRecordId(updated.id)) {
+      await createCar(carToCreatePayload(updated));
+    } else {
+      await updateCar(updated.id, carToUpdatePayload(updated));
+    }
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 
   const handleCarNotesAutosave = async (carId: string, document: Record<string, unknown>) => {
+    if (isDraftRecordId(carId)) return;
     await updateCar(carId, { notes_document: document });
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
@@ -59,23 +71,8 @@ export function CarsPage() {
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
-  const handleAddCar = async (): Promise<Car> => {
-    const body: CarCreate = {
-      brand: tx("New", "Nuevo"),
-      model: tx("Car", "Auto"),
-      year: new Date().getFullYear(),
-      mileage: 0,
-      price: 0,
-      desired_price: null,
-      car_type: "sedan",
-      listed_at: new Date().toISOString(),
-      owner_type: "owned",
-      status: "available",
-      attachments: null,
-    };
-    const created = await createCar(body);
-    await queryClient.invalidateQueries({ queryKey: ["cars"] });
-    return mapCarFromApi(created);
+  const handleAddCar = (): Car => {
+    return buildDraftCar(tx);
   };
 
   return (

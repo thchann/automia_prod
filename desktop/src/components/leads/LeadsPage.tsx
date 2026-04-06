@@ -15,7 +15,15 @@ import { LeadsTable } from "./LeadsTable";
 import { LeadsFunnel } from "./LeadsFunnel";
 import { Lead, LeadStatus } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi, leadToUpdatePayload } from "@/lib/apiMappers";
+import {
+  mapCarFromApi,
+  mapLeadFromApi,
+  mapStatusFromApi,
+  leadToCreatePayload,
+  leadToUpdatePayload,
+} from "@/lib/apiMappers";
+import { buildDraftLead } from "@/lib/draftLeadCar";
+import { isDraftRecordId } from "@/lib/draftIds";
 
 type Tab = "table" | "funnel";
 
@@ -63,11 +71,21 @@ export function LeadsPage() {
   const [tab, setTab] = useState<Tab>("table");
 
   const handleUpdateLead = async (updated: Lead) => {
-    await updateLead(updated.id, leadToUpdatePayload(updated));
+    if (isDraftRecordId(updated.id)) {
+      const created = await createLead(leadToCreatePayload(updated));
+      const mapped = mapLeadFromApi(created, statuses);
+      const extra = leadToUpdatePayload(updated);
+      if (extra.attachments !== undefined) {
+        await updateLead(mapped.id, { attachments: extra.attachments });
+      }
+    } else {
+      await updateLead(updated.id, leadToUpdatePayload(updated));
+    }
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
   const handleNotesDocumentAutosave = async (leadId: string, document: Record<string, unknown>) => {
+    if (isDraftRecordId(leadId)) return;
     await updateLead(leadId, { notes_document: document });
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
@@ -77,17 +95,8 @@ export function LeadsPage() {
     await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
-  const handleAddLead = async (): Promise<Lead> => {
-    const defaultStatus = statuses[0];
-    const created = await createLead({
-      lead_type: "pending",
-      source: "manual",
-      platform_sender_id: `manual-${crypto.randomUUID()}`,
-      status_id: defaultStatus?.id ?? undefined,
-      name: tx("New Lead", "Nuevo lead"),
-    });
-    await queryClient.invalidateQueries({ queryKey: ["leads"] });
-    return mapLeadFromApi(created, statuses);
+  const handleAddLead = (): Lead => {
+    return buildDraftLead(statuses, tx("New Lead", "Nuevo lead"));
   };
 
   const handleUpdateStatuses = async (next: LeadStatus[]) => {

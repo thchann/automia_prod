@@ -12,6 +12,7 @@ import { Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { exportCarNotes } from "@automia/api";
+import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
 
 const MAX_ATTACHMENTS = 12;
@@ -394,11 +395,15 @@ export function CarEditDialog({
                 recordId={car.id}
                 notesDocument={car.notes_document}
                 legacyNotes={car.notes}
-                exportNotes={(format) => exportCarNotes(car.id, format)}
+                exportNotes={
+                  isDraftRecordId(car.id) ? undefined : (format) => exportCarNotes(car.id, format)
+                }
                 exportDownloadBasename={`car-${car.id}-notes`}
                 onPersist={async (json) => {
                   notesDocRef.current = json;
-                  await onNotesDocumentAutosave?.(car.id, json);
+                  if (!isDraftRecordId(car.id)) {
+                    await onNotesDocumentAutosave?.(car.id, json);
+                  }
                 }}
               />
             </div>
