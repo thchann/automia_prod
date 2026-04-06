@@ -19,6 +19,7 @@ export type { ApiRequestOptions } from "./client";
 
 export * from "./types";
 
+export * from "./settings";
 export * from "./auth";
 export * from "./leads";
 export * from "./leadStatuses";

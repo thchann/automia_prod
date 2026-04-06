@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Trash2 } from "lucide-react";
-import { patchMe } from "@automia/api";
+import { getSettings, patchSettings } from "@automia/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -84,9 +84,17 @@ function AccountSettingsForm() {
 
   useEffect(() => {
     if (!user) return;
-    setName(user.name);
-    setClientDescription(user.client_description ?? "");
-    setWebsite(user.website ?? "");
+    void getSettings()
+      .then((u) => {
+        setName(u.name);
+        setClientDescription(u.client_description ?? "");
+        setWebsite(u.website ?? "");
+      })
+      .catch(() => {
+        setName(user.name);
+        setClientDescription(user.client_description ?? "");
+        setWebsite(user.website ?? "");
+      });
   }, [user]);
 
   const handleLogout = () => {
@@ -98,7 +106,7 @@ function AccountSettingsForm() {
     if (!user) return;
     setSaving(true);
     try {
-      await patchMe({
+      await patchSettings({
         name: name.trim(),
         client_description: clientDescription.trim() || null,
         website: website.trim() || null,

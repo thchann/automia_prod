@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Sun, User, Globe, LogOut } from "lucide-react";
-import { patchMe } from "@automia/api";
+import { patchSettings } from "@automia/api";
 import EditProfileSheet from "@/components/EditProfileSheet";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/contexts/AuthContext";
@@ -104,7 +104,7 @@ const SettingsPage = () => {
         user={profileUser}
         onSave={async (updated) => {
           try {
-            await patchMe({
+            await patchSettings({
               name: updated.name,
               client_description: updated.client_description || null,
               website: updated.website || null,

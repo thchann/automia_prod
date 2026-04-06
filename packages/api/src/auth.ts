@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import { clearAuthTokens, setAuthTokens } from "./tokens";
+import { patchSettings } from "./settings";
 import type {
   AccessCodeValidateResponse,
   ProfileUpdateRequest,
@@ -49,11 +50,9 @@ export async function fetchMe(): Promise<UserMeResponse> {
   return apiRequest<UserMeResponse>("/auth/me");
 }
 
+/** Persists profile fields via `PATCH /settings` (backend has no `PATCH /auth/me`). */
 export async function patchMe(body: UserProfilePatch): Promise<UserMeResponse> {
-  return apiRequest<UserMeResponse>("/auth/me", {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
+  return patchSettings(body);
 }
 
 export async function patchProfile(body: ProfileUpdateRequest): Promise<UserMeResponse> {

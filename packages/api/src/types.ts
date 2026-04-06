@@ -29,18 +29,20 @@ export interface UserMeResponse {
   created_at: string;
 }
 
-export interface UserProfilePatch {
-  name?: string;
+/**
+ * PATCH `/settings` and PATCH `/auth/profile` — matches FastAPI `ProfileUpdateRequest`
+ * (`app/schemas/auth.py`) and fields handled by `apply_user_profile_updates`
+ * (`app/services/user_profile.py`): `name`, `client_description`, `website`, `avatar_url`.
+ */
+export interface ProfileUpdateRequest {
+  name?: string | null;
   client_description?: string | null;
   website?: string | null;
   avatar_url?: string | null;
 }
 
-/** Body for PATCH /auth/profile — matches FastAPI `ProfileUpdateRequest`. */
-export interface ProfileUpdateRequest {
-  client_description?: string | null;
-  website?: string | null;
-}
+/** @deprecated Prefer `ProfileUpdateRequest` — same shape. */
+export type UserProfilePatch = ProfileUpdateRequest;
 
 /**
  * Tiptap editor document (`JSONContent` shape).
