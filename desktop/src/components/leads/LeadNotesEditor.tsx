@@ -24,26 +24,26 @@ import {
 } from "@/components/ui/select";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import {
   Bold,
+  ChevronDown,
   FileDown,
   Italic,
   List,
   ListOrdered,
   ListTodo,
   MoreHorizontal,
-  MoreVertical,
   TableIcon,
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 
 const AUTOSAVE_MS = 2000;
 
@@ -340,176 +340,145 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
 
   const compactSelectTrigger = "h-8 w-[min(100%,5.5rem)] gap-1 border-input/80 text-xs shadow-none shrink-0";
 
-  const formattingPanel = (
-    <div className="flex max-w-[min(100vw-2rem,20rem)] flex-col gap-3">
-      <p className="text-xs font-medium text-muted-foreground">{tx("Formatting", "Formato")}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <ToolbarGroup>
-          <Select
-            value={fontSizeKeyFromEditor(editor)}
-            onValueChange={(key) => {
-              const opt = SIZE_OPTIONS.find((o) => o.key === key);
-              if (!opt) return;
-              const chain = editor.chain().focus();
-              if (!opt.value) chain.unsetFontSize().run();
-              else chain.setFontSize(opt.value).run();
-            }}
-          >
-            <SelectTrigger className={cn(compactSelectTrigger, "w-[52px]")} aria-label={tx("Font size", "Tamano")}>
-              <SelectValue placeholder="—" />
-            </SelectTrigger>
-            <SelectContent>
-              {SIZE_OPTIONS.map((o) => (
-                <SelectItem key={o.key} value={o.key}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <Toggle
-            size="sm"
-            pressed={editor.isActive("bold")}
-            onPressedChange={() => editor.chain().focus().toggleBold().run()}
-            aria-label={tx("Bold", "Negrita")}
-          >
-            <Bold className="h-4 w-4" />
-          </Toggle>
-          <Toggle
-            size="sm"
-            pressed={editor.isActive("italic")}
-            onPressedChange={() => editor.chain().focus().toggleItalic().run()}
-            aria-label={tx("Italic", "Cursiva")}
-          >
-            <Italic className="h-4 w-4" />
-          </Toggle>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <Select
-            value={textColorKeyFromEditor(editor)}
-            onValueChange={(key) => {
-              const opt = TEXT_COLORS.find((c) => c.key === key);
-              if (!opt) return;
-              const chain = editor.chain().focus();
-              if (!opt.hex) chain.unsetColor().run();
-              else chain.setColor(opt.hex).run();
-            }}
-          >
-            <SelectTrigger className={cn(compactSelectTrigger, "w-[min(100%,7.5rem)]")} aria-label={tx("Text color", "Color de texto")}>
-              <SelectValue placeholder={tx("Color", "Color")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">{tx("Default color", "Color predeterminado")}</SelectItem>
-              {TEXT_COLORS.filter((c) => c.hex).map((c) => (
-                <SelectItem key={c.key} value={c.key}>
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm border border-border" style={{ backgroundColor: c.hex }} />
-                    {c.key}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </ToolbarGroup>
-      </div>
-      <Separator />
-      <div className="flex flex-wrap items-center gap-2">
-        <ToolbarGroup>
-          <Toggle
-            size="sm"
-            pressed={editor.isActive("bulletList")}
-            onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-            aria-label={tx("Bullet list", "Lista con viñetas")}
-          >
-            <List className="h-4 w-4" />
-          </Toggle>
-          <Toggle
-            size="sm"
-            pressed={editor.isActive("orderedList")}
-            onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
-            aria-label={tx("Numbered list", "Lista numerada")}
-          >
-            <ListOrdered className="h-4 w-4" />
-          </Toggle>
-          <Toggle
-            size="sm"
-            pressed={editor.isActive("taskList")}
-            onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
-            aria-label={tx("Task list", "Lista de tareas")}
-          >
-            <ListTodo className="h-4 w-4" />
-          </Toggle>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 px-2 text-xs"
-            onClick={() =>
-              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-            }
-          >
-            <TableIcon className="h-4 w-4 mr-1" />
-            {tx("Table", "Tabla")}
-          </Button>
-        </ToolbarGroup>
-      </div>
-    </div>
-  );
-
   return (
     <div className="lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-950/50">
       <div className="lead-notes-toolbar sticky top-0 z-20 flex shrink-0 flex-col gap-0 border-b border-border/80 bg-[hsl(42_10%_94%)]/95 px-2 py-2 backdrop-blur-md dark:bg-zinc-900/95">
-        <div
-          className={cn(
-            "flex w-full min-w-0 items-center gap-2",
-            exportNotes ? "justify-between" : "justify-start",
-          )}
-        >
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 border-border/90"
-                aria-label={tx("Formatting", "Formato")}
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          <ToolbarGroup>
+            <Select
+              value={fontSizeKeyFromEditor(editor)}
+              onValueChange={(key) => {
+                const opt = SIZE_OPTIONS.find((o) => o.key === key);
+                if (!opt) return;
+                const chain = editor.chain().focus();
+                if (!opt.value) chain.unsetFontSize().run();
+                else chain.setFontSize(opt.value).run();
+              }}
+            >
+              <SelectTrigger className={cn(compactSelectTrigger, "w-[52px]")} aria-label={tx("Font size", "Tamano")}>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                {SIZE_OPTIONS.map((o) => (
+                  <SelectItem key={o.key} value={o.key}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </ToolbarGroup>
+          <ToolbarGroup>
+            <Toggle
+              size="sm"
+              pressed={editor.isActive("bold")}
+              onPressedChange={() => editor.chain().focus().toggleBold().run()}
+              aria-label={tx("Bold", "Negrita")}
+            >
+              <Bold className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              size="sm"
+              pressed={editor.isActive("italic")}
+              onPressedChange={() => editor.chain().focus().toggleItalic().run()}
+              aria-label={tx("Italic", "Cursiva")}
+            >
+              <Italic className="h-4 w-4" />
+            </Toggle>
+          </ToolbarGroup>
+          <ToolbarGroup>
+            <Select
+              value={textColorKeyFromEditor(editor)}
+              onValueChange={(key) => {
+                const opt = TEXT_COLORS.find((c) => c.key === key);
+                if (!opt) return;
+                const chain = editor.chain().focus();
+                if (!opt.hex) chain.unsetColor().run();
+                else chain.setColor(opt.hex).run();
+              }}
+            >
+              <SelectTrigger
+                className={cn(compactSelectTrigger, "w-[min(100%,7.5rem)]")}
+                aria-label={tx("Text color", "Color de texto")}
               >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-3" align="start" sideOffset={6}>
-              {formattingPanel}
-            </PopoverContent>
-          </Popover>
+                <SelectValue placeholder={tx("Color", "Color")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{tx("Default color", "Color predeterminado")}</SelectItem>
+                {TEXT_COLORS.filter((c) => c.hex).map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-sm border border-border" style={{ backgroundColor: c.hex }} />
+                      {c.key}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </ToolbarGroup>
 
-          {exportNotes ? (
+          <div className="min-w-[0.5rem] flex-1" aria-hidden />
+
+          <ToolbarGroup className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 border-border/90"
-                  aria-label={tx("More", "Mas")}
+                  size="sm"
+                  className="h-8 gap-1 border-border/90 px-2.5 shadow-sm"
+                  aria-label={tx("More formatting", "Mas formato")}
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4 shrink-0" />
+                  <span className="hidden max-w-[8rem] truncate sm:inline">{tx("More", "Mas")}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={6} className="min-w-[10rem]">
-                <DropdownMenuItem onClick={() => void runExport("pdf")}>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  {tx("Download PDF", "Descargar PDF")}
+              <DropdownMenuContent align="end" sideOffset={6} className="min-w-[12rem]">
+                <DropdownMenuCheckboxItem
+                  checked={editor.isActive("bulletList")}
+                  onCheckedChange={() => editor.chain().focus().toggleBulletList().run()}
+                >
+                  <List className="mr-2 h-4 w-4" />
+                  {tx("Bullet list", "Lista con viñetas")}
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={editor.isActive("orderedList")}
+                  onCheckedChange={() => editor.chain().focus().toggleOrderedList().run()}
+                >
+                  <ListOrdered className="mr-2 h-4 w-4" />
+                  {tx("Numbered list", "Lista numerada")}
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={editor.isActive("taskList")}
+                  onCheckedChange={() => editor.chain().focus().toggleTaskList().run()}
+                >
+                  <ListTodo className="mr-2 h-4 w-4" />
+                  {tx("Task list", "Lista de tareas")}
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+                  }
+                >
+                  <TableIcon className="mr-2 h-4 w-4" />
+                  {tx("Insert table", "Insertar tabla")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void runExport("docx")}>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  {tx("Download DOCX", "Descargar DOCX")}
-                </DropdownMenuItem>
+                {exportNotes ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => void runExport("pdf")}>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      {tx("Download PDF", "Descargar PDF")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void runExport("docx")}>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      {tx("Download DOCX", "Descargar DOCX")}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : null}
+          </ToolbarGroup>
         </div>
       </div>
 

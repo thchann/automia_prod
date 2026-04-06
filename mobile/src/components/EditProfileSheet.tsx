@@ -7,17 +7,24 @@ interface EditProfileSheetProps {
   open: boolean;
   onClose: () => void;
   user: { name: string; email: string; client_description: string; website: string; avatar_url: string | null };
-  onSave: (patch: { client_description: string; website: string; avatar_url: string | null }) => void | Promise<void>;
+  onSave: (patch: {
+    name: string;
+    client_description: string;
+    website: string;
+    avatar_url: string | null;
+  }) => void | Promise<void>;
 }
 
 const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps) => {
   const { tx } = useLanguage();
+  const [name, setName] = useState(user.name);
   const [description, setDescription] = useState(user.client_description);
   const [website, setWebsite] = useState(user.website);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar_url);
 
   useEffect(() => {
     if (!open) return;
+    setName(user.name);
     setDescription(user.client_description);
     setWebsite(user.website);
     setAvatarPreview(user.avatar_url);
@@ -33,9 +40,14 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
   };
 
   const handleSave = () => {
-    void Promise.resolve(onSave({ client_description: description, website, avatar_url: avatarPreview })).then(() =>
-      onClose(),
-    );
+    void Promise.resolve(
+      onSave({
+        name: name.trim(),
+        client_description: description,
+        website,
+        avatar_url: avatarPreview,
+      }),
+    ).then(() => onClose());
   };
 
   return (
@@ -48,7 +60,9 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
               {avatarPreview ? (
                 <img src={avatarPreview} alt={tx("Avatar", "Avatar")} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl font-bold text-muted-foreground">{user.name.charAt(0)}</span>
+                <span className="text-2xl font-bold text-muted-foreground">
+                  {(name.trim() || user.name || "?").charAt(0)}
+                </span>
               )}
             </div>
             <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
@@ -59,16 +73,12 @@ const EditProfileSheet = ({ open, onClose, user, onSave }: EditProfileSheetProps
           <p className="text-xs text-primary font-medium">{tx("Edit picture", "Editar foto")}</p>
         </div>
 
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{tx("Name", "Nombre")}</label>
-          <input
-            type="text"
-            value={user.name}
-            readOnly
-            disabled
-            className="w-full bg-muted/60 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground cursor-not-allowed"
-          />
-        </div>
+        <Field
+          label={tx("Name", "Nombre")}
+          value={name}
+          onChange={setName}
+          placeholder={tx("Your name", "Tu nombre")}
+        />
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Email</label>
           <input

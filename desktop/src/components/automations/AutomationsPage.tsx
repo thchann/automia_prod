@@ -190,11 +190,8 @@ export function AutomationsPage() {
     }
   };
 
-  const accountLabel = (row: AutomationItem) => {
-    const raw = row.platform_page_id?.trim();
-    if (!raw) return tx("Instagram account", "Cuenta de Instagram");
-    return raw.length > 28 ? `${raw.slice(0, 26)}…` : raw;
-  };
+  /** Do not surface `platform_page_id` in the UI. */
+  const accountSubtitle = () => tx("Instagram account", "Cuenta de Instagram");
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 text-foreground">
@@ -258,7 +255,7 @@ export function AutomationsPage() {
           <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
             {BOT_ORDER.map((botKey) => {
               const { title, description } = botCatalogMeta(botKey, tx);
-              const count = countAutomationsForCatalog(automations, types, botKey);
+              const hasConnected = countAutomationsForCatalog(automations, types, botKey) > 0;
               const isIg = true;
 
               return (
@@ -280,15 +277,8 @@ export function AutomationsPage() {
                       <div className="font-semibold">{title}</div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
                     </div>
-                    <div className="mt-auto flex h-8 flex-wrap items-center justify-between gap-2 pr-1">
-                      <span className="text-xs text-muted-foreground">
-                        {count === 0
-                          ? tx("No bots connected", "Sin bots conectados")
-                          : count === 1
-                            ? tx("1 bot connected", "1 bot conectado")
-                            : tx(`${count} bots connected`, `${count} bots conectados`)}
-                      </span>
-                      {count > 1 ? (
+                    <div className="mt-auto flex h-8 flex-wrap items-center justify-end gap-2 pr-1">
+                      {hasConnected ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -346,7 +336,7 @@ export function AutomationsPage() {
                     </div>
                     <div>
                       <div className="font-semibold">{typeItem.name}</div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{accountLabel(conn)}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{accountSubtitle()}</p>
                     </div>
                     <div className="mt-auto flex h-8 items-center justify-between pr-1">
                       <Button

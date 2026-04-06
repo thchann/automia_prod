@@ -105,6 +105,7 @@ const SettingsPage = () => {
         onSave={async (updated) => {
           try {
             await patchSettings({
+              name: updated.name,
               client_description: updated.client_description || null,
               website: updated.website || null,
               avatar_url: updated.avatar_url,

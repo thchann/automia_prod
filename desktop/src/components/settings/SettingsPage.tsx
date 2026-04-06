@@ -78,6 +78,7 @@ function AccountSettingsForm() {
   const navigate = useNavigate();
   const { tx } = useLanguage();
   const { user, logout, refreshUser } = useAuth();
+  const [name, setName] = useState("");
   const [clientDescription, setClientDescription] = useState("");
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
@@ -86,10 +87,12 @@ function AccountSettingsForm() {
     if (!user) return;
     void getSettings()
       .then((u) => {
+        setName(u.name);
         setClientDescription(u.client_description ?? "");
         setWebsite(u.website ?? "");
       })
       .catch(() => {
+        setName(user.name);
         setClientDescription(user.client_description ?? "");
         setWebsite(user.website ?? "");
       });
@@ -105,6 +108,7 @@ function AccountSettingsForm() {
     setSaving(true);
     try {
       await patchSettings({
+        name: name.trim(),
         client_description: clientDescription.trim() || null,
         website: website.trim() || null,
       });
@@ -129,9 +133,9 @@ function AccountSettingsForm() {
               <Label htmlFor="settings-name">{tx("Name", "Nombre")}</Label>
               <Input
                 id="settings-name"
-                value={user?.name ?? ""}
-                readOnly
-                className="h-10 rounded-lg bg-muted/50"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 rounded-lg"
               />
             </div>
             <div className="space-y-2">
