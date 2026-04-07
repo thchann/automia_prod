@@ -242,78 +242,6 @@ export function AutomationManageDialog({
                 <p className="text-sm text-muted-foreground mb-1">{tx("Description", "Descripcion")}</p>
                 <p className="text-sm text-foreground leading-relaxed">{typeItem.description ?? typeItem.code}</p>
               </div>
-              {isIgDm ? (
-                <div className="space-y-2 rounded-lg border border-border p-3">
-                  <p className="text-sm font-medium text-foreground">
-                    {tx("Instagram DM settings", "Configuracion de DM de Instagram")}
-                  </p>
-                  <ToggleGroup
-                    type="single"
-                    value={dmMode}
-                    onValueChange={(v) => {
-                      if (v === "ai" || v === "static") setDmMode(v);
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="justify-start"
-                    aria-label={tx("DM response mode", "Modo de respuesta de DM")}
-                  >
-                    <ToggleGroupItem value="ai">{tx("AI response", "Respuesta IA")}</ToggleGroupItem>
-                    <ToggleGroupItem value="static">{tx("Static reply", "Respuesta fija")}</ToggleGroupItem>
-                  </ToggleGroup>
-                  {dmMode === "ai" ? (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        {tx("Custom instructions (optional)", "Instrucciones personalizadas (opcional)")}
-                      </p>
-                      <Textarea
-                        value={dmInstructions}
-                        onChange={(e) => setDmInstructions(e.target.value)}
-                        maxLength={AI_MAX_CHARS}
-                        rows={5}
-                        placeholder={tx(
-                          "Tell the bot how to respond (tone, goals, routing to website, etc.).",
-                          "Indica como debe responder el bot (tono, objetivos, envio al sitio web, etc.).",
-                        )}
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        {dmInstructions.length}/{AI_MAX_CHARS}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        {tx("Fixed reply (required)", "Respuesta fija (obligatoria)")}
-                      </p>
-                      <Textarea
-                        value={dmStaticMessage}
-                        onChange={(e) => setDmStaticMessage(e.target.value)}
-                        maxLength={STATIC_MAX_CHARS}
-                        rows={4}
-                        placeholder={tx("Write the exact message to send.", "Escribe el mensaje exacto a enviar.")}
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        {dmStaticMessage.length}/{STATIC_MAX_CHARS}
-                      </p>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground">
-                    {tx(
-                      "Business description and website are managed in profile settings.",
-                      "La descripcion del negocio y el sitio web se gestionan en perfil.",
-                    )}
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="rounded-full"
-                    disabled={savingDm}
-                    onClick={() => void saveDmSettings()}
-                  >
-                    {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
-                  </Button>
-                </div>
-              ) : null}
               <div>
                 <p className="text-sm text-muted-foreground mb-2">{tx("Run state", "Estado de ejecucion")}</p>
                 <div className="flex items-center gap-3">
@@ -358,52 +286,179 @@ export function AutomationManageDialog({
             </div>
           </div>
 
-          {/* Column 2 — messages */}
+          {/* Column 2 — DM settings + messages */}
           <div className="flex min-h-[320px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
-            <div className="shrink-0 px-4 pt-3 pb-2">
-              <p className="text-base font-semibold text-foreground">{tx("Messages", "Mensajes")}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {tx("Sent and received activity from this automation.", "Actividad enviada y recibida.")}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {filterPill(tx("All activity", "Toda la actividad"))}
-                {filterPill(tx("Outbound", "Salientes"))}
-                {filterPill(tx("Time range", "Periodo"))}
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 space-y-3 pb-4">
-              {loadingMessages ? (
-                <p className="text-sm text-muted-foreground py-6">{tx("Loading messages…", "Cargando mensajes…")}</p>
-              ) : mergedMessages.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  {tx("No messages yet. When the API exposes message history, it will show here.", "Aun no hay mensajes. Cuando el servidor exponga el historial, aparecera aqui.")}
-                </p>
-              ) : (
-                mergedMessages.map((m) => {
-                  const isErr = m.direction?.toLowerCase() === "error";
-                  return (
-                    <div
-                      key={m.id}
-                      className={`rounded-xl border p-3 shadow-sm ${
-                        isErr ? "border-destructive/40 bg-destructive/5" : "border-border bg-background"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span
-                          className={`text-[10px] font-semibold uppercase tracking-wide ${
-                            isErr ? "text-destructive" : "text-muted-foreground"
+            {isIgDm ? (
+              <>
+                <div className="min-h-0 flex-1 border-b border-border">
+                  <div className="h-full overflow-y-auto px-4 pb-4 pt-3">
+                    <div className="space-y-2 rounded-lg border border-border p-3">
+                      <p className="text-sm font-medium text-foreground">
+                        {tx("Instagram DM settings", "Configuracion de DM de Instagram")}
+                      </p>
+                      <ToggleGroup
+                        type="single"
+                        value={dmMode}
+                        onValueChange={(v) => {
+                          if (v === "ai" || v === "static") setDmMode(v);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="justify-start"
+                        aria-label={tx("DM response mode", "Modo de respuesta de DM")}
+                      >
+                        <ToggleGroupItem value="ai">{tx("AI response", "Respuesta IA")}</ToggleGroupItem>
+                        <ToggleGroupItem value="static">{tx("Static reply", "Respuesta fija")}</ToggleGroupItem>
+                      </ToggleGroup>
+                      {dmMode === "ai" ? (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            {tx("Custom instructions (optional)", "Instrucciones personalizadas (opcional)")}
+                          </p>
+                          <Textarea
+                            value={dmInstructions}
+                            onChange={(e) => setDmInstructions(e.target.value)}
+                            maxLength={AI_MAX_CHARS}
+                            rows={5}
+                            placeholder={tx(
+                              "Tell the bot how to respond (tone, goals, routing to website, etc.).",
+                              "Indica como debe responder el bot (tono, objetivos, envio al sitio web, etc.).",
+                            )}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            {dmInstructions.length}/{AI_MAX_CHARS}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            {tx("Fixed reply (required)", "Respuesta fija (obligatoria)")}
+                          </p>
+                          <Textarea
+                            value={dmStaticMessage}
+                            onChange={(e) => setDmStaticMessage(e.target.value)}
+                            maxLength={STATIC_MAX_CHARS}
+                            rows={4}
+                            placeholder={tx("Write the exact message to send.", "Escribe el mensaje exacto a enviar.")}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            {dmStaticMessage.length}/{STATIC_MAX_CHARS}
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">
+                        {tx(
+                          "Business description and website are managed in profile settings.",
+                          "La descripcion del negocio y el sitio web se gestionan en perfil.",
+                        )}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="rounded-full"
+                        disabled={savingDm}
+                        onClick={() => void saveDmSettings()}
+                      >
+                        {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <div className="shrink-0 px-4 pt-3 pb-2">
+                    <p className="text-base font-semibold text-foreground">{tx("Messages", "Mensajes")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tx("Sent and received activity from this automation.", "Actividad enviada y recibida.")}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {filterPill(tx("All activity", "Toda la actividad"))}
+                      {filterPill(tx("Outbound", "Salientes"))}
+                      {filterPill(tx("Time range", "Periodo"))}
+                    </div>
+                  </div>
+                  <div className="min-h-0 h-[calc(100%-4.5rem)] overflow-y-auto px-4 space-y-3 pb-4">
+                    {loadingMessages ? (
+                      <p className="text-sm text-muted-foreground py-6">{tx("Loading messages…", "Cargando mensajes…")}</p>
+                    ) : mergedMessages.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-6 text-center">
+                        {tx("No messages yet. When the API exposes message history, it will show here.", "Aun no hay mensajes. Cuando el servidor exponga el historial, aparecera aqui.")}
+                      </p>
+                    ) : (
+                      mergedMessages.map((m) => {
+                        const isErr = m.direction?.toLowerCase() === "error";
+                        return (
+                          <div
+                            key={m.id}
+                            className={`rounded-xl border p-3 shadow-sm ${
+                              isErr ? "border-destructive/40 bg-destructive/5" : "border-border bg-background"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span
+                                className={`text-[10px] font-semibold uppercase tracking-wide ${
+                                  isErr ? "text-destructive" : "text-muted-foreground"
+                                }`}
+                              >
+                                {directionLabel(m.direction, tx)}
+                              </span>
+                              <span className="text-xs text-muted-foreground shrink-0">{formatWhen(m.created_at)}</span>
+                            </div>
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{m.body || "—"}</p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="shrink-0 px-4 pt-3 pb-2">
+                  <p className="text-base font-semibold text-foreground">{tx("Messages", "Mensajes")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {tx("Sent and received activity from this automation.", "Actividad enviada y recibida.")}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {filterPill(tx("All activity", "Toda la actividad"))}
+                    {filterPill(tx("Outbound", "Salientes"))}
+                    {filterPill(tx("Time range", "Periodo"))}
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 space-y-3 pb-4">
+                  {loadingMessages ? (
+                    <p className="text-sm text-muted-foreground py-6">{tx("Loading messages…", "Cargando mensajes…")}</p>
+                  ) : mergedMessages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-6 text-center">
+                      {tx("No messages yet. When the API exposes message history, it will show here.", "Aun no hay mensajes. Cuando el servidor exponga el historial, aparecera aqui.")}
+                    </p>
+                  ) : (
+                    mergedMessages.map((m) => {
+                      const isErr = m.direction?.toLowerCase() === "error";
+                      return (
+                        <div
+                          key={m.id}
+                          className={`rounded-xl border p-3 shadow-sm ${
+                            isErr ? "border-destructive/40 bg-destructive/5" : "border-border bg-background"
                           }`}
                         >
-                          {directionLabel(m.direction, tx)}
-                        </span>
-                        <span className="text-xs text-muted-foreground shrink-0">{formatWhen(m.created_at)}</span>
-                      </div>
-                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{m.body || "—"}</p>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span
+                              className={`text-[10px] font-semibold uppercase tracking-wide ${
+                                isErr ? "text-destructive" : "text-muted-foreground"
+                              }`}
+                            >
+                              {directionLabel(m.direction, tx)}
+                            </span>
+                            <span className="text-xs text-muted-foreground shrink-0">{formatWhen(m.created_at)}</span>
+                          </div>
+                          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{m.body || "—"}</p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
