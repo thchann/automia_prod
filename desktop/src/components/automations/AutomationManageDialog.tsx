@@ -292,7 +292,7 @@ export function AutomationManageDialog({
               <>
                 <div className="min-h-0 flex-1 border-b border-border">
                   <div className="h-full overflow-y-auto px-4 pb-4 pt-3">
-                    <div className="space-y-2 rounded-lg border border-border p-3">
+                    <div className="space-y-2">
                       <p className="text-sm font-medium text-foreground">
                         {tx("Instagram DM settings", "Configuracion de DM de Instagram")}
                       </p>

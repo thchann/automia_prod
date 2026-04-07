@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileText, Trash2, Upload } from "lucide-react";
 import {
   ApiError,
   exportCarNotes,
@@ -106,6 +106,12 @@ export function CarEditDialog({
     if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
     const next = current.filter((_, i) => i !== index);
     setAttachments(next.length ? next : null);
+  };
+
+  const canPreviewAttachment = (att: CarAttachment) => {
+    if (typeof att.url === "string" && att.url.length > 0) return true;
+    if (att.storage_key && !isDraftRecordId(car.id)) return true;
+    return false;
   };
 
   const viewAttachment = (att: CarAttachment) => {
@@ -389,16 +395,16 @@ export function CarEditDialog({
                         </div>
                       </div>
                       <div className="flex items-center shrink-0">
-                        {att.type === "image" ? (
+                        {canPreviewAttachment(att) ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             type="button"
-                            title={tx("View", "Ver")}
+                            title={tx("Preview", "Vista previa")}
                             onClick={() => viewAttachment(att)}
                             className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                         ) : null}
                         <Button
