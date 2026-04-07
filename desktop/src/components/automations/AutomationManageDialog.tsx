@@ -346,21 +346,6 @@ export function AutomationManageDialog({
                           </p>
                         </div>
                       )}
-                      <p className="text-[11px] text-muted-foreground">
-                        {tx(
-                          "Business description and website are managed in profile settings.",
-                          "La descripcion del negocio y el sitio web se gestionan en perfil.",
-                        )}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="rounded-full"
-                        disabled={savingDm}
-                        onClick={() => void saveDmSettings()}
-                      >
-                        {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -463,6 +448,17 @@ export function AutomationManageDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
+          {isIgDm ? (
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-full"
+              disabled={savingDm}
+              onClick={() => void saveDmSettings()}
+            >
+              {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {tx("Close", "Cerrar")}
           </Button>
