@@ -226,7 +226,7 @@ export function CarEditDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex flex-col max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-none gap-0 p-0 sm:max-w-[min(1180px,calc(100vw-1.5rem))] overflow-hidden"
+        className="flex flex-col max-h-[90vh] w-[calc(100vw-10vh)] max-w-none gap-0 p-0 sm:max-w-[min(1360px,calc(100vw-10vh))] overflow-hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
