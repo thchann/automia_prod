@@ -343,7 +343,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
   return (
     <div className="lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-950/50">
       <div className="lead-notes-toolbar sticky top-0 z-20 flex shrink-0 flex-col gap-0 border-b border-border/80 bg-[hsl(42_10%_94%)]/95 px-2 py-2 backdrop-blur-md dark:bg-zinc-900/95">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto">
           <ToolbarGroup>
             <Select
               value={fontSizeKeyFromEditor(editor)}
@@ -397,7 +397,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
               }}
             >
               <SelectTrigger
-                className={cn(compactSelectTrigger, "w-[min(100%,7.5rem)]")}
+                className={cn(compactSelectTrigger, "w-[min(100%,6.25rem)]")}
                 aria-label={tx("Text color", "Color de texto")}
               >
                 <SelectValue placeholder={tx("Color", "Color")} />
@@ -425,11 +425,10 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1 border-border/90 px-2.5 shadow-sm"
+                  className="h-8 gap-1 border-border/90 px-2 shadow-sm"
                   aria-label={tx("More formatting", "Mas formato")}
                 >
                   <MoreHorizontal className="h-4 w-4 shrink-0" />
-                  <span className="hidden max-w-[8rem] truncate sm:inline">{tx("More", "Mas")}</span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
