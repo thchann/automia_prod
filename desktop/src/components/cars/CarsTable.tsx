@@ -204,11 +204,11 @@ export function CarsTable({
   };
 
   const statsCatalog = useMemo(() => ([
-    { id: "total", label: tx("Total Cars", "Total de autos"), color: "bg-blue-500", value: filteredCars.length },
-    { id: "available", label: tx("Available", "Disponible"), color: "bg-emerald-500", value: filteredCars.filter((c) => c.status === "available").length },
-    { id: "sold", label: tx("Sold", "Vendido"), color: "bg-amber-500", value: filteredCars.filter((c) => c.status === "sold").length },
-    { id: "owned", label: tx("Owned", "Propio"), color: "bg-purple-500", value: filteredCars.filter((c) => c.owner_type === "owned").length },
-  ]), [filteredCars, tx]);
+    { id: "total", label: tx("Total Cars", "Total de autos"), color: "bg-blue-500", value: cars.length },
+    { id: "available", label: tx("Available", "Disponible"), color: "bg-emerald-500", value: cars.filter((c) => c.status === "available").length },
+    { id: "sold", label: tx("Sold", "Vendido"), color: "bg-amber-500", value: cars.filter((c) => c.status === "sold").length },
+    { id: "owned", label: tx("Owned", "Propio"), color: "bg-purple-500", value: cars.filter((c) => c.owner_type === "owned").length },
+  ]), [cars, tx]);
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;

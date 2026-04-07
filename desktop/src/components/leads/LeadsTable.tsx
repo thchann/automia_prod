@@ -229,10 +229,10 @@ export function LeadsTable({
     return { color };
   };
 
-  const totalLeads = filteredLeads.length;
-  const newLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "New").length;
-  const contactedLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "Contacted").length;
-  const qualifiedLeads = filteredLeads.filter((l) => getStatus(l.status_id)?.name === "Qualified").length;
+  const totalLeads = leads.length;
+  const newLeads = leads.filter((l) => getStatus(l.status_id)?.name === "New").length;
+  const contactedLeads = leads.filter((l) => getStatus(l.status_id)?.name === "Contacted").length;
+  const qualifiedLeads = leads.filter((l) => getStatus(l.status_id)?.name === "Qualified").length;
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
