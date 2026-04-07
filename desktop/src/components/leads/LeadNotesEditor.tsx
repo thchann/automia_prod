@@ -355,7 +355,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
                 else chain.setFontSize(opt.value).run();
               }}
             >
-              <SelectTrigger className={cn(compactSelectTrigger, "w-[52px]")} aria-label={tx("Font size", "Tamano")}>
+              <SelectTrigger className={cn(compactSelectTrigger, "w-[74px]")} aria-label={tx("Font size", "Tamano")}>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
