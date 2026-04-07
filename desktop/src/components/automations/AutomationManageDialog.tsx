@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -8,7 +8,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getAutomation, listAutomationMessages, updateAutomation } from "@automia/api";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError, getAutomation, listAutomationMessages, updateAutomation, updateAutomationConfig } from "@automia/api";
 import type { AutomationItem, AutomationMessageItem, AutomationTypeItem } from "@automia/api";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
@@ -40,6 +42,18 @@ function directionLabel(dir: string | null, tx: (en: string, es: string) => stri
   return dir;
 }
 
+type DmMode = "ai" | "static";
+const AI_MAX_CHARS = 8000;
+const STATIC_MAX_CHARS = 2000;
+
+function isInstagramDmType(typeItem: AutomationTypeItem): boolean {
+  if (typeItem.platform !== "instagram") return false;
+  const code = typeItem.code.toLowerCase();
+  const name = typeItem.name.toLowerCase();
+  if (code === "instagram_comment" || code === "instagram_comments") return false;
+  return code === "instagram_dm" || /\bdm\b/.test(code) || /\bdm\b/.test(name);
+}
+
 export function AutomationManageDialog({
   open,
   onOpenChange,
@@ -49,6 +63,10 @@ export function AutomationManageDialog({
 }: Props) {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
+  const [dmMode, setDmMode] = useState<DmMode>("ai");
+  const [dmInstructions, setDmInstructions] = useState("");
+  const [dmStaticMessage, setDmStaticMessage] = useState("");
+  const [savingDm, setSavingDm] = useState(false);
 
   const { data: detail = automation } = useQuery({
     queryKey: ["automation", automation.id],
@@ -104,6 +122,16 @@ export function AutomationManageDialog({
 
   const isActive = detail.status === "active";
   const isIg = typeItem.platform === "instagram";
+  const isIgDm = isInstagramDmType(typeItem);
+
+  useEffect(() => {
+    if (!open || !isIgDm) return;
+    const cfg = (detail.config ?? {}) as Record<string, unknown>;
+    const rawMode = typeof cfg.dm_response_mode === "string" ? cfg.dm_response_mode : "";
+    setDmMode(rawMode === "static" ? "static" : "ai");
+    setDmInstructions(typeof cfg.dm_system_instructions === "string" ? cfg.dm_system_instructions : "");
+    setDmStaticMessage(typeof cfg.dm_static_message === "string" ? cfg.dm_static_message : "");
+  }, [open, isIgDm, detail.id, detail.updated_at, detail.config]);
 
   const toggleStatus = async () => {
     const next = detail.status === "active" ? "paused" : "active";
@@ -113,6 +141,65 @@ export function AutomationManageDialog({
       await queryClient.invalidateQueries({ queryKey: ["automation", detail.id] });
     } catch {
       toast.error(tx("Update failed", "Error al actualizar"));
+    }
+  };
+
+  const saveDmSettings = async () => {
+    if (!isIgDm) return;
+    if (dmMode !== "ai" && dmMode !== "static") {
+      toast.error(tx("Invalid mode selected.", "Modo seleccionado no valido."));
+      return;
+    }
+    const prompt = dmInstructions.trim();
+    const staticMessage = dmStaticMessage.trim();
+    if (prompt.length > AI_MAX_CHARS) {
+      toast.error(
+        tx(
+          `Custom instructions must be ${AI_MAX_CHARS} characters or less.`,
+          `Las instrucciones deben tener ${AI_MAX_CHARS} caracteres o menos.`,
+        ),
+      );
+      return;
+    }
+    if (dmMode === "static") {
+      if (!staticMessage) {
+        toast.error(tx("Fixed reply is required in static mode.", "La respuesta fija es obligatoria en modo estatico."));
+        return;
+      }
+      if (staticMessage.length > STATIC_MAX_CHARS) {
+        toast.error(
+          tx(
+            `Fixed reply must be ${STATIC_MAX_CHARS} characters or less.`,
+            `La respuesta fija debe tener ${STATIC_MAX_CHARS} caracteres o menos.`,
+          ),
+        );
+        return;
+      }
+    }
+    setSavingDm(true);
+    try {
+      const fresh = await getAutomation(detail.id);
+      const prev = (fresh.config ?? {}) as Record<string, unknown>;
+      const next: Record<string, unknown> = { ...prev, dm_response_mode: dmMode };
+      if (dmMode === "ai") {
+        if (prompt) next.dm_system_instructions = prompt;
+        else delete next.dm_system_instructions;
+        delete next.dm_static_message;
+      } else {
+        next.dm_static_message = staticMessage;
+      }
+      await updateAutomationConfig(detail.id, { config: next });
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+      await queryClient.invalidateQueries({ queryKey: ["automation", detail.id] });
+      toast.success(tx("DM settings saved.", "Configuracion de DM guardada."));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) {
+        toast.error(typeof e.detail === "string" ? e.detail : e.message);
+      } else {
+        toast.error(tx("Could not save DM settings.", "No se pudo guardar la configuracion de DM."));
+      }
+    } finally {
+      setSavingDm(false);
     }
   };
 
@@ -155,6 +242,78 @@ export function AutomationManageDialog({
                 <p className="text-sm text-muted-foreground mb-1">{tx("Description", "Descripcion")}</p>
                 <p className="text-sm text-foreground leading-relaxed">{typeItem.description ?? typeItem.code}</p>
               </div>
+              {isIgDm ? (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {tx("Instagram DM settings", "Configuracion de DM de Instagram")}
+                  </p>
+                  <ToggleGroup
+                    type="single"
+                    value={dmMode}
+                    onValueChange={(v) => {
+                      if (v === "ai" || v === "static") setDmMode(v);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    aria-label={tx("DM response mode", "Modo de respuesta de DM")}
+                  >
+                    <ToggleGroupItem value="ai">{tx("AI response", "Respuesta IA")}</ToggleGroupItem>
+                    <ToggleGroupItem value="static">{tx("Static reply", "Respuesta fija")}</ToggleGroupItem>
+                  </ToggleGroup>
+                  {dmMode === "ai" ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {tx("Custom instructions (optional)", "Instrucciones personalizadas (opcional)")}
+                      </p>
+                      <Textarea
+                        value={dmInstructions}
+                        onChange={(e) => setDmInstructions(e.target.value)}
+                        maxLength={AI_MAX_CHARS}
+                        rows={5}
+                        placeholder={tx(
+                          "Tell the bot how to respond (tone, goals, routing to website, etc.).",
+                          "Indica como debe responder el bot (tono, objetivos, envio al sitio web, etc.).",
+                        )}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        {dmInstructions.length}/{AI_MAX_CHARS}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {tx("Fixed reply (required)", "Respuesta fija (obligatoria)")}
+                      </p>
+                      <Textarea
+                        value={dmStaticMessage}
+                        onChange={(e) => setDmStaticMessage(e.target.value)}
+                        maxLength={STATIC_MAX_CHARS}
+                        rows={4}
+                        placeholder={tx("Write the exact message to send.", "Escribe el mensaje exacto a enviar.")}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        {dmStaticMessage.length}/{STATIC_MAX_CHARS}
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    {tx(
+                      "Business description and website are managed in profile settings.",
+                      "La descripcion del negocio y el sitio web se gestionan en perfil.",
+                    )}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-full"
+                    disabled={savingDm}
+                    onClick={() => void saveDmSettings()}
+                  >
+                    {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
+                  </Button>
+                </div>
+              ) : null}
               <div>
                 <p className="text-sm text-muted-foreground mb-2">{tx("Run state", "Estado de ejecucion")}</p>
                 <div className="flex items-center gap-3">
