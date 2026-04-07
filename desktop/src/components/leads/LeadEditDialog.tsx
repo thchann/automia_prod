@@ -436,16 +436,18 @@ export function LeadEditDialog({
                         </div>
                       </div>
                       <div className="flex items-center shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          title={tx("View", "Ver")}
-                          onClick={() => viewAttachment(att)}
-                          className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
+                        {att.type === "image" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            title={tx("View", "Ver")}
+                            onClick={() => viewAttachment(att)}
+                            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="sm"
