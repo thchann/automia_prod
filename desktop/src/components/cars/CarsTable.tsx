@@ -131,7 +131,8 @@ export function CarsTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
-  const [cardFilter, setCardFilter] = useState<"total" | "available" | "sold" | "owned" | null>(null);
+  /** Inventory status filter from summary cards (`null` = show all). */
+  const [cardFilter, setCardFilter] = useState<"available" | "sold" | null>(null);
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
@@ -143,7 +144,6 @@ export function CarsTable({
     return cars.filter((car) => {
       if (cardFilter === "available" && car.status !== "available") return false;
       if (cardFilter === "sold" && car.status !== "sold") return false;
-      if (cardFilter === "owned" && car.owner_type !== "owned") return false;
       if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
@@ -217,12 +217,23 @@ export function CarsTable({
     }
   };
 
-  const statsCatalog = useMemo(() => ([
-    { id: "total", label: tx("Total Cars", "Total de autos"), color: "bg-blue-500", value: cars.length },
-    { id: "available", label: tx("Available", "Disponible"), color: "bg-emerald-500", value: cars.filter((c) => c.status === "available").length },
-    { id: "sold", label: tx("Sold", "Vendido"), color: "bg-amber-500", value: cars.filter((c) => c.status === "sold").length },
-    { id: "owned", label: tx("Owned", "Propio"), color: "bg-purple-500", value: cars.filter((c) => c.owner_type === "owned").length },
-  ]), [cars, tx]);
+  const statusCards = useMemo(
+    () => [
+      {
+        id: "available" as const,
+        label: tx("Available", "Disponible"),
+        color: "bg-emerald-500",
+        value: cars.filter((c) => c.status === "available").length,
+      },
+      {
+        id: "sold" as const,
+        label: tx("Sold", "Vendido"),
+        color: "bg-amber-500",
+        value: cars.filter((c) => c.status === "sold").length,
+      },
+    ],
+    [cars, tx],
+  );
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
@@ -230,7 +241,8 @@ export function CarsTable({
   const hasActiveFilters =
     !allCarColumnsSelected(searchColumns) ||
     statusFilters.size > 0 ||
-    searchQuery.trim().length > 0;
+    searchQuery.trim().length > 0 ||
+    cardFilter != null;
 
   const visibleColumns = useMemo(
     () => CAR_SEARCH_COLUMN_IDS.filter((id) => searchColumns.has(id)),
@@ -340,31 +352,30 @@ export function CarsTable({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {statsCatalog.map((stat) => (
-          <button
-            key={stat.label}
-            type="button"
-            onClick={() =>
-              setCardFilter((prev) => {
-                const next = stat.id as "total" | "available" | "sold" | "owned";
-                return prev === next ? null : next;
-              })
-            }
-            className={cn(
-              "rounded-lg border p-4 text-left transition-colors",
-              cardFilter === stat.id
-                ? "border-primary bg-primary/10"
-                : "border-border hover:bg-surface-hover",
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className={`h-2 w-2 rounded-full ${stat.color}`} />
-              {stat.label}
-            </div>
-            <div className="text-2xl font-semibold text-foreground mt-1">{stat.value}</div>
-          </button>
-        ))}
+      <div className="-mx-1 overflow-x-auto pb-1">
+        <div className="flex min-w-0 gap-3 px-1">
+          {statusCards.map((stat) => (
+            <button
+              key={stat.id}
+              type="button"
+              onClick={() =>
+                setCardFilter((prev) => (prev === stat.id ? null : stat.id))
+              }
+              className={cn(
+                "shrink-0 min-w-[9.5rem] rounded-lg border p-4 text-left transition-colors",
+                cardFilter === stat.id
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:bg-surface-hover",
+              )}
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${stat.color}`} />
+                <span className="line-clamp-2">{stat.label}</span>
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <TableSearchToolbar

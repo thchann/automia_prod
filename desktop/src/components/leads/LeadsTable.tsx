@@ -58,6 +58,9 @@ interface LeadsTableProps {
 
 const PAGE_SIZE = 9;
 
+/** Card filter key for leads with `status_id == null`. */
+const UNASSIGNED_STATUS_KEY = "__unassigned__";
+
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
@@ -129,7 +132,8 @@ export function LeadsTable({
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [cardFilter, setCardFilter] = useState<"total" | "new" | "contacted" | "qualified" | null>(null);
+  /** Selected pipeline status id, or `__unassigned__` for leads with no status; `null` = no card filter. */
+  const [cardFilter, setCardFilter] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
   const [leadTypeFilters, setLeadTypeFilters] = useState<Set<Lead["lead_type"]>>(() => new Set());
@@ -150,11 +154,12 @@ export function LeadsTable({
         if (!sid || !statusFilterIds.has(sid)) return false;
       }
       if (leadTypeFilters.size > 0 && !leadTypeFilters.has(lead.lead_type)) return false;
-      if (cardFilter != null && cardFilter !== "total") {
-        const statusName = statuses.find((s) => s.id === lead.status_id)?.name?.toLowerCase() ?? "";
-        if (cardFilter === "new" && statusName !== "new") return false;
-        if (cardFilter === "contacted" && statusName !== "contacted") return false;
-        if (cardFilter === "qualified" && statusName !== "qualified") return false;
+      if (cardFilter != null) {
+        if (cardFilter === UNASSIGNED_STATUS_KEY) {
+          if (lead.status_id != null) return false;
+        } else if (lead.status_id !== cardFilter) {
+          return false;
+        }
       }
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
@@ -238,10 +243,11 @@ export function LeadsTable({
     return { color };
   };
 
-  const totalLeads = leads.length;
-  const newLeads = leads.filter((l) => getStatus(l.status_id)?.name === "New").length;
-  const contactedLeads = leads.filter((l) => getStatus(l.status_id)?.name === "Contacted").length;
-  const qualifiedLeads = leads.filter((l) => getStatus(l.status_id)?.name === "Qualified").length;
+  const sortedStatuses = useMemo(
+    () => [...statuses].sort((a, b) => a.display_order - b.display_order),
+    [statuses],
+  );
+  const unassignedCount = leads.filter((l) => l.status_id == null).length;
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
@@ -403,36 +409,59 @@ export function LeadsTable({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { id: "total", label: tx("Total Leads", "Total de leads"), value: totalLeads, color: "bg-blue-500" },
-          { id: "new", label: tx("New Leads", "Leads nuevos"), value: newLeads, color: "bg-amber-500" },
-          { id: "contacted", label: tx("Contacted", "Contactado"), value: contactedLeads, color: "bg-emerald-500" },
-          { id: "qualified", label: tx("Qualified", "Calificado"), value: qualifiedLeads, color: "bg-red-500" },
-        ].map((stat) => (
-          <button
-            key={stat.label}
-            type="button"
-            onClick={() =>
-              setCardFilter((prev) => {
-                const next = stat.id as "total" | "new" | "contacted" | "qualified";
-                return prev === next ? null : next;
-              })
-            }
-            className={cn(
-              "rounded-lg border p-4 text-left transition-colors",
-              cardFilter === stat.id
-                ? "border-primary bg-primary/10"
-                : "border-border hover:bg-surface-hover",
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className={`h-2 w-2 rounded-full ${stat.color}`} />
-              {stat.label}
-            </div>
-            <div className="text-2xl font-semibold text-foreground mt-1">{stat.value}</div>
-          </button>
-        ))}
+      <div className="-mx-1 overflow-x-auto pb-1">
+        <div className="flex min-w-0 gap-3 px-1">
+          {sortedStatuses.map((s) => {
+            const count = leads.filter((l) => l.status_id === s.id).length;
+            const label = translateStatusName(s.name, tx);
+            const active = cardFilter === s.id;
+            const dotColor = s.color?.trim() || null;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() =>
+                  setCardFilter((prev) => (prev === s.id ? null : s.id))
+                }
+                className={cn(
+                  "shrink-0 min-w-[9.5rem] rounded-lg border p-4 text-left transition-colors",
+                  active ? "border-primary bg-primary/10" : "border-border hover:bg-surface-hover",
+                )}
+              >
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/80"
+                    style={dotColor ? { backgroundColor: dotColor } : undefined}
+                  />
+                  <span className="line-clamp-2">{label}</span>
+                </div>
+                <div className="mt-1 text-2xl font-semibold text-foreground">{count}</div>
+              </button>
+            );
+          })}
+          {unassignedCount > 0 ? (
+            <button
+              type="button"
+              onClick={() =>
+                setCardFilter((prev) =>
+                  prev === UNASSIGNED_STATUS_KEY ? null : UNASSIGNED_STATUS_KEY,
+                )
+              }
+              className={cn(
+                "shrink-0 min-w-[9.5rem] rounded-lg border p-4 text-left transition-colors",
+                cardFilter === UNASSIGNED_STATUS_KEY
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:bg-surface-hover",
+              )}
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/60" />
+                <span className="line-clamp-2">{tx("Unassigned", "Sin asignar")}</span>
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-foreground">{unassignedCount}</div>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <TableSearchToolbar
