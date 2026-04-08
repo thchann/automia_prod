@@ -235,6 +235,9 @@ export function CarsTable({
     [cars, tx],
   );
 
+  const carStatusCardCount = statusCards.length;
+  const carStatusRowMinWidth = `max(100%, ${Math.max(carStatusCardCount, 1) * 280}px)`;
+
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
 
@@ -352,28 +355,33 @@ export function CarsTable({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {statusCards.map((stat) => (
-          <button
-            key={stat.id}
-            type="button"
-            onClick={() =>
-              setCardFilter((prev) => (prev === stat.id ? null : stat.id))
-            }
-            className={cn(
-              "min-w-0 rounded-lg border p-4 text-left transition-colors",
-              cardFilter === stat.id
-                ? "border-primary bg-primary/10"
-                : "border-border hover:bg-surface-hover",
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${stat.color}`} />
-              <span className="line-clamp-2">{stat.label}</span>
-            </div>
-            <div className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</div>
-          </button>
-        ))}
+      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+        <div
+          className="flex min-w-0 flex-nowrap gap-4 px-1"
+          style={{ minWidth: carStatusRowMinWidth }}
+        >
+          {statusCards.map((stat) => (
+            <button
+              key={stat.id}
+              type="button"
+              onClick={() =>
+                setCardFilter((prev) => (prev === stat.id ? null : stat.id))
+              }
+              className={cn(
+                "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
+                cardFilter === stat.id
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:bg-surface-hover",
+              )}
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${stat.color}`} />
+                <span className="line-clamp-2">{stat.label}</span>
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <TableSearchToolbar

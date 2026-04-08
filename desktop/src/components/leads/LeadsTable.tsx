@@ -249,6 +249,10 @@ export function LeadsTable({
   );
   const unassignedCount = leads.filter((l) => l.status_id == null).length;
 
+  const leadStatusCardCount = sortedStatuses.length + (unassignedCount > 0 ? 1 : 0);
+  /** One row: cards share width when the row fits the viewport; scroll horizontally when there are many. */
+  const leadStatusRowMinWidth = `max(100%, ${Math.max(leadStatusCardCount, 1) * 280}px)`;
+
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
     statusFilterIds.size > 0 ||
@@ -409,7 +413,11 @@ export function LeadsTable({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+        <div
+          className="flex min-w-0 flex-nowrap gap-4 px-1"
+          style={{ minWidth: leadStatusRowMinWidth }}
+        >
           {sortedStatuses.map((s) => {
             const count = leads.filter((l) => l.status_id === s.id).length;
             const label = translateStatusName(s.name, tx);
@@ -423,7 +431,7 @@ export function LeadsTable({
                   setCardFilter((prev) => (prev === s.id ? null : s.id))
                 }
                 className={cn(
-                  "min-w-0 rounded-lg border p-4 text-left transition-colors",
+                  "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border hover:bg-surface-hover",
                 )}
               >
@@ -447,7 +455,7 @@ export function LeadsTable({
                 )
               }
               className={cn(
-                "min-w-0 rounded-lg border p-4 text-left transition-colors",
+                "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
                 cardFilter === UNASSIGNED_STATUS_KEY
                   ? "border-primary bg-primary/10"
                   : "border-border hover:bg-surface-hover",
@@ -460,6 +468,7 @@ export function LeadsTable({
               <div className="mt-1 text-2xl font-semibold text-foreground">{unassignedCount}</div>
             </button>
           ) : null}
+        </div>
       </div>
 
       <TableSearchToolbar
