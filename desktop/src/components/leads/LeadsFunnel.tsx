@@ -3,8 +3,6 @@ import { Plus, MoreVertical } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FunnelColumnColorMenu } from "./FunnelColumnColorMenu";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
@@ -50,8 +48,6 @@ export function LeadsFunnel({
   };
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [colorMenuOpenId, setColorMenuOpenId] = useState<string | null>(null);
-  const [lastUsedColors, setLastUsedColors] = useState<string[]>([]);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStatusId, setDragOverStatusId] = useState<string | null>(null);
 
@@ -96,19 +92,6 @@ export function LeadsFunnel({
       statuses.map((s) => (s.id === editingColumnId ? { ...s, name: editingName } : s)),
     );
     setEditingColumnId(null);
-    setColorMenuOpenId(null);
-  };
-
-  const updateColumnColor = (statusId: string, color: string | null) => {
-    onUpdateStatuses(statuses.map((s) => (s.id === statusId ? { ...s, color } : s)));
-    setColorMenuOpenId(null);
-  };
-
-  const handleColorSelect = (statusId: string, hex: string | null) => {
-    updateColumnColor(statusId, hex);
-    if (hex) {
-      setLastUsedColors((prev) => [hex, ...prev.filter((c) => c !== hex)].slice(0, 5));
-    }
   };
 
   const addColumn = () => {
@@ -147,37 +130,6 @@ export function LeadsFunnel({
               {/* Column header */}
               <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {editingColumnId === status.id && (
-                    <Popover
-                      open={colorMenuOpenId === status.id}
-                      onOpenChange={(open) => setColorMenuOpenId(open ? status.id : null)}
-                    >
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="h-6 w-6 shrink-0 rounded-full border-2 border-border shadow-sm outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          style={{ backgroundColor: color }}
-                          aria-label={tx("Choose column color", "Elegir color de columna")}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto border-0 bg-transparent p-0 shadow-none"
-                        align="start"
-                        side="bottom"
-                        sideOffset={8}
-                        collisionPadding={16}
-                        onOpenAutoFocus={(e) => e.preventDefault()}
-                      >
-                        <FunnelColumnColorMenu
-                          currentHex={status.color}
-                          lastUsed={lastUsedColors}
-                          onSelect={(hex) => handleColorSelect(status.id, hex)}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-
                   {editingColumnId === status.id ? (
                     <Input
                       value={editingName}
