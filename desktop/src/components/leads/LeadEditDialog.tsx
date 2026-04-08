@@ -22,6 +22,7 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
+import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
@@ -82,6 +83,12 @@ export function LeadEditDialog({
 
   const leadType = form.lead_type || "pending";
   const attachmentList = attachments;
+  const linkedCars =
+    lead && cars.length
+      ? getAllCarIdsForLead(lead)
+          .map((id) => cars.find((c) => c.id === id))
+          .filter((c): c is Car => Boolean(c))
+      : [];
 
   const handleSave = () => {
     void (async () => {
@@ -331,6 +338,32 @@ export function LeadEditDialog({
                     ))}
                   </select>
                 </div>
+                {linkedCars.length > 0 ? (
+                  <div className="col-span-2 rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      {tx("Linked cars", "Autos vinculados")}
+                    </p>
+                    <ul className="space-y-2">
+                      {linkedCars.map((car) => (
+                        <li
+                          key={car.id}
+                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {car.year} {car.brand} {car.model}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground capitalize">
+                              {car.status === "sold"
+                                ? tx("sold", "vendido")
+                                : tx("available", "disponible")}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
 
                 {leadType === "buyer" && (
                   <div className="space-y-3 rounded-lg border border-border p-4">

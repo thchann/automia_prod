@@ -257,6 +257,19 @@ export function CarsTable({
     }
   };
 
+  const unlinkLeadFromCar = (leadId: string, carId: string) => {
+    const now = new Date().toISOString();
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const nextIds = getAllCarIdsForLead(lead).filter((id) => id !== carId);
+    onUpdateLead({
+      ...lead,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+      updated_at: now,
+    });
+  };
+
   const confirmDeleteCars = () => {
     const ids = pendingDeleteCarIds;
     if (!ids?.length) return;
@@ -574,6 +587,7 @@ export function CarsTable({
         onSave={onUpdateCar}
         onNotesDocumentAutosave={onNotesDocumentAutosave}
         leads={leads}
+        onUnlinkLeadFromCar={unlinkLeadFromCar}
       />
 
       <Dialog open={!!bulkMatchCar} onOpenChange={(open) => !open && setBulkMatchCar(null)}>

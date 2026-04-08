@@ -13,7 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Car, CarAttachment, Lead } from "@/types/leads";
 import { getLeadsForCar } from "@/lib/leadCarLinks";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
   exportCarNotes,
@@ -37,6 +37,8 @@ interface CarEditDialogProps {
   leads?: Lead[];
   /** Optional: e.g. open lead editor from home dashboard. */
   onOpenLinkedLead?: (lead: Lead) => void;
+  /** Optional: sever the connection between this car and a linked lead. */
+  onUnlinkLeadFromCar?: (leadId: string, carId: string) => void;
 }
 
 export function CarEditDialog({
@@ -47,6 +49,7 @@ export function CarEditDialog({
   onNotesDocumentAutosave,
   leads,
   onOpenLinkedLead,
+  onUnlinkLeadFromCar,
 }: CarEditDialogProps) {
   const [form, setForm] = useState<Partial<Car>>({});
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
@@ -291,7 +294,7 @@ export function CarEditDialog({
                       {linkedLeads.map((lead) => (
                         <li
                           key={lead.id}
-                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">
@@ -305,17 +308,29 @@ export function CarEditDialog({
                                   : tx("pending", "pendiente")}
                             </span>
                           </div>
-                          {onOpenLinkedLead ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 shrink-0 text-xs"
-                              onClick={() => onOpenLinkedLead(lead)}
-                            >
-                              {tx("Open", "Abrir")}
-                            </Button>
-                          ) : null}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {onOpenLinkedLead ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 shrink-0 text-xs"
+                                onClick={() => onOpenLinkedLead(lead)}
+                              >
+                                {tx("Open", "Abrir")}
+                              </Button>
+                            ) : null}
+                            {onUnlinkLeadFromCar ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-transparent text-[10px] font-semibold text-destructive opacity-0 transition-opacity hover:border-destructive hover:bg-destructive/10 group-hover:opacity-100"
+                                aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
+                                onClick={() => onUnlinkLeadFromCar(lead.id, car.id)}
+                              >
+                                <X className="h-3 w-3" aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
                         </li>
                       ))}
                     </ul>
