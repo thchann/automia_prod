@@ -22,7 +22,7 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import { getCar } from "@automia/api";
 import { mapCarFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
-import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
+import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -240,18 +240,20 @@ export function CarsTable({
   const selectedCar =
     selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
 
-  const assignCarToLead = (carId: string, leadId: string) => {
-    const now = new Date().toISOString();
+  /** Link one or more cars to a lead in one update (bulk match must not loop — each loop saw stale `leads`). */
+  const assignCarsToLead = (leadId: string, carIds: string[]) => {
     const lead = leads.find((l) => l.id === leadId);
-    if (!lead) return;
-    const current = getAllCarIdsForLead(lead);
-    const nextIds = Array.from(new Set([...current, carId]));
+    if (!lead || carIds.length === 0) return;
+    const merged = mergeCarIdsIntoLead(lead, carIds);
     onUpdateLead({
       ...lead,
-      car_id: nextIds[0] ?? null,
-      car_ids: nextIds.length ? nextIds : null,
-      updated_at: now,
+      ...merged,
+      updated_at: new Date().toISOString(),
     });
+  };
+
+  const assignCarToLead = (carId: string, leadId: string) => {
+    assignCarsToLead(leadId, [carId]);
   };
 
   const unmatchCar = (carId: string) => {
@@ -731,7 +733,7 @@ export function CarsTable({
                   onClick={() => {
                     const ids = bulkMatchCarIds ?? [];
                     if (ids.length === 0) return;
-                    for (const carId of ids) assignCarToLead(carId, lead.id);
+                    assignCarsToLead(lead.id, ids);
                     setBulkMatchCarIds(null);
                     setSelected(new Set());
                   }}

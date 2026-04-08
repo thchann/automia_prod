@@ -44,7 +44,7 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
-import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
+import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -263,18 +263,20 @@ export function LeadsTable({
   const selectedLead =
     selected.size === 1 ? leads.find((lead) => lead.id === Array.from(selected)[0]) ?? null : null;
 
-  const assignLeadToCar = (leadId: string, carId: string) => {
-    const now = new Date().toISOString();
+  /** Link one or more cars to a lead in a single update (required when linking multiple cars — sequential updates read stale `leads`). */
+  const assignCarsToLead = (leadId: string, carIds: string[]) => {
     const lead = leads.find((l) => l.id === leadId);
-    if (!lead) return;
-    const current = getAllCarIdsForLead(lead);
-    const nextIds = Array.from(new Set([...current, carId]));
+    if (!lead || carIds.length === 0) return;
+    const merged = mergeCarIdsIntoLead(lead, carIds);
     onUpdateLead({
       ...lead,
-      car_id: nextIds[0] ?? null,
-      car_ids: nextIds.length ? nextIds : null,
-      updated_at: now,
+      ...merged,
+      updated_at: new Date().toISOString(),
     });
+  };
+
+  const assignLeadToCar = (leadId: string, carId: string) => {
+    assignCarsToLead(leadId, [carId]);
   };
 
   const translateLeadType = (leadType: Lead["lead_type"]) => (
@@ -806,10 +808,8 @@ export function LeadsTable({
             <Button
               disabled={!matchLead || carsToMatch.size === 0}
               onClick={() => {
-                if (!matchLead) return;
-                for (const carId of carsToMatch) {
-                  requestAssignLeadToCar(matchLead.id, carId, "single");
-                }
+                if (!matchLead || carsToMatch.size === 0) return;
+                assignCarsToLead(matchLead.id, Array.from(carsToMatch));
                 setCarsToMatch(new Set());
                 setMatchLead(null);
               }}
