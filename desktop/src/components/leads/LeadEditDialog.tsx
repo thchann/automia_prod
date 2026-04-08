@@ -91,9 +91,11 @@ export function LeadEditDialog({
     car_ids: form.car_ids !== undefined ? form.car_ids : lead.car_ids,
   } as Lead;
   const linkedCarIds = getAllCarIdsForLead(effectiveLead);
-  const linkedCars = linkedCarIds
-    .map((id) => cars.find((c) => c.id === id))
-    .filter((c): c is Car => Boolean(c));
+  /** Resolved rows plus orphan IDs (not in `cars`) so links stay visible and unlinkable. */
+  const linkedRows = linkedCarIds.map((id) => {
+    const car = cars.find((c) => c.id === id);
+    return car ? ({ type: "car" as const, car }) : ({ type: "orphan" as const, id });
+  });
   const carsAvailableToLink = cars.filter((c) => !linkedCarIds.includes(c.id));
 
   const addLinkedCar = (carId: string) => {
@@ -296,34 +298,50 @@ export function LeadEditDialog({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
               <div className="grid gap-4">
-                {linkedCars.length > 0 ? (
+                {linkedRows.length > 0 ? (
                   <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       {tx("Linked cars", "Autos vinculados")}
                     </p>
                     <ul className="space-y-2">
-                      {linkedCars.map((car) => (
+                      {linkedRows.map((row) => (
                         <li
-                          key={car.id}
-                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                          key={row.type === "car" ? row.car.id : `orphan-${row.id}`}
+                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {car.year} {car.brand} {car.model}
-                            </p>
-                            <span className="text-[11px] text-muted-foreground capitalize">
-                              {car.status === "sold"
-                                ? tx("sold", "vendido")
-                                : tx("available", "disponible")}
-                            </span>
+                            {row.type === "car" ? (
+                              <>
+                                <p className="truncate text-sm font-medium text-foreground">
+                                  {row.car.year} {row.car.brand} {row.car.model}
+                                </p>
+                                <span className="text-[11px] text-muted-foreground capitalize">
+                                  {row.car.status === "sold"
+                                    ? tx("sold", "vendido")
+                                    : tx("available", "disponible")}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <p className="truncate text-sm font-medium text-foreground">
+                                  {tx("Unknown car (not in inventory)", "Auto desconocido (no en inventario)")}
+                                </p>
+                                <span
+                                  className="block truncate font-mono text-[11px] text-muted-foreground"
+                                  title={row.id}
+                                >
+                                  {row.id}
+                                </span>
+                              </>
+                            )}
                           </div>
                           <button
                             type="button"
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive opacity-100 transition-opacity hover:border-destructive hover:bg-destructive/10 md:opacity-0 md:group-hover:opacity-100"
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
                             aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
-                            onClick={() => removeLinkedCar(car.id)}
+                            onClick={() => removeLinkedCar(row.type === "car" ? row.car.id : row.id)}
                           >
-                            <X className="h-3 w-3" aria-hidden />
+                            <X className="h-4 w-4" aria-hidden />
                           </button>
                         </li>
                       ))}

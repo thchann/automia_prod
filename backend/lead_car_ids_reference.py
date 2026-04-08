@@ -75,3 +75,41 @@ if __name__ == "__main__":
     assert serialize_lead_car_fields_for_response(None, None) == (None, None)
 
     print("lead_car_ids_reference: ok")
+
+
+# -----------------------------------------------------------------------------
+# Merge the following into your Railway FastAPI + SQLAlchemy service (not wired here).
+# -----------------------------------------------------------------------------
+
+# Postgres: add a column (or use a lead_cars junction table for strict M2M).
+#
+#   ALTER TABLE leads ADD COLUMN IF NOT EXISTS car_ids JSONB DEFAULT '[]'::jsonb;
+#   -- Keep existing car_id UUID FK as "primary" for filters; sync with car_ids[0] in app code.
+#
+# SQLAlchemy model (illustrative):
+#
+#   from sqlalchemy import Column
+#   from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+#
+#   class Lead(Base):
+#       __tablename__ = "leads"
+#       id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+#       user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+#       car_id = Column(PG_UUID(as_uuid=True), ForeignKey("cars.id"), nullable=True)
+#       car_ids = Column(JSONB, nullable=True)  # ordered list of UUID strings or native UUIDs
+#
+# Pydantic (align with desktop `@automia/api` LeadUpdate / LeadResponse):
+#
+#   class LeadUpdate(BaseModel):
+#       car_id: UUID | None = None
+#       car_ids: list[UUID] | None = None
+#       # ... other fields
+#
+# In your PUT handler, after loading the row:
+#       primary, ordered = normalize_car_links_for_write(payload.car_id, payload.car_ids)
+#       row.car_id = primary
+#       row.car_ids = [str(x) for x in ordered] if ordered else None  # or list of UUIDs if JSONB supports it
+#
+# In list/detail serializers, always call:
+#       cid, cids = serialize_lead_car_fields_for_response(row.car_id, parsed_car_ids_from_json(row))
+#       return LeadItem(car_id=cid, car_ids=cids, ...)

@@ -16,7 +16,14 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { AppErrorBoundary } from "./components/AppErrorBoundary.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      /** Avoid refetch-on-tab-focus wiping multi-car `car_ids` when GET /leads omits them (server is source of truth on refetch). */
+      refetchOnWindowFocus: (query) => query.queryKey[0] !== "leads",
+    },
+  },
+});
 const routerBasename =
   import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
 
