@@ -5,7 +5,6 @@ import {
   listAutomations,
   listAutomationTypes,
   startInstagramOAuth,
-  updateAutomation,
 } from "@automia/api";
 import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
@@ -180,16 +179,6 @@ export function AutomationsPage() {
     void runInstagramOAuth({ automationTypeId: typeItem.id });
   };
 
-  const toggleAutomation = async (row: AutomationItem) => {
-    const next = row.status === "active" ? "paused" : "active";
-    try {
-      await updateAutomation(row.id, { status: next });
-      await queryClient.invalidateQueries({ queryKey: ["automations"] });
-    } catch {
-      toast.error(tx("Update failed", "Error al actualizar"));
-    }
-  };
-
   /** Do not surface `platform_page_id` in the UI. */
   const accountSubtitle = () => tx("Instagram account", "Cuenta de Instagram");
 
@@ -317,7 +306,6 @@ export function AutomationsPage() {
                   display_order: 0,
                 } satisfies AutomationTypeItem);
               const isIg = typeItem.platform === "instagram";
-              const isActive = conn.status === "active";
 
               return (
                 <div
@@ -338,7 +326,7 @@ export function AutomationsPage() {
                       <div className="font-semibold">{typeItem.name}</div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{accountSubtitle()}</p>
                     </div>
-                    <div className="mt-auto flex h-8 items-center justify-between pr-1">
+                    <div className="mt-auto flex h-8 items-center pr-1">
                       <Button
                         type="button"
                         variant="outline"
@@ -348,20 +336,6 @@ export function AutomationsPage() {
                       >
                         {tx("Manage", "Gestionar")}
                       </Button>
-                      <button
-                        type="button"
-                        aria-label={isActive ? tx("Active", "Activo") : tx("Paused", "Pausado")}
-                        onClick={() => void toggleAutomation(conn)}
-                        className={`relative h-6 w-10 shrink-0 overflow-hidden rounded-full transition-colors ${
-                          isActive ? "bg-primary" : "bg-muted"
-                        }`}
-                      >
-                        <span
-                          className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-                            isActive ? "translate-x-4" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
                     </div>
                   </div>
                 </div>
