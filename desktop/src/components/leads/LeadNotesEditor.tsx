@@ -24,10 +24,8 @@ import {
 } from "@/components/ui/select";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/i18n/LanguageProvider";
@@ -343,7 +341,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
   return (
     <div className="lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-950/50">
       <div className="lead-notes-toolbar sticky top-0 z-20 flex shrink-0 flex-col gap-0 border-b border-border/80 bg-[hsl(42_10%_94%)]/95 px-2 py-2 backdrop-blur-md dark:bg-zinc-900/95">
-        <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
           <ToolbarGroup>
             <Select
               value={fontSizeKeyFromEditor(editor)}
@@ -416,68 +414,77 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
             </Select>
           </ToolbarGroup>
 
-          <div className="min-w-[0.5rem] flex-1" aria-hidden />
-
-          <ToolbarGroup className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1 border-border/90 px-2 shadow-sm"
-                  aria-label={tx("More formatting", "Mas formato")}
-                >
-                  <MoreHorizontal className="h-4 w-4 shrink-0" />
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={6} className="min-w-[12rem]">
-                <DropdownMenuCheckboxItem
-                  checked={editor.isActive("bulletList")}
-                  onCheckedChange={() => editor.chain().focus().toggleBulletList().run()}
-                >
-                  <List className="mr-2 h-4 w-4" />
-                  {tx("Bullet list", "Lista con viñetas")}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={editor.isActive("orderedList")}
-                  onCheckedChange={() => editor.chain().focus().toggleOrderedList().run()}
-                >
-                  <ListOrdered className="mr-2 h-4 w-4" />
-                  {tx("Numbered list", "Lista numerada")}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={editor.isActive("taskList")}
-                  onCheckedChange={() => editor.chain().focus().toggleTaskList().run()}
-                >
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  {tx("Task list", "Lista de tareas")}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-                  }
-                >
-                  <TableIcon className="mr-2 h-4 w-4" />
-                  {tx("Insert table", "Insertar tabla")}
-                </DropdownMenuItem>
-                {exportNotes ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => void runExport("pdf")}>
-                      <FileDown className="mr-2 h-4 w-4" />
-                      {tx("Download PDF", "Descargar PDF")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void runExport("docx")}>
-                      <FileDown className="mr-2 h-4 w-4" />
-                      {tx("Download DOCX", "Descargar DOCX")}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <ToolbarGroup>
+            <Toggle
+              size="sm"
+              pressed={editor.isActive("bulletList")}
+              onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
+              aria-label={tx("Bullet list", "Lista con viñetas")}
+            >
+              <List className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              size="sm"
+              pressed={editor.isActive("orderedList")}
+              onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
+              aria-label={tx("Numbered list", "Lista numerada")}
+            >
+              <ListOrdered className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              size="sm"
+              pressed={editor.isActive("taskList")}
+              onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
+              aria-label={tx("Task list", "Lista de tareas")}
+            >
+              <ListTodo className="h-4 w-4" />
+            </Toggle>
           </ToolbarGroup>
+          <ToolbarGroup>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() =>
+                editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+              }
+              aria-label={tx("Insert table", "Insertar tabla")}
+            >
+              <TableIcon className="h-4 w-4" />
+            </Button>
+          </ToolbarGroup>
+
+          <div className="min-w-[0.5rem] flex-1 basis-full sm:basis-auto sm:flex-1" aria-hidden />
+
+          {exportNotes ? (
+            <ToolbarGroup className="ml-auto sm:ml-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 border-border/90 px-2 shadow-sm"
+                    aria-label={tx("Export notes", "Exportar notas")}
+                  >
+                    <MoreHorizontal className="h-4 w-4 shrink-0" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" sideOffset={6} className="min-w-[12rem]">
+                  <DropdownMenuItem onClick={() => void runExport("pdf")}>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    {tx("Download PDF", "Descargar PDF")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void runExport("docx")}>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    {tx("Download DOCX", "Descargar DOCX")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </ToolbarGroup>
+          ) : null}
         </div>
       </div>
 
