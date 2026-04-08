@@ -409,8 +409,7 @@ export function LeadsTable({
         </div>
       </div>
 
-      <div className="-mx-1 overflow-x-auto pb-1">
-        <div className="flex min-w-0 gap-3 px-1">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           {sortedStatuses.map((s) => {
             const count = leads.filter((l) => l.status_id === s.id).length;
             const label = translateStatusName(s.name, tx);
@@ -424,7 +423,7 @@ export function LeadsTable({
                   setCardFilter((prev) => (prev === s.id ? null : s.id))
                 }
                 className={cn(
-                  "shrink-0 min-w-[9.5rem] rounded-lg border p-4 text-left transition-colors",
+                  "min-w-0 rounded-lg border p-4 text-left transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border hover:bg-surface-hover",
                 )}
               >
@@ -448,7 +447,7 @@ export function LeadsTable({
                 )
               }
               className={cn(
-                "shrink-0 min-w-[9.5rem] rounded-lg border p-4 text-left transition-colors",
+                "min-w-0 rounded-lg border p-4 text-left transition-colors",
                 cardFilter === UNASSIGNED_STATUS_KEY
                   ? "border-primary bg-primary/10"
                   : "border-border hover:bg-surface-hover",
@@ -461,7 +460,6 @@ export function LeadsTable({
               <div className="mt-1 text-2xl font-semibold text-foreground">{unassignedCount}</div>
             </button>
           ) : null}
-        </div>
       </div>
 
       <TableSearchToolbar
