@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
   exportLeadNotes,
@@ -83,12 +83,37 @@ export function LeadEditDialog({
 
   const leadType = form.lead_type || "pending";
   const attachmentList = attachments;
-  const linkedCars =
-    lead && cars.length
-      ? getAllCarIdsForLead(lead)
-          .map((id) => cars.find((c) => c.id === id))
-          .filter((c): c is Car => Boolean(c))
-      : [];
+
+  const effectiveLead = {
+    ...lead,
+    ...form,
+    car_id: form.car_id ?? lead.car_id,
+    car_ids: form.car_ids !== undefined ? form.car_ids : lead.car_ids,
+  } as Lead;
+  const linkedCarIds = getAllCarIdsForLead(effectiveLead);
+  const linkedCars = linkedCarIds
+    .map((id) => cars.find((c) => c.id === id))
+    .filter((c): c is Car => Boolean(c));
+  const carsAvailableToLink = cars.filter((c) => !linkedCarIds.includes(c.id));
+
+  const addLinkedCar = (carId: string) => {
+    if (!carId || linkedCarIds.includes(carId)) return;
+    const nextIds = Array.from(new Set([...linkedCarIds, carId]));
+    setForm({
+      ...form,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+    });
+  };
+
+  const removeLinkedCar = (carId: string) => {
+    const nextIds = linkedCarIds.filter((id) => id !== carId);
+    setForm({
+      ...form,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+    });
+  };
 
   const handleSave = () => {
     void (async () => {
@@ -280,7 +305,7 @@ export function LeadEditDialog({
                       {linkedCars.map((car) => (
                         <li
                           key={car.id}
-                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">
@@ -292,6 +317,14 @@ export function LeadEditDialog({
                                 : tx("available", "disponible")}
                             </span>
                           </div>
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive opacity-100 transition-opacity hover:border-destructive hover:bg-destructive/10 md:opacity-0 md:group-hover:opacity-100"
+                            aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
+                            onClick={() => removeLinkedCar(car.id)}
+                          >
+                            <X className="h-3 w-3" aria-hidden />
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -350,14 +383,23 @@ export function LeadEditDialog({
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Linked car", "Auto vinculado")}</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Add linked car", "Agregar auto vinculado")}</label>
                   <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={form.car_id || ""}
-                    onChange={(e) => setForm({ ...form, car_id: e.target.value || null })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    value=""
+                    disabled={carsAvailableToLink.length === 0}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      if (id) addLinkedCar(id);
+                      e.currentTarget.value = "";
+                    }}
                   >
-                    <option value="">{tx("None", "Ninguno")}</option>
-                    {cars.map((c) => (
+                    <option value="">
+                      {carsAvailableToLink.length === 0
+                        ? tx("All cars already linked", "Todos los autos ya están vinculados")
+                        : tx("Choose a car to link…", "Elige un auto para vincular…")}
+                    </option>
+                    {carsAvailableToLink.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.year} {c.brand} {c.model}
                       </option>
