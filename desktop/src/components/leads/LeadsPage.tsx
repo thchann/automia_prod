@@ -20,6 +20,8 @@ import {
   mapCarFromApi,
   mapLeadFromApi,
   mapStatusFromApi,
+  mergeLeadResponseWithClientCarLinks,
+  patchLeadsListCache,
   leadToCreatePayload,
   leadToUpdatePayload,
 } from "@/lib/apiMappers";
@@ -101,7 +103,9 @@ export function LeadsPage() {
         if (!old?.leads) return old;
         return {
           ...old,
-          leads: old.leads.map((l) => (l.id === data.id ? data : l)),
+          leads: old.leads.map((l) =>
+            l.id === data.id ? mergeLeadResponseWithClientCarLinks(data, l) : l,
+          ),
         };
       });
     },
@@ -119,16 +123,23 @@ export function LeadsPage() {
       if (extra.attachments !== undefined) {
         await updateLead(mapped.id, { attachments: extra.attachments });
       }
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
     } else {
-      await updateLead(updated.id, leadToUpdatePayload(updated));
+      const data = await updateLead(updated.id, leadToUpdatePayload(updated));
+      patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
     }
-    await queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 
   const handleNotesDocumentAutosave = async (leadId: string, document: Record<string, unknown>) => {
     if (isDraftRecordId(leadId)) return;
-    await updateLead(leadId, { notes_document: document });
-    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+    const existing = raw?.leads.find((l) => l.id === leadId);
+    const data = await updateLead(leadId, { notes_document: document });
+    if (existing) {
+      patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, existing));
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    }
   };
 
   const handleDeleteLead = async (id: string) => {

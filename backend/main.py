@@ -4,6 +4,9 @@ Reference FastAPI app with CORS configured for browser preflight (OPTIONS).
 Merge this pattern into your Railway backend: register CORSMiddleware as early as
 possible so OPTIONS /auth/register returns 200 + CORS headers instead of 405.
 
+Multi-car lead links (`car_ids` + `car_id`): see `lead_car_ids_reference.py` for
+normalize/serialize helpers to paste into your real lead CRUD (this stub has no DB).
+
 Run locally:  uvicorn main:app --reload --host 0.0.0.0 --port 8000
 """
 

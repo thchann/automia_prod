@@ -14,6 +14,7 @@ import {
   updateCar,
   updateLead,
   type AutomationItem,
+  type LeadsListResponse,
 } from "@automia/api";
 import { Car as CarType, Lead } from "@/types/leads";
 import { CarEditDialog } from "@/components/cars/CarEditDialog";
@@ -25,6 +26,8 @@ import {
   mapCarFromApi,
   mapLeadFromApi,
   mapStatusFromApi,
+  mergeLeadResponseWithClientCarLinks,
+  patchLeadsListCache,
   carToCreatePayload,
   carToUpdatePayload,
   leadToCreatePayload,
@@ -506,11 +509,17 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           const lead = leads.find((l) => l.id === leadId);
           if (!lead || isDraftRecordId(lead.id)) return;
           const nextIds = getAllCarIdsForLead(lead).filter((id) => id !== carId);
-          await updateLead(lead.id, {
+          const data = await updateLead(lead.id, {
             car_id: nextIds[0] ?? null,
             car_ids: nextIds.length ? nextIds : null,
           });
-          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          patchLeadsListCache(
+            queryClient,
+            mergeLeadResponseWithClientCarLinks(data, {
+              car_id: nextIds[0] ?? null,
+              car_ids: nextIds.length ? nextIds : null,
+            }),
+          );
         }}
       />
       <LeadEditDialog
@@ -527,16 +536,23 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
             if (extra.attachments !== undefined) {
               await updateLead(mapped.id, { attachments: extra.attachments });
             }
+            await queryClient.invalidateQueries({ queryKey: ["leads"] });
           } else {
-            await updateLead(updated.id, leadToUpdatePayload(updated));
+            const data = await updateLead(updated.id, leadToUpdatePayload(updated));
+            patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
           }
-          await queryClient.invalidateQueries({ queryKey: ["leads"] });
           setEditLead(null);
         }}
         onNotesDocumentAutosave={async (leadId, document) => {
           if (isDraftRecordId(leadId)) return;
-          await updateLead(leadId, { notes_document: document });
-          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+          const existing = raw?.leads.find((l) => l.id === leadId);
+          const data = await updateLead(leadId, { notes_document: document });
+          if (existing) {
+            patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, existing));
+          } else {
+            await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          }
         }}
         statuses={statuses}
         cars={cars}

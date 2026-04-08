@@ -14,6 +14,8 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import {
   mapCarFromApi,
   mapLeadFromApi,
+  mergeLeadResponseWithClientCarLinks,
+  patchLeadsListCache,
   carToCreatePayload,
   carToUpdatePayload,
   leadToUpdatePayload,
@@ -69,8 +71,8 @@ export function CarsPage() {
   };
 
   const handleUpdateLead = async (updated: Lead) => {
-    await updateLead(updated.id, leadToUpdatePayload(updated));
-    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    const data = await updateLead(updated.id, leadToUpdatePayload(updated));
+    patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
   };
 
   const handleAddCar = (): Car => {

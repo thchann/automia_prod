@@ -38,6 +38,12 @@ export function mapCarFromApi(c: CarResponse): Car {
 }
 
 export function mapLeadFromApi(l: LeadResponse): Lead {
+  const car_ids =
+    l.car_ids != null && l.car_ids.length > 0
+      ? l.car_ids
+      : l.car_id
+        ? [l.car_id]
+        : undefined;
   return {
     id: l.id,
     user_id: l.user_id,
@@ -46,7 +52,7 @@ export function mapLeadFromApi(l: LeadResponse): Lead {
     source: l.source,
     status_id: l.status_id,
     car_id: l.car_id,
-    ...(l.car_ids !== undefined ? { car_ids: l.car_ids } : {}),
+    ...(car_ids !== undefined ? { car_ids } : {}),
     name: l.name,
     instagram_handle: l.instagram_handle,
     phone: l.phone,

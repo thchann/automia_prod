@@ -7,7 +7,9 @@ import type {
   LeadResponse,
   LeadStatusResponse,
   LeadUpdate,
+  LeadsListResponse,
 } from "@automia/api";
+import type { QueryClient } from "@tanstack/react-query";
 import type { Car, CarAttachment, Lead, LeadStatus } from "@/types/leads";
 
 /**
@@ -72,12 +74,62 @@ export function mapCarFromApi(c: CarResponse): Car {
   };
 }
 
+/** Car link fields overlaid onto PUT responses when the API omits `car_ids`. */
+export type LeadCarLinkFields = Pick<LeadResponse, "car_id" | "car_ids">;
+
+/**
+ * When the API omits `car_ids` on list/PUT (common if only `car_id` is stored),
+ * merge the client's intended links so React Query cache stays correct.
+ */
+export function mergeLeadResponseWithClientCarLinks(
+  server: LeadResponse,
+  client: LeadCarLinkFields,
+): LeadResponse {
+  const car_ids =
+    client.car_ids !== undefined
+      ? client.car_ids
+      : client.car_id
+        ? [client.car_id]
+        : server.car_ids ?? (server.car_id ? [server.car_id] : null);
+
+  const car_id =
+    client.car_ids === null
+      ? null
+      : client.car_id != null
+        ? client.car_id
+        : client.car_ids !== undefined && client.car_ids !== null && client.car_ids.length > 0
+          ? client.car_ids[0]
+          : server.car_id;
+
+  return {
+    ...server,
+    car_id,
+    ...(car_ids !== undefined ? { car_ids } : {}),
+  };
+}
+
+export function patchLeadsListCache(queryClient: QueryClient, merged: LeadResponse): void {
+  queryClient.setQueryData<LeadsListResponse>(["leads"], (old) => {
+    if (!old?.leads) return old;
+    return {
+      ...old,
+      leads: old.leads.map((l) => (l.id === merged.id ? merged : l)),
+    };
+  });
+}
+
 export function mapLeadFromApi(
   r: LeadResponse,
   statuses?: LeadStatus[],
 ): Lead {
   const lt = r.lead_type as Lead["lead_type"];
   const status = statuses?.find((s) => s.id === r.status_id);
+  const car_ids =
+    r.car_ids != null && r.car_ids.length > 0
+      ? r.car_ids
+      : r.car_id
+        ? [r.car_id]
+        : undefined;
   return {
     id: r.id,
     user_id: r.user_id,
@@ -86,7 +138,7 @@ export function mapLeadFromApi(
     source: r.source,
     status_id: r.status_id,
     car_id: r.car_id,
-    ...(r.car_ids !== undefined ? { car_ids: r.car_ids } : {}),
+    ...(car_ids !== undefined ? { car_ids } : {}),
     name: r.name,
     instagram_handle: r.instagram_handle,
     phone: r.phone,
