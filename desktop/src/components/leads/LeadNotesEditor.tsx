@@ -486,10 +486,6 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
           <EditorContent editor={editor} />
         </div>
       </div>
-
-      <p className="shrink-0 border-t border-border/80 bg-[hsl(42_10%_94%)]/90 px-3 py-2 text-[10px] text-muted-foreground dark:bg-zinc-900/90">
-        {tx("Notes auto-save after you stop typing for 2 seconds.", "Las notas se guardan solas tras 2 s sin escribir.")}
-      </p>
     </div>
   );
 });
