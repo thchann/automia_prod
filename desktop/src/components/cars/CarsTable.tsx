@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Car, Lead } from "@/types/leads";
 import { CarEditDialog } from "./CarEditDialog";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
@@ -24,6 +25,12 @@ import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -42,6 +49,7 @@ interface CarsTableProps {
   onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => Car | Promise<Car>;
+  onAddCarFromUrl: (url: string) => Car | Promise<Car>;
 }
 
 const PAGE_SIZE = 9;
@@ -90,6 +98,7 @@ export function CarsTable({
   onUpdateLead,
   onDeleteCar,
   onAddCar,
+  onAddCarFromUrl,
 }: CarsTableProps) {
   const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -114,6 +123,9 @@ export function CarsTable({
   const [showImagePopup, setShowImagePopup] = useState<string | null>(null);
   const [bulkMatchCar, setBulkMatchCar] = useState<Car | null>(null);
   const [bulkMatchCarIds, setBulkMatchCarIds] = useState<string[] | null>(null);
+  const [addViaUrlOpen, setAddViaUrlOpen] = useState(false);
+  const [urlToImport, setUrlToImport] = useState("");
+  const [addingViaUrl, setAddingViaUrl] = useState(false);
   const [pendingUnmatchCar, setPendingUnmatchCar] = useState<Car | null>(null);
   const [pendingDeleteCarIds, setPendingDeleteCarIds] = useState<string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -278,6 +290,27 @@ export function CarsTable({
     setSelected(new Set());
   };
 
+  const startAddManual = () => {
+    void Promise.resolve(onAddCar()).then((created) => beginEditCar(created));
+  };
+
+  const startAddViaUrl = () => {
+    setAddViaUrlOpen(true);
+  };
+
+  const submitAddViaUrl = () => {
+    const url = urlToImport.trim();
+    if (!url) return;
+    setAddingViaUrl(true);
+    void Promise.resolve(onAddCarFromUrl(url))
+      .then((created) => {
+        setAddViaUrlOpen(false);
+        setUrlToImport("");
+        beginEditCar(created);
+      })
+      .finally(() => setAddingViaUrl(false));
+  };
+
   return (
     <div className="flex max-w-full flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -286,14 +319,22 @@ export function CarsTable({
           <Button variant="outline" size="sm" disabled aria-disabled>
             {tx("Export Cars", "Exportar autos")}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              void Promise.resolve(onAddCar()).then((created) => beginEditCar(created));
-            }}
-          >
-            + {tx("Add Car", "Agregar auto")}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm">
+                + {tx("Add Car", "Agregar auto")}
+                <ChevronDown className="ml-1 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={startAddManual}>
+                {tx("Add manually", "Agregar manualmente")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={startAddViaUrl}>
+                {tx("Add via URL", "Agregar por URL")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -589,6 +630,45 @@ export function CarsTable({
         leads={leads}
         onUnlinkLeadFromCar={unlinkLeadFromCar}
       />
+
+      <Dialog
+        open={addViaUrlOpen}
+        onOpenChange={(open) => {
+          setAddViaUrlOpen(open);
+          if (!open) {
+            setUrlToImport("");
+            setAddingViaUrl(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>{tx("Add car via URL", "Agregar auto por URL")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={urlToImport}
+              onChange={(e) => setUrlToImport(e.target.value)}
+              placeholder="https://neoauto.com/auto/..."
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "Sites supported: NeoAuto (more coming soon).",
+                "Sitios compatibles: NeoAuto (más próximamente).",
+              )}
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setAddViaUrlOpen(false)} disabled={addingViaUrl}>
+                {tx("Cancel", "Cancelar")}
+              </Button>
+              <Button type="button" onClick={submitAddViaUrl} disabled={addingViaUrl || urlToImport.trim().length === 0}>
+                {addingViaUrl ? tx("Importing…", "Importando…") : tx("Import", "Importar")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!bulkMatchCar} onOpenChange={(open) => !open && setBulkMatchCar(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">
