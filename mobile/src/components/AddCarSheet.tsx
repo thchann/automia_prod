@@ -164,7 +164,7 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
       <div className="space-y-4">
         <Field label={tx("Brand *", "Marca *")} value={brand} onChange={setBrand} placeholder="e.g. BMW" />
         <Field label={tx("Model *", "Modelo *")} value={model} onChange={setModel} placeholder="e.g. M4 Competition" />
-        <Field label={tx("Year *", "Ano *")} value={year} onChange={setYear} placeholder="e.g. 2024" type="number" />
+        <Field label={tx("Year *", "Año *")} value={year} onChange={setYear} placeholder="e.g. 2024" type="number" />
         <Field label={tx("Mileage", "Kilometraje")} value={mileage} onChange={setMileage} placeholder="e.g. 12000" type="number" />
         <Field label={tx("Listing Price", "Precio de lista")} value={price} onChange={setPrice} placeholder="e.g. 72500" type="number" />
         <Field label={tx("Desired Price", "Precio deseado")} value={desiredPrice} onChange={setDesiredPrice} placeholder="e.g. 74000" type="number" />
@@ -179,7 +179,7 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueno")}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueño")}</label>
           <select value={ownerType} onChange={(e) => setOwnerType(e.target.value as OwnerType)}
             className="w-full bg-muted rounded-md px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30">
             {ownerTypes.map((t) => (
@@ -236,7 +236,7 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
           </div>
 
           {attachmentList.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{tx("No attachments yet.", "Aun no hay adjuntos.")}</p>
+            <p className="text-xs text-muted-foreground">{tx("No attachments yet.", "Aún no hay adjuntos.")}</p>
           ) : (
             <div className="space-y-2">
               {attachmentList.map((att, idx) => (

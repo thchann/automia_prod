@@ -81,7 +81,7 @@ const Dashboard = ({ onTabChange }: DashboardProps) => {
   const hour = new Date().getHours();
   const greeting =
     hour < 12
-      ? tx("Good morning", "Buenos dias")
+      ? tx("Good morning", "Buenos días")
       : hour < 18
         ? tx("Good afternoon", "Buenas tardes")
         : tx("Good evening", "Buenas noches");

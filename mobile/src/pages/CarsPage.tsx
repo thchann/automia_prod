@@ -117,7 +117,7 @@ const CarsPage = () => {
         <TableSearchToolbar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, ano, precio...)")}
+          placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, año, precio...)")}
           filterContent={(
             <div className="space-y-1 p-3">
               <div className="pt-2">
@@ -213,7 +213,7 @@ const CarsPage = () => {
           <>
             <DetailRow label={tx("Brand", "Marca")} value={selected.brand} />
             <DetailRow label={tx("Model", "Modelo")} value={selected.model} />
-            <DetailRow label={tx("Year", "Ano")} value={String(selected.year)} />
+            <DetailRow label={tx("Year", "Año")} value={String(selected.year)} />
             <DetailRow
               label={tx("Mileage", "Kilometraje")}
               value={selected.mileage != null ? `${selected.mileage.toLocaleString(locale)} km` : null}
@@ -221,7 +221,7 @@ const CarsPage = () => {
             <DetailRow label={tx("Listing Price", "Precio de lista")} value={fmt(selected.price)} />
             <DetailRow label={tx("Desired Price", "Precio deseado")} value={fmt(selected.desired_price)} />
             <DetailRow label={tx("Type", "Tipo")} value={selected.car_type} />
-            <DetailRow label={tx("Owner Type", "Tipo de dueno")} value={selected.owner_type === "owned" ? tx("owned", "propio") : selected.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")} />
+            <DetailRow label={tx("Owner Type", "Tipo de dueño")} value={selected.owner_type === "owned" ? tx("owned", "propio") : selected.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")} />
             <DetailRow label={tx("Status", "Estado")} value={selected.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")} />
             <DetailRow
               label={tx("Listed", "Publicado")}

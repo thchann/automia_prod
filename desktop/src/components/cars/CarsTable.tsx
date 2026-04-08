@@ -21,6 +21,7 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import { getCar } from "@automia/api";
 import { mapCarFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
+import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -114,6 +115,7 @@ export function CarsTable({
   const [bulkMatchCar, setBulkMatchCar] = useState<Car | null>(null);
   const [bulkMatchCarIds, setBulkMatchCarIds] = useState<string[] | null>(null);
   const [pendingUnmatchCar, setPendingUnmatchCar] = useState<Car | null>(null);
+  const [pendingDeleteCarIds, setPendingDeleteCarIds] = useState<string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
@@ -226,30 +228,40 @@ export function CarsTable({
   const selectedCar =
     selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
 
-  const getLeadForCar = (carId: string) => leads.find((l) => l.car_id === carId) ?? null;
-
   const assignCarToLead = (carId: string, leadId: string) => {
     const now = new Date().toISOString();
-    for (const lead of leads) {
-      if (lead.id === leadId) {
-        onUpdateLead({ ...lead, car_id: carId, updated_at: now });
-      } else if (lead.car_id === carId) {
-        onUpdateLead({ ...lead, car_id: null, updated_at: now });
-      }
-    }
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const current = getAllCarIdsForLead(lead);
+    const nextIds = Array.from(new Set([...current, carId]));
+    onUpdateLead({
+      ...lead,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+      updated_at: now,
+    });
   };
 
   const unmatchCar = (carId: string) => {
     const now = new Date().toISOString();
     for (const lead of leads) {
-      if (lead.car_id === carId) {
-        onUpdateLead({ ...lead, car_id: null, updated_at: now });
-      }
+      const current = getAllCarIdsForLead(lead);
+      if (!current.includes(carId)) continue;
+      const nextIds = current.filter((id) => id !== carId);
+      onUpdateLead({
+        ...lead,
+        car_id: nextIds[0] ?? null,
+        car_ids: nextIds.length ? nextIds : null,
+        updated_at: now,
+      });
     }
   };
 
-  const deleteSelectedCars = () => {
-    for (const carId of selected) onDeleteCar(carId);
+  const confirmDeleteCars = () => {
+    const ids = pendingDeleteCarIds;
+    if (!ids?.length) return;
+    for (const carId of ids) onDeleteCar(carId);
+    setPendingDeleteCarIds(null);
     setSelected(new Set());
   };
 
@@ -302,7 +314,7 @@ export function CarsTable({
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, ano, precio...)")}
+        placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, año, precio...)")}
         filterContent={(
           <div className="space-y-1 p-3">
             <div className="grid grid-cols-2 rounded-md border border-border p-1">
@@ -407,7 +419,7 @@ export function CarsTable({
               </TableHead>
               {visibleColumns.includes("brand") && <TableHead className="min-w-[100px]">{tx("Brand", "Marca")}</TableHead>}
               {visibleColumns.includes("model") && <TableHead className="min-w-[100px]">{tx("Model", "Modelo")}</TableHead>}
-              {visibleColumns.includes("year") && <TableHead className="min-w-[72px]">{tx("Year", "Ano")}</TableHead>}
+              {visibleColumns.includes("year") && <TableHead className="min-w-[72px]">{tx("Year", "Año")}</TableHead>}
               {visibleColumns.includes("mileage") && <TableHead className="min-w-[88px]">{tx("Mileage", "Kilometraje")}</TableHead>}
               {visibleColumns.includes("price") && <TableHead className="min-w-[96px]">{tx("Price", "Precio")}</TableHead>}
               {visibleColumns.includes("desired") && <TableHead className="min-w-[100px]">{tx("Desired", "Deseado")}</TableHead>}
@@ -461,7 +473,11 @@ export function CarsTable({
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => beginEditCar(car)}>
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteCar(car.id)}>
+                      <button
+                        type="button"
+                        className="p-1 hover:text-destructive text-muted-foreground"
+                        onClick={() => setPendingDeleteCarIds([car.id])}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground">
@@ -527,12 +543,12 @@ export function CarsTable({
 
               {(() => {
                 if (selected.size !== 1) return null;
-                const matchedLead = selectedCar ? getLeadForCar(selectedCar.id) : null;
+                const linked = selectedCar ? getLeadsForCar(selectedCar.id, leads) : [];
                 return (
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={!matchedLead}
+                    disabled={linked.length === 0}
                     onClick={() => {
                       if (!selectedCar) return;
                       setPendingUnmatchCar(selectedCar);
@@ -544,7 +560,7 @@ export function CarsTable({
               })()}
             </>
           ) : null}
-          <Button variant="destructive" size="sm" onClick={deleteSelectedCars}>
+          <Button variant="destructive" size="sm" onClick={() => setPendingDeleteCarIds(Array.from(selected))}>
             {tx("Delete", "Eliminar")}
           </Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
@@ -557,6 +573,7 @@ export function CarsTable({
         onOpenChange={(open) => !open && setEditCar(null)}
         onSave={onUpdateCar}
         onNotesDocumentAutosave={onNotesDocumentAutosave}
+        leads={leads}
       />
 
       <Dialog open={!!bulkMatchCar} onOpenChange={(open) => !open && setBulkMatchCar(null)}>
@@ -639,6 +656,30 @@ export function CarsTable({
       </Dialog>
 
       <AlertDialog
+        open={pendingDeleteCarIds != null && pendingDeleteCarIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteCarIds(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tx("Delete car(s)?", "¿Eliminar auto(s)?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteCarIds && pendingDeleteCarIds.length === 1
+                ? tx("This car will be permanently removed.", "Este auto se eliminará de forma permanente.")
+                : tx("These cars will be permanently removed.", "Estos autos se eliminarán de forma permanente.")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tx("Cancel", "Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmDeleteCars}>
+              {tx("Delete", "Eliminar")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
         open={!!pendingUnmatchCar}
         onOpenChange={(open) => {
           if (!open) setPendingUnmatchCar(null);
@@ -649,17 +690,12 @@ export function CarsTable({
             <AlertDialogTitle>{tx("Unmatch car", "Desvincular auto")}</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingUnmatchCar ? (() => {
-                const matchedLead = getLeadForCar(pendingUnmatchCar.id);
-                if (!matchedLead) return tx("This car has no match.", "Este auto no tiene vinculo.");
-                const matchedLeadType =
-                  matchedLead.lead_type === "buyer"
-                    ? tx("buyer", "comprador")
-                    : matchedLead.lead_type === "seller"
-                    ? tx("seller", "vendedor")
-                    : tx("pending", "pendiente");
+                const linked = getLeadsForCar(pendingUnmatchCar.id, leads);
+                if (linked.length === 0) return tx("This car has no match.", "Este auto no tiene vínculo.");
+                const names = linked.map((l) => l.name || tx("Unnamed", "Sin nombre")).join(", ");
                 return tx(
-                  `This car is matched with ${matchedLeadType} ${matchedLead.name || tx("Unnamed", "Sin nombre")}. Unmatch it?`,
-                  `Este auto esta vinculado con ${matchedLeadType} ${matchedLead.name || tx("Unnamed", "Sin nombre")}. ¿Desvincular?`,
+                  `This car is linked to: ${names}. Remove all links for this car?`,
+                  `Este auto está vinculado con: ${names}. ¿Quitar todos los vínculos de este auto?`,
                 );
               })() : null}
             </AlertDialogDescription>
@@ -690,7 +726,7 @@ function translateCarColumn(label: string) {
     case "Model":
       return "Modelo";
     case "Year":
-      return "Ano";
+      return "Año";
     case "Mileage":
       return "Kilometraje";
     case "Price":

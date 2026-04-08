@@ -220,7 +220,7 @@ export function AutomationManageDialog({
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
             <DialogTitle className="text-left">
-              {tx("Manage automation", "Gestionar automatizacion")}: {typeItem.name}
+              {tx("Manage automation", "Gestionar automatización")}: {typeItem.name}
             </DialogTitle>
           </DialogHeader>
         </div>
@@ -230,7 +230,7 @@ export function AutomationManageDialog({
           <div className="flex min-h-[280px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-sm font-semibold text-foreground">
-                {tx("Automation details", "Detalles de la automatizacion")}
+                {tx("Automation details", "Detalles de la automatización")}
               </p>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 space-y-4">
@@ -366,7 +366,7 @@ export function AutomationManageDialog({
                       <p className="text-sm text-muted-foreground py-6">{tx("Loading messages…", "Cargando mensajes…")}</p>
                     ) : mergedMessages.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-6 text-center">
-                        {tx("No messages yet. When the API exposes message history, it will show here.", "Aun no hay mensajes. Cuando el servidor exponga el historial, aparecera aqui.")}
+                        {tx("No messages yet. When the API exposes message history, it will show here.", "Aún no hay mensajes. Cuando el servidor exponga el historial, aparecerá aquí.")}
                       </p>
                     ) : (
                       mergedMessages.map((m) => {
@@ -414,7 +414,7 @@ export function AutomationManageDialog({
                     <p className="text-sm text-muted-foreground py-6">{tx("Loading messages…", "Cargando mensajes…")}</p>
                   ) : mergedMessages.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-6 text-center">
-                      {tx("No messages yet. When the API exposes message history, it will show here.", "Aun no hay mensajes. Cuando el servidor exponga el historial, aparecera aqui.")}
+                      {tx("No messages yet. When the API exposes message history, it will show here.", "Aún no hay mensajes. Cuando el servidor exponga el historial, aparecerá aquí.")}
                     </p>
                   ) : (
                     mergedMessages.map((m) => {

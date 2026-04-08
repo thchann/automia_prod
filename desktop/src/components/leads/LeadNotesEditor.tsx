@@ -156,6 +156,8 @@ type Props = {
   onPersist: (json: Record<string, unknown>) => void | Promise<void>;
   exportNotes?: (format: "pdf" | "docx") => Promise<Blob>;
   exportDownloadBasename?: string;
+  /** Override root sizing (e.g. `min-h-0 flex-1` when filling a fixed-height dialog panel). */
+  className?: string;
 };
 
 export type LeadNotesEditorHandle = {
@@ -164,7 +166,7 @@ export type LeadNotesEditorHandle = {
 };
 
 export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function LeadNotesEditor(
-  { recordId, notesDocument, legacyNotes, onPersist, exportNotes, exportDownloadBasename },
+  { recordId, notesDocument, legacyNotes, onPersist, exportNotes, exportDownloadBasename, className },
   ref,
 ) {
   const { tx } = useLanguage();
@@ -255,7 +257,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
       editorProps: {
         attributes: {
           class:
-            "tiptap focus:outline-none min-h-[min(70vh,36rem)] w-full max-w-none px-14 py-12 text-[15px] text-foreground leading-[1.65] antialiased",
+            "tiptap focus:outline-none min-h-[min(70vh,36rem)] w-full max-w-none px-10 py-9 text-[15px] text-foreground leading-[1.65] antialiased",
         },
       },
       onCreate: ({ editor: ed }) => {
@@ -330,7 +332,12 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
 
   if (!editor) {
     return (
-      <div className="flex min-h-[min(70vh,28rem)] items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+      <div
+        className={cn(
+          "flex min-h-[min(70vh,28rem)] items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground",
+          className,
+        )}
+      >
         {tx("Loading editor…", "Cargando editor…")}
       </div>
     );
@@ -339,7 +346,12 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
   const compactSelectTrigger = "h-8 w-[min(100%,5.5rem)] gap-1 border-input/80 text-xs shadow-none shrink-0";
 
   return (
-    <div className="lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-950/50">
+    <div
+      className={cn(
+        "lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-900/50",
+        className,
+      )}
+    >
       <div className="lead-notes-toolbar sticky top-0 z-20 flex shrink-0 flex-col gap-0 border-b border-border/80 bg-[hsl(42_10%_94%)]/95 px-2 py-2 backdrop-blur-md dark:bg-zinc-900/95">
         <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
           <ToolbarGroup>
@@ -353,7 +365,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
                 else chain.setFontSize(opt.value).run();
               }}
             >
-              <SelectTrigger className={cn(compactSelectTrigger, "w-[74px]")} aria-label={tx("Font size", "Tamano")}>
+              <SelectTrigger className={cn(compactSelectTrigger, "w-[74px]")} aria-label={tx("Font size", "Tamaño")}>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
@@ -488,8 +500,8 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
         </div>
       </div>
 
-      <div className="lead-notes-scroll min-h-0 flex-1 overflow-y-auto bg-[hsl(42_22%_88%)] px-3 pb-5 pt-1 dark:bg-zinc-900/85">
-        <div className="lead-notes-page mx-auto w-full max-w-[816px] rounded-sm border border-black/[0.09] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-zinc-950 dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
+      <div className="lead-notes-scroll min-h-0 flex-1 overflow-y-auto bg-[hsl(42_22%_88%)] px-2 pb-3 pt-0.5 dark:bg-zinc-900/80">
+        <div className="lead-notes-page mx-auto w-full max-w-[816px] rounded-sm border border-black/[0.09] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06),0_16px_40px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-zinc-900/95 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
           <EditorContent editor={editor} />
         </div>
       </div>

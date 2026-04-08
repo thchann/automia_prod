@@ -214,8 +214,8 @@ const AddLeadSheet = ({
             <div className="pt-2">
               <p className="text-xs font-bold text-primary uppercase tracking-wider mb-3">{tx("Buyer Preferences", "Preferencias del comprador")}</p>
             </div>
-            <Field label={tx("Min Budget", "Presupuesto minimo")} value={desiredBudgetMin} onChange={setDesiredBudgetMin} placeholder="e.g. 25000" type="number" />
-            <Field label={tx("Max Budget", "Presupuesto maximo")} value={desiredBudgetMax} onChange={setDesiredBudgetMax} placeholder="e.g. 40000" type="number" />
+            <Field label={tx("Min Budget", "Presupuesto mínimo")} value={desiredBudgetMin} onChange={setDesiredBudgetMin} placeholder="e.g. 25000" type="number" />
+            <Field label={tx("Max Budget", "Presupuesto máximo")} value={desiredBudgetMax} onChange={setDesiredBudgetMax} placeholder="e.g. 40000" type="number" />
             <Field label={tx("Preferred Make", "Marca preferida")} value={desiredMake} onChange={setDesiredMake} placeholder="e.g. BMW" />
             <Field label={tx("Preferred Model", "Modelo preferido")} value={desiredModel} onChange={setDesiredModel} placeholder="e.g. 3 Series" />
             <Field label={tx("Preferred Type", "Tipo preferido")} value={desiredCarType} onChange={setDesiredCarType} placeholder="e.g. sedan" />

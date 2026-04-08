@@ -9,6 +9,7 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
+import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 
 interface LeadsFunnelProps {
   leads: Lead[];
@@ -215,7 +216,8 @@ export function LeadsFunnel({
                   />
                 )}
                 {columnLeads.map((lead) => {
-                  const car = getCar(lead.car_id);
+                  const carIds = getAllCarIdsForLead(lead);
+                  const car = (carIds.length ? getCar(carIds[0]) : null) ?? getCar(lead.car_id);
                   return (
                     <div
                       key={lead.id}

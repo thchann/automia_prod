@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Car, CarAttachment } from "@/types/leads";
+import { Car, CarAttachment, Lead } from "@/types/leads";
+import { getLeadsForCar } from "@/lib/leadCarLinks";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, Eye, FileText, Trash2, Upload } from "lucide-react";
 import {
@@ -32,6 +33,10 @@ interface CarEditDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (car: Car) => void | Promise<void>;
   onNotesDocumentAutosave?: (carId: string, document: Record<string, unknown>) => void | Promise<void>;
+  /** When set, used to show linked leads and whether “Desired price” applies (seller lead). */
+  leads?: Lead[];
+  /** Optional: e.g. open lead editor from home dashboard. */
+  onOpenLinkedLead?: (lead: Lead) => void;
 }
 
 export function CarEditDialog({
@@ -40,6 +45,8 @@ export function CarEditDialog({
   onOpenChange,
   onSave,
   onNotesDocumentAutosave,
+  leads,
+  onOpenLinkedLead,
 }: CarEditDialogProps) {
   const [form, setForm] = useState<Partial<Car>>({});
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
@@ -73,6 +80,12 @@ export function CarEditDialog({
       if (att.url?.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
   }, [open]);
+
+  const linkedLeads = useMemo(
+    () => (car ? getLeadsForCar(car.id, leads ?? []) : []),
+    [car, leads],
+  );
+  const showDesiredPrice = linkedLeads.some((l) => l.lead_type === "seller");
 
   if (!car) return null;
 
@@ -110,6 +123,16 @@ export function CarEditDialog({
     const removed = current[index];
     if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
     const next = current.filter((_, i) => i !== index);
+    setAttachments(next.length ? next : null);
+  };
+
+  const renameAttachment = (index: number, filename: string) => {
+    const current = attachmentList;
+    const row = current[index];
+    if (!row) return;
+    const next = [...current];
+    const trimmed = filename.trim();
+    next[index] = { ...row, filename: trimmed || row.filename };
     setAttachments(next.length ? next : null);
   };
 
@@ -259,6 +282,45 @@ export function CarEditDialog({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
               <div className="grid gap-4">
+                {linkedLeads.length > 0 ? (
+                  <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      {tx("Linked leads", "Leads vinculados")}
+                    </p>
+                    <ul className="space-y-2">
+                      {linkedLeads.map((lead) => (
+                        <li
+                          key={lead.id}
+                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {lead.name ?? tx("Unknown lead", "Lead desconocido")}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground capitalize">
+                              {lead.lead_type === "buyer"
+                                ? tx("buyer", "comprador")
+                                : lead.lead_type === "seller"
+                                  ? tx("seller", "vendedor")
+                                  : tx("pending", "pendiente")}
+                            </span>
+                          </div>
+                          {onOpenLinkedLead ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 shrink-0 text-xs"
+                              onClick={() => onOpenLinkedLead(lead)}
+                            >
+                              {tx("Open", "Abrir")}
+                            </Button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Brand", "Marca")}</label>
@@ -271,7 +333,7 @@ export function CarEditDialog({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Year", "Ano")}</label>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Year", "Año")}</label>
                     <Input
                       type="number"
                       value={form.year ?? ""}
@@ -290,7 +352,7 @@ export function CarEditDialog({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${showDesiredPrice ? "grid-cols-2" : "grid-cols-1"}`}>
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Price", "Precio")}</label>
                     <Input
@@ -302,21 +364,23 @@ export function CarEditDialog({
                       }}
                     />
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Desired Price", "Precio deseado")}</label>
-                    <Input
-                      type="number"
-                      value={form.desired_price ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setForm({ ...form, desired_price: v === "" ? null : Number(v) });
-                      }}
-                    />
-                  </div>
+                  {showDesiredPrice ? (
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">{tx("Desired Price", "Precio deseado")}</label>
+                      <Input
+                        type="number"
+                        value={form.desired_price ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setForm({ ...form, desired_price: v === "" ? null : Number(v) });
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueno")}</label>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueño")}</label>
                     <select
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       value={form.owner_type || "owned"}
@@ -360,7 +424,7 @@ export function CarEditDialog({
             </div>
           </div>
 
-          <div className="flex min-h-[320px] flex-col min-h-0 md:col-span-2 md:min-h-[min(520px,calc(90vh-10rem))] bg-muted/20">
+          <div className="flex min-h-[min(70vh,28rem)] max-h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <ToggleGroup
                 type="single"
@@ -379,10 +443,10 @@ export function CarEditDialog({
             </div>
 
             {rightPanel === "files" ? (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div className="shrink-0 px-4 pb-2">
                   <p className="text-xs text-muted-foreground">
-                    {tx("Attached files appear above the upload area.", "Los archivos adjuntos aparecen arriba del area de subida.")}
+                    {tx("Attached files appear above the upload area.", "Los archivos adjuntos aparecen arriba del área de subida.")}
                   </p>
                 </div>
 
@@ -391,7 +455,7 @@ export function CarEditDialog({
                     {attachmentList.length === 0 ? (
                       <div className="flex flex-1 min-h-[6rem] items-center justify-center rounded-md border border-dashed border-transparent px-2">
                         <p className="text-center text-xs text-muted-foreground">
-                          {tx("No attachments yet.", "Aun no hay adjuntos.")}
+                          {tx("No attachments yet.", "Aún no hay adjuntos.")}
                         </p>
                       </div>
                     ) : (
@@ -412,8 +476,14 @@ export function CarEditDialog({
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{att.filename ?? tx("Untitled", "Sin nombre")}</p>
+                            <div className="min-w-0 flex-1">
+                              <Input
+                                value={att.filename ?? ""}
+                                onChange={(e) => renameAttachment(idx, e.target.value)}
+                                placeholder={tx("Untitled", "Sin nombre")}
+                                className="h-8 text-sm font-medium"
+                                aria-label={tx("File name", "Nombre del archivo")}
+                              />
                               <p className="text-xs text-muted-foreground capitalize">{att.type}</p>
                             </div>
                           </div>
@@ -506,12 +576,13 @@ export function CarEditDialog({
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 sm:px-4 sm:pb-4">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={car.id}
+                  className="min-h-0 max-h-full flex-1"
                   recordId={car.id}
                   notesDocument={car.notes_document}
                   legacyNotes={car.notes}

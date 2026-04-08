@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight, Plus } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { mapCarFromApi, mapLeadFromApi, mapStatusFromApi } from "@/lib/apiMappers";
+import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
 
 const LeadsPage = () => {
   const { tx, locale } = useLanguage();
@@ -87,7 +88,10 @@ const LeadsPage = () => {
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
-        const car = cars.find((c) => c.id === lead.car_id);
+        const carIds = getAllCarIdsForLead(lead);
+        const car =
+          (carIds.length ? cars.find((c) => c.id === carIds[0]) : null) ??
+          cars.find((c) => c.id === lead.car_id);
         const hay = buildLeadSearchHaystackForColumns(
           lead,
           car,
@@ -300,7 +304,7 @@ const LeadsPage = () => {
             ) : (
               <DetailRow label="Instagram" value={selected.instagram_handle} />
             )}
-            <DetailRow label={tx("Phone", "Telefono")} value={selected.phone} />
+            <DetailRow label={tx("Phone", "Teléfono")} value={selected.phone} />
             <DetailRow label={tx("Notes", "Notas")} value={selected.notes} />
             {selected.lead_type === "buyer" && (
               <>
@@ -328,16 +332,18 @@ const LeadsPage = () => {
                           </p>
 
                           {(() => {
-                            const matchedLeadForCar = leads.find((l) => l.car_id === m.car.id) ?? null;
-                            const matchedLeadTypeLabel = matchedLeadForCar
-                              ? matchedLeadForCar.lead_type === "buyer"
+                            const leadsForCar = getLeadsForCar(m.car.id, leads);
+                            const primary = leadsForCar[0];
+                            const moreCount = Math.max(0, leadsForCar.length - 1);
+                            const matchedLeadTypeLabel = primary
+                              ? primary.lead_type === "buyer"
                                 ? tx("buyer", "comprador")
-                                : matchedLeadForCar.lead_type === "seller"
-                                ? tx("seller", "vendedor")
-                                : tx("pending", "pendiente")
+                                : primary.lead_type === "seller"
+                                  ? tx("seller", "vendedor")
+                                  : tx("pending", "pendiente")
                               : tx("Unassigned", "Sin asignar");
-                            const matchedLeadName = matchedLeadForCar
-                              ? matchedLeadForCar.name || tx("Unnamed", "Sin nombre")
+                            const matchedLeadName = primary
+                              ? `${primary.name || tx("Unnamed", "Sin nombre")}${moreCount > 0 ? ` (+${moreCount})` : ""}`
                               : tx("No match", "Sin vincular");
 
                             return (
@@ -370,11 +376,11 @@ const LeadsPage = () => {
                   }
                 />
                 <DetailRow
-                  label={tx("Max Mileage", "Kilometraje maximo")}
+                  label={tx("Max Mileage", "Kilometraje máximo")}
                   value={selected.desired_mileage_max?.toLocaleString(locale) || null}
                 />
                 <DetailRow
-                  label={tx("Year Range", "Rango de ano")}
+                  label={tx("Year Range", "Rango de año")}
                   value={
                     selected.desired_year_min || selected.desired_year_max
                       ? `${selected.desired_year_min || "?"} – ${selected.desired_year_max || "?"}`

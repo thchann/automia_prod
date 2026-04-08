@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Car as CarIcon, Clock, Layers, Plug, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Car as CarIcon, Clock, Layers, Plug, TrendingUp, Users, Zap } from "lucide-react";
 import {
   ApiError,
   createCar,
@@ -10,8 +10,10 @@ import {
   listCars,
   listLeadStatuses,
   listLeads,
+  listAutomations,
   updateCar,
   updateLead,
+  type AutomationItem,
 } from "@automia/api";
 import { Car as CarType, Lead } from "@/types/leads";
 import { CarEditDialog } from "@/components/cars/CarEditDialog";
@@ -32,6 +34,7 @@ import { isDraftRecordId } from "@/lib/draftIds";
 import {
   DASHBOARD_PLACEHOLDER_WIDGETS,
   type DashboardNavTarget,
+  type DashboardWidgetId,
 } from "@/lib/dashboardWidgetContent";
 
 function displayDate(value: string | null, locale: string, missingLabel: string) {
@@ -52,6 +55,88 @@ const placeholderIcon = {
   response_metrics: Layers,
   integrations_pulse: Plug,
 } as const;
+
+function isActiveAutomation(a: AutomationItem): boolean {
+  const s = (a.status || "").toLowerCase();
+  if (!s) return true;
+  return !["disabled", "inactive", "error", "disconnected", "revoked"].includes(s);
+}
+
+function DashboardWidgetPlaceholderBody({
+  id,
+  tx,
+}: {
+  id: DashboardWidgetId;
+  tx: (en: string, es: string) => string;
+}) {
+  if (id === "pipeline_summary") {
+    return (
+      <div className="mt-4 space-y-2.5">
+        {[
+          { label: "New", labelEs: "Nuevo", w: 0.38 },
+          { label: "Qualified", labelEs: "Calif.", w: 0.22 },
+          { label: "Won", labelEs: "Ganado", w: 0.12 },
+        ].map((row) => (
+          <div key={row.label} className="flex items-center gap-2">
+            <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary/35" style={{ width: `${row.w * 100}%` }} />
+            </div>
+            <span className="w-16 shrink-0 text-right text-[10px] text-muted-foreground">
+              {tx(row.label, row.labelEs)}
+            </span>
+          </div>
+        ))}
+        <p className="pt-1 text-[10px] text-muted-foreground">
+          {tx("Sample layout — not live data.", "Diseño de ejemplo — sin datos en vivo.")}
+        </p>
+      </div>
+    );
+  }
+  if (id === "response_metrics") {
+    return (
+      <div className="mt-4 space-y-2 text-sm">
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-1.5">
+          <span className="text-muted-foreground">{tx("Avg. reply time", "Tiempo prom. de resp.")}</span>
+          <span className="font-mono text-muted-foreground">—</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-1.5">
+          <span className="text-muted-foreground">{tx("First touch", "Primer contacto")}</span>
+          <span className="font-mono text-muted-foreground">—</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground">{tx("Touchpoints", "Puntos de contacto")}</span>
+          <span className="font-mono text-muted-foreground">—</span>
+        </div>
+        <div className="mt-3 h-8 overflow-hidden rounded-md bg-muted/30">
+          <div className="flex h-full items-end gap-px px-1 pb-1">
+            {[40, 65, 55, 80, 45, 70, 50].map((h, i) => (
+              <div key={i} className="flex-1 rounded-sm bg-primary/25" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-foreground/90">OAuth</span>
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <span className="h-2 w-2 rounded-full bg-amber-500/90" />
+          {tx("Pending", "Pendiente")}
+        </span>
+      </div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-foreground/90">{tx("Webhooks", "Webhooks")}</span>
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+          {tx("Not checked", "Sin verificar")}
+        </span>
+      </div>
+      <p className="text-[10px] text-muted-foreground">{tx("Last checked —", "Última verificación —")}</p>
+    </div>
+  );
+}
 
 export interface HomeOverviewProps {
   /** Optional: mobile dashboard navigates to Leads/Cars when stat cards are tapped. */
@@ -83,6 +168,10 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   const { data: statusesData } = useQuery({
     queryKey: ["lead-statuses"],
     queryFn: () => listLeadStatuses(),
+  });
+  const { data: automationsData } = useQuery({
+    queryKey: ["automations"],
+    queryFn: listAutomations,
   });
 
   const statuses = useMemo(
@@ -129,7 +218,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   const hour = new Date().getHours();
   const greeting =
     hour < 12
-      ? tx("Good morning", "Buenos dias")
+      ? tx("Good morning", "Buenos días")
       : hour < 18
         ? tx("Good afternoon", "Buenas tardes")
         : tx("Good evening", "Buenas noches");
@@ -149,6 +238,11 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   const availableCars = cars.filter((c) => c.status === "available").length;
   const soldCars = cars.filter((c) => c.status === "sold").length;
   const carTotal = Math.max(cars.length, 1);
+
+  const activeAutomationsCount = useMemo(() => {
+    const list = automationsData?.automations ?? [];
+    return list.filter(isActiveAutomation).length;
+  }, [automationsData]);
 
   const recentActivity = useMemo(() => {
     const carEntries = cars.map((car) => ({
@@ -183,28 +277,47 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">{today}</p>
       </div>
 
-      <button
-        type="button"
-        onClick={() => onNavigate?.("Leads")}
-        className={cn("w-full p-4 mb-1", cardBase, statCardInteractive)}
-      >
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground">{tx("Active leads", "Leads activos")}</p>
-          <Users size={14} className="text-muted-foreground" aria-hidden />
-        </div>
-        <p className="text-2xl font-extrabold tabular-nums text-foreground">{totalLeads}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full bg-badge-pending/15 px-2 py-0.5 text-xs font-medium text-badge-pending">
-            {pendingLeads} {tx("pending", "pendientes")}
-          </span>
-          <span className="rounded-full bg-badge-buyer/15 px-2 py-0.5 text-xs font-medium text-badge-buyer">
-            {buyers} {tx("buyers", "compradores")}
-          </span>
-          <span className="rounded-full bg-badge-seller/15 px-2 py-0.5 text-xs font-medium text-badge-seller">
-            {sellers} {tx("sellers", "vendedores")}
-          </span>
-        </div>
-      </button>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => onNavigate?.("Leads")}
+          className={cn("w-full p-4", cardBase, statCardInteractive)}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">{tx("Active leads", "Leads activos")}</p>
+            <Users size={14} className="text-muted-foreground" aria-hidden />
+          </div>
+          <p className="text-2xl font-extrabold tabular-nums text-foreground">{totalLeads}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full bg-badge-pending/15 px-2 py-0.5 text-xs font-medium text-badge-pending">
+              {pendingLeads} {tx("pending", "pendientes")}
+            </span>
+            <span className="rounded-full bg-badge-buyer/15 px-2 py-0.5 text-xs font-medium text-badge-buyer">
+              {buyers} {tx("buyers", "compradores")}
+            </span>
+            <span className="rounded-full bg-badge-seller/15 px-2 py-0.5 text-xs font-medium text-badge-seller">
+              {sellers} {tx("sellers", "vendedores")}
+            </span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate?.("Automations")}
+          className={cn("w-full p-4", cardBase, statCardInteractive)}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">
+              {tx("Active automations", "Automatizaciones activas")}
+            </p>
+            <Zap size={14} className="text-muted-foreground" aria-hidden />
+          </div>
+          <p className="text-2xl font-extrabold tabular-nums text-foreground">{activeAutomationsCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {tx("Connected integrations", "Integraciones conectadas")}
+          </p>
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
@@ -260,12 +373,8 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
                   <Icon size={16} className="shrink-0 text-muted-foreground" aria-hidden />
                 </div>
                 <p className="text-sm text-foreground/90">{tx(w.descriptionEn, w.descriptionEs)}</p>
-                <div className="mt-4 rounded-md border border-dashed border-border bg-muted/30 px-3 py-6 text-center">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {tx("Placeholder — connect loadDashboardWidgetContent()", "Marcador — conecta loadDashboardWidgetContent()")}
-                  </p>
-                  <p className="mt-1 font-mono text-[10px] text-muted-foreground/80">{w.id}</p>
-                </div>
+                <DashboardWidgetPlaceholderBody id={w.id} tx={tx} />
+                <p className="mt-3 font-mono text-[10px] text-muted-foreground/70">{w.id}</p>
               </div>
             );
           })}
@@ -278,7 +387,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           <Clock size={14} className="text-muted-foreground" aria-hidden />
         </div>
         {recentActivity.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">{tx("No activity yet.", "Sin actividad aun.")}</p>
+          <p className="py-2 text-sm text-muted-foreground">{tx("No activity yet.", "Sin actividad aún.")}</p>
         ) : (
           recentActivity.map((entry) =>
             entry.type === "car" ? (
@@ -362,7 +471,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
               "w-full rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60",
             )}
           >
-            {tx("See more", "Ver mas")}
+            {tx("See more", "Ver más")}
           </button>
         </div>
       </div>
@@ -386,6 +495,11 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           if (isDraftRecordId(carId)) return;
           await updateCar(carId, { notes_document: document });
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
+        }}
+        leads={leads}
+        onOpenLinkedLead={(lead) => {
+          setEditCar(null);
+          beginEditLead(lead);
         }}
       />
       <LeadEditDialog

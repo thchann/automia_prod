@@ -1,5 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link2, Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import {
+  Link2,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -34,6 +44,7 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
+import { getAllCarIdsForLead, getLeadsForCar } from "@/lib/leadCarLinks";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -113,13 +124,8 @@ export function LeadsTable({
   const [matchLead, setMatchLead] = useState<Lead | null>(null);
   const [carsToMatch, setCarsToMatch] = useState<Set<string>>(new Set());
   const [bulkMatchLead, setBulkMatchLead] = useState<Lead | null>(null);
-  const [pendingCarReassign, setPendingCarReassign] = useState<null | {
-    targetLeadId: string;
-    carId: string;
-    existingLead: Lead;
-    mode: "single" | "bulk";
-  }>(null);
   const [unmatchCarsOpen, setUnmatchCarsOpen] = useState(false);
+  const [pendingDeleteLeadIds, setPendingDeleteLeadIds] = useState<string[] | null>(null);
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,7 +159,10 @@ export function LeadsTable({
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
-        const car = cars.find((c) => c.id === lead.car_id);
+        const carIds = getAllCarIdsForLead(lead);
+        const car =
+          (carIds.length ? cars.find((c) => c.id === carIds[0]) : null) ??
+          cars.find((c) => c.id === lead.car_id);
         const hay = buildLeadSearchHaystackForColumns(
           lead,
           car,
@@ -254,43 +263,19 @@ export function LeadsTable({
   const selectedLead =
     selected.size === 1 ? leads.find((lead) => lead.id === Array.from(selected)[0]) ?? null : null;
 
-  const getAllCarIdsForLead = (lead: Lead): string[] => {
-    const ids: string[] = [];
-    if (lead.car_ids?.length) ids.push(...lead.car_ids);
-    if (lead.car_id) ids.push(lead.car_id);
-    // de-dupe preserving order
-    return Array.from(new Set(ids));
-  };
-
   const assignLeadToCar = (leadId: string, carId: string) => {
     const now = new Date().toISOString();
-    for (const lead of leads) {
-      if (lead.id === leadId) {
-        const current = getAllCarIdsForLead(lead);
-        const nextIds = Array.from(new Set([...current, carId]));
-        onUpdateLead({
-          ...lead,
-          car_id: nextIds[0] ?? null,
-          car_ids: nextIds.length ? nextIds : null,
-          updated_at: now,
-        });
-      } else {
-        // Ensure one car belongs to only one lead:
-        const current = getAllCarIdsForLead(lead);
-        if (!current.includes(carId)) continue;
-        const nextIds = current.filter((id) => id !== carId);
-        onUpdateLead({
-          ...lead,
-          car_id: nextIds[0] ?? null,
-          car_ids: nextIds.length ? nextIds : null,
-          updated_at: now,
-        });
-      }
-    }
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const current = getAllCarIdsForLead(lead);
+    const nextIds = Array.from(new Set([...current, carId]));
+    onUpdateLead({
+      ...lead,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+      updated_at: now,
+    });
   };
-
-  const getLeadForCar = (carId: string) =>
-    leads.find((l) => getAllCarIdsForLead(l).includes(carId)) ?? null;
 
   const translateLeadType = (leadType: Lead["lead_type"]) => (
     leadType === "buyer"
@@ -301,12 +286,6 @@ export function LeadsTable({
   );
 
   const requestAssignLeadToCar = (targetLeadId: string, carId: string, mode: "single" | "bulk") => {
-    const existingLeadForCar = getLeadForCar(carId);
-    if (existingLeadForCar && existingLeadForCar.id !== targetLeadId) {
-      setPendingCarReassign({ targetLeadId, carId, existingLead: existingLeadForCar, mode });
-      return;
-    }
-
     assignLeadToCar(targetLeadId, carId);
     if (mode === "single") {
       setMatchLead(null);
@@ -317,8 +296,11 @@ export function LeadsTable({
     }
   };
 
-  const deleteSelectedLeads = () => {
-    for (const leadId of selected) onDeleteLead(leadId);
+  const confirmDeleteLeads = () => {
+    const ids = pendingDeleteLeadIds;
+    if (!ids?.length) return;
+    for (const leadId of ids) void onDeleteLead(leadId);
+    setPendingDeleteLeadIds(null);
     setSelected(new Set());
   };
 
@@ -327,6 +309,24 @@ export function LeadsTable({
     const id = Array.from(selected)[0];
     return leads.find((l) => l.id === id) ?? null;
   }, [selected, leads]);
+
+  const moveCarOrderForSelectedLead = (carId: string, delta: -1 | 1) => {
+    if (!selectedLeadForUnmatch) return;
+    const ids = getAllCarIdsForLead(selectedLeadForUnmatch);
+    const i = ids.indexOf(carId);
+    if (i < 0) return;
+    const j = i + delta;
+    if (j < 0 || j >= ids.length) return;
+    const next = [...ids];
+    [next[i], next[j]] = [next[j], next[i]];
+    const now = new Date().toISOString();
+    onUpdateLead({
+      ...selectedLeadForUnmatch,
+      car_id: next[0] ?? null,
+      car_ids: next.length ? next : null,
+      updated_at: now,
+    });
+  };
 
   const connectedCarsFromSelectedLead = useMemo(() => {
     if (!selectedLeadForUnmatch) return [];
@@ -355,7 +355,6 @@ export function LeadsTable({
 
     setUnmatchCarsOpen(false);
     setCarToUnmatchId(null);
-    setPendingCarReassign(null);
     setSelected(new Set());
   };
 
@@ -564,7 +563,7 @@ export function LeadsTable({
               </TableHead>
               {visibleColumns.includes("name") && <TableHead className="min-w-[120px]">{tx("Name", "Nombre")}</TableHead>}
               {visibleColumns.includes("instagram") && <TableHead className="min-w-[100px]">Instagram</TableHead>}
-              {visibleColumns.includes("phone") && <TableHead className="min-w-[100px]">{tx("Phone", "Telefono")}</TableHead>}
+              {visibleColumns.includes("phone") && <TableHead className="min-w-[100px]">{tx("Phone", "Teléfono")}</TableHead>}
               {visibleColumns.includes("leadType") && <TableHead className="min-w-[88px]">{tx("Lead type", "Tipo de lead")}</TableHead>}
               {visibleColumns.includes("car") && <TableHead className="min-w-[160px]">{tx("Car", "Auto")}</TableHead>}
               {visibleColumns.includes("buyerCriteria") && <TableHead className="min-w-[220px]">{tx("Buyer criteria", "Criterios del comprador")}</TableHead>}
@@ -579,7 +578,9 @@ export function LeadsTable({
           <TableBody>
             {paged.map((lead) => {
               const status = getStatus(lead.status_id);
-              const car = getCar(lead.car_id);
+              const carIds = getAllCarIdsForLead(lead);
+              const car =
+                (carIds.length ? getCar(carIds[0]) : null) ?? getCar(lead.car_id);
               return (
                 <TableRow
                   key={lead.id}
@@ -646,7 +647,11 @@ export function LeadsTable({
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => beginEditLead(lead)}>
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button type="button" className="p-1 hover:text-destructive text-muted-foreground" onClick={() => onDeleteLead(lead.id)}>
+                      <button
+                        type="button"
+                        className="p-1 hover:text-destructive text-muted-foreground"
+                        onClick={() => setPendingDeleteLeadIds([lead.id])}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground">
@@ -714,7 +719,7 @@ export function LeadsTable({
               ) : null}
             </>
           ) : null}
-          <Button variant="destructive" size="sm" onClick={deleteSelectedLeads}>
+          <Button variant="destructive" size="sm" onClick={() => setPendingDeleteLeadIds(Array.from(selected))}>
             {tx("Delete", "Eliminar")}
           </Button>
           <button type="button" onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground ml-2">✕</button>
@@ -743,7 +748,9 @@ export function LeadsTable({
               <p className="text-sm text-muted-foreground">{tx("No inventory matches yet.", "Todavia no hay coincidencias de inventario.")}</p>
             ) : (
               matchResults.map((m) => {
-                const matchedLeadForCar = getLeadForCar(m.car.id);
+                const leadsForCar = getLeadsForCar(m.car.id, leads);
+                const primary = leadsForCar[0];
+                const moreCount = Math.max(0, leadsForCar.length - 1);
                 return (
                   <div
                     key={m.car.id}
@@ -772,10 +779,12 @@ export function LeadsTable({
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
-                        {matchedLeadForCar ? translateLeadType(matchedLeadForCar.lead_type) : tx("Unassigned", "Sin asignar")}
+                        {primary ? translateLeadType(primary.lead_type) : tx("Unassigned", "Sin asignar")}
                       </span>
                       <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
-                        {matchedLeadForCar ? (matchedLeadForCar.name || tx("Unnamed", "Sin nombre")) : tx("No match", "Sin vincular")}
+                        {primary
+                          ? `${primary.name || tx("Unnamed", "Sin nombre")}${moreCount > 0 ? ` (+${moreCount})` : ""}`
+                          : tx("No match", "Sin vincular")}
                       </span>
                     </div>
                   </div>
@@ -841,16 +850,18 @@ export function LeadsTable({
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {(() => {
-                      const matchedLeadForCar = getLeadForCar(car.id);
+                      const leadsForCar = getLeadsForCar(car.id, leads);
+                      const primary = leadsForCar[0];
+                      const moreCount = Math.max(0, leadsForCar.length - 1);
                       return (
                         <>
                           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
-                            {matchedLeadForCar
-                              ? translateLeadType(matchedLeadForCar.lead_type)
-                              : tx("Unassigned", "Sin asignar")}
+                            {primary ? translateLeadType(primary.lead_type) : tx("Unassigned", "Sin asignar")}
                           </span>
                           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
-                            {matchedLeadForCar ? (matchedLeadForCar.name || tx("Unnamed", "Sin nombre")) : tx("No match", "Sin vincular")}
+                            {primary
+                              ? `${primary.name || tx("Unnamed", "Sin nombre")}${moreCount > 0 ? ` (+${moreCount})` : ""}`
+                              : tx("No match", "Sin vincular")}
                           </span>
                         </>
                       );
@@ -880,6 +891,12 @@ export function LeadsTable({
             ) : (
               <div className="space-y-2">
                 {connectedCarsFromSelectedLead.map((car) => {
+                  const orderedIds = selectedLeadForUnmatch
+                    ? getAllCarIdsForLead(selectedLeadForUnmatch)
+                    : [];
+                  const idx = orderedIds.indexOf(car.id);
+                  const canMoveUp = idx > 0;
+                  const canMoveDown = idx >= 0 && idx < orderedIds.length - 1;
                   return (
                     <div
                       key={car.id}
@@ -891,10 +908,41 @@ export function LeadsTable({
                           onCheckedChange={() => setCarToUnmatchId(car.id)}
                         />
                       </div>
+                      <div className="flex flex-col gap-0.5 pt-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          disabled={!canMoveUp}
+                          title={tx("Move up", "Subir")}
+                          onClick={() => moveCarOrderForSelectedLead(car.id, -1)}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          disabled={!canMoveDown}
+                          title={tx("Move down", "Bajar")}
+                          onClick={() => moveCarOrderForSelectedLead(car.id, 1)}
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium">
-                          {car.year} {car.brand} {car.model}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">
+                            {car.year} {car.brand} {car.model}
+                          </p>
+                          {idx === 0 ? (
+                            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                              {tx("Primary", "Principal")}
+                            </span>
+                          ) : null}
+                        </div>
 
                         {selectedLeadForUnmatch ? (
                           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -939,39 +987,24 @@ export function LeadsTable({
       </Dialog>
 
       <AlertDialog
-        open={!!pendingCarReassign}
+        open={pendingDeleteLeadIds != null && pendingDeleteLeadIds.length > 0}
         onOpenChange={(open) => {
-          if (!open) setPendingCarReassign(null);
+          if (!open) setPendingDeleteLeadIds(null);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{tx("Car already matched", "Auto ya vinculado")}</AlertDialogTitle>
+            <AlertDialogTitle>{tx("Delete lead(s)?", "¿Eliminar lead(s)?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingCarReassign
-                ? tx(
-                    `This car is already matched with ${pendingCarReassign.existingLead.name || tx("Unnamed", "Sin nombre")}. Are you sure you want to continue?`,
-                    `Este auto ya está vinculado con ${pendingCarReassign.existingLead.name || tx("Unnamed", "Sin nombre")}. ¿Seguro que quieres continuar?`,
-                  )
-                : null}
+              {pendingDeleteLeadIds && pendingDeleteLeadIds.length === 1
+                ? tx("This lead will be permanently removed.", "Este lead se eliminará de forma permanente.")
+                : tx("These leads will be permanently removed.", "Estos leads se eliminarán de forma permanente.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tx("Cancel", "Cancelar")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!pendingCarReassign) return;
-                assignLeadToCar(pendingCarReassign.targetLeadId, pendingCarReassign.carId);
-                if (pendingCarReassign.mode === "single") {
-                  setMatchLead(null);
-                } else {
-                  setBulkMatchLead(null);
-                  setSelected(new Set());
-                }
-                setPendingCarReassign(null);
-              }}
-            >
-              {tx("Continue", "Continuar")}
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={confirmDeleteLeads}>
+              {tx("Delete", "Eliminar")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -985,7 +1018,7 @@ function translateLeadColumn(label: string) {
     case "Name":
       return "Nombre";
     case "Phone":
-      return "Telefono";
+      return "Teléfono";
     case "Lead type":
       return "Tipo de lead";
     case "Car":
@@ -1025,10 +1058,10 @@ function translateStatusName(name: string, tx: (enText: string, esText: string) 
 function translateMatchReason(reason: string, tx: (enText: string, esText: string) => string) {
   return reason
     .replace("Price in budget", tx("Price in budget", "Precio dentro del presupuesto"))
-    .replace("Price above min", tx("Price above min", "Precio por encima del minimo"))
-    .replace("Price below max", tx("Price below max", "Precio por debajo del maximo"))
-    .replace("Year match", tx("Year match", "Ano coincide"))
-    .replace("Mileage within max", tx("Mileage within max", "Kilometraje dentro del maximo"))
+    .replace("Price above min", tx("Price above min", "Precio por encima del mínimo"))
+    .replace("Price below max", tx("Price below max", "Precio por debajo del máximo"))
+    .replace("Year match", tx("Year match", "Año coincide"))
+    .replace("Mileage within max", tx("Mileage within max", "Kilometraje dentro del máximo"))
     .replace("Make match", tx("Make match", "Marca coincide"))
     .replace("Model match", tx("Model match", "Modelo coincide"))
     .replace("Type match", tx("Type match", "Tipo coincide"))

@@ -60,6 +60,8 @@ export interface LeadResponse {
   source: string;
   status_id: string | null;
   car_id: string | null;
+  /** Additional linked cars (ordered); primary remains `car_id` when present. */
+  car_ids?: string[] | null;
   name: string | null;
   instagram_handle: string | null;
   phone: string | null;
@@ -89,6 +91,7 @@ export interface LeadCreate {
   platform_sender_id: string;
   status_id?: string | null;
   car_id?: string | null;
+  car_ids?: string[] | null;
   name?: string | null;
   instagram_handle?: string | null;
   phone?: string | null;
@@ -108,6 +111,7 @@ export interface LeadUpdate {
   lead_type?: string | null;
   status_id?: string | null;
   car_id?: string | null;
+  car_ids?: string[] | null;
   name?: string | null;
   instagram_handle?: string | null;
   phone?: string | null;

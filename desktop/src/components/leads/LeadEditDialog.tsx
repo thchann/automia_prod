@@ -176,6 +176,16 @@ export function LeadEditDialog({
     setAttachments(attachmentList.filter((_, i) => i !== index));
   };
 
+  const renameAttachment = (index: number, filename: string) => {
+    const current = attachmentList;
+    const row = current[index];
+    if (!row) return;
+    const trimmed = filename.trim();
+    const next = [...current];
+    next[index] = { ...row, filename: trimmed || row.filename };
+    setAttachments(next);
+  };
+
   const canPreviewAttachment = (att: CarAttachment) => {
     if (typeof att.url === "string" && att.url.length > 0) return true;
     if (att.storage_key && !isDraftRecordId(lead.id)) return true;
@@ -327,7 +337,7 @@ export function LeadEditDialog({
                     <p className="text-sm font-medium text-foreground">{tx("Buyer criteria", "Criterios del comprador")}</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget min", "Presupuesto minimo")}</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget min", "Presupuesto mínimo")}</label>
                         <Input
                           type="number"
                           value={form.desired_budget_min ?? ""}
@@ -335,7 +345,7 @@ export function LeadEditDialog({
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget max", "Presupuesto maximo")}</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Budget max", "Presupuesto máximo")}</label>
                         <Input
                           type="number"
                           value={form.desired_budget_max ?? ""}
@@ -345,7 +355,7 @@ export function LeadEditDialog({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Mileage max", "Kilometraje maximo")}</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Mileage max", "Kilometraje máximo")}</label>
                         <Input
                           type="number"
                           value={form.desired_mileage_max ?? ""}
@@ -364,7 +374,7 @@ export function LeadEditDialog({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Year min", "Ano minimo")}</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Year min", "Año mínimo")}</label>
                         <Input
                           type="number"
                           value={form.desired_year_min ?? ""}
@@ -374,7 +384,7 @@ export function LeadEditDialog({
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Year max", "Ano maximo")}</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">{tx("Year max", "Año máximo")}</label>
                         <Input
                           type="number"
                           value={form.desired_year_max ?? ""}
@@ -407,7 +417,7 @@ export function LeadEditDialog({
           </div>
 
           {/* Columns 2–3 — Files or Notes (single panel, spans two grid columns) */}
-          <div className="flex min-h-[320px] flex-col min-h-0 md:col-span-2 md:min-h-[min(520px,calc(90vh-10rem))] bg-muted/20">
+          <div className="flex min-h-[min(70vh,28rem)] max-h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <ToggleGroup
                 type="single"
@@ -426,10 +436,10 @@ export function LeadEditDialog({
             </div>
 
             {rightPanel === "files" ? (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div className="shrink-0 px-4 pb-2">
                   <p className="text-xs text-muted-foreground">
-                    {tx("Attached files appear above the upload area.", "Los archivos adjuntos aparecen arriba del area de subida.")}
+                    {tx("Attached files appear above the upload area.", "Los archivos adjuntos aparecen arriba del área de subida.")}
                   </p>
                 </div>
 
@@ -438,7 +448,7 @@ export function LeadEditDialog({
                     {attachmentList.length === 0 ? (
                       <div className="flex flex-1 min-h-[6rem] items-center justify-center rounded-md border border-dashed border-transparent px-2">
                         <p className="text-center text-xs text-muted-foreground">
-                          {tx("No attachments yet.", "Aun no hay adjuntos.")}
+                          {tx("No attachments yet.", "Aún no hay adjuntos.")}
                         </p>
                       </div>
                     ) : (
@@ -459,8 +469,14 @@ export function LeadEditDialog({
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{att.filename ?? tx("Untitled", "Sin nombre")}</p>
+                            <div className="min-w-0 flex-1">
+                              <Input
+                                value={att.filename ?? ""}
+                                onChange={(e) => renameAttachment(idx, e.target.value)}
+                                placeholder={tx("Untitled", "Sin nombre")}
+                                className="h-8 text-sm font-medium"
+                                aria-label={tx("File name", "Nombre del archivo")}
+                              />
                               <p className="text-xs text-muted-foreground capitalize">{att.type}</p>
                             </div>
                           </div>
@@ -553,12 +569,13 @@ export function LeadEditDialog({
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 sm:px-4 sm:pb-4">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={lead.id}
+                  className="min-h-0 max-h-full flex-1"
                   recordId={lead.id}
                   notesDocument={lead.notes_document}
                   legacyNotes={lead.notes}

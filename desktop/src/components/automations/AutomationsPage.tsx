@@ -297,7 +297,7 @@ export function AutomationsPage() {
           </div>
         ) : sortedAutomations.length === 0 ? (
           <p className="py-8 text-sm text-muted-foreground">
-            {tx("No connected automations yet.", "Aun no hay automatizaciones conectadas.")}
+            {tx("No connected automations yet.", "Aún no hay automatizaciones conectadas.")}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
