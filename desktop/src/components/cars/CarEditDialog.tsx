@@ -439,7 +439,7 @@ export function CarEditDialog({
             </div>
           </div>
 
-          <div className="flex min-h-[min(70vh,28rem)] max-h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
+          <div className="flex h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <ToggleGroup
                 type="single"
