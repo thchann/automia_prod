@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage.tsx";
 import SetupWebsitePage from "./pages/SetupWebsitePage.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.tsx";
 import { AppErrorBoundary } from "./components/AppErrorBoundary.tsx";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/verification" element={<VerificationPage />} />
                 <Route path="/sign-in" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route
                   path="/setup-website"
                   element={

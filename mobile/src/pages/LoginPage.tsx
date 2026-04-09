@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import LoginForm from "@/components/LoginForm";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +40,11 @@ export default function LoginPage() {
           }}
           onCreateAccount={() => navigate("/verification")}
         />
+        <p className="text-center text-sm text-muted-foreground">
+          <Link to="/privacy-policy" className="underline underline-offset-4 hover:text-foreground">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );

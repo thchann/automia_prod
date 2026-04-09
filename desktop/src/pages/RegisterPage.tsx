@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Lock, Mail, User } from "lucide-react";
 
 import { ApiError } from "@automia/api";
@@ -121,6 +121,11 @@ export default function RegisterPage() {
           >
             Already have an account? Sign in
           </button>
+          <p className="text-center text-sm text-muted-foreground">
+            <Link to="/privacy-policy" className="underline underline-offset-4 hover:text-foreground">
+              Privacy Policy
+            </Link>
+          </p>
         </form>
       </div>
     </div>
