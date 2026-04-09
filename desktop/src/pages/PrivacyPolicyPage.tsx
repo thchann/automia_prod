@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
 
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
         <p className="mb-10 text-center text-lg font-medium text-foreground">
-          This Privacy Policy explains how {LEGAL_ENTITY_NAME} (“we,” “us”) collects, uses, and shares
+          This Privacy Policy explains how {LEGAL_ENTITY_NAME} collects, uses, and shares
           personal information when you use {APP_DISPLAY_NAME}, including Instagram messaging
           automations and integrations.
         </p>
