@@ -1,6 +1,6 @@
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,12 +74,13 @@ export function DashboardHeader() {
                 ))}
               </div>
               <div className="border-t border-border pt-2 space-y-1">
-                <button
-                  type="button"
+                <Link
+                  to="/privacy-policy"
+                  onClick={() => setOpen(false)}
                   className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
                 >
                   {tx("Terms & policies", "Terminos y politicas")}
-                </button>
+                </Link>
                 <button
                   type="button"
                   className="block w-full text-left text-sm text-foreground hover:text-primary py-1.5 transition-colors"
