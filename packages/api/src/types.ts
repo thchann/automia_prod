@@ -239,6 +239,8 @@ export interface AutomationItem {
   user_id: string;
   automation_type_id: string;
   platform_page_id: string;
+  platform_username: string | null;
+  platform_display_name: string | null;
   token_type: string;
   token_expires_at: string | null;
   status: string;

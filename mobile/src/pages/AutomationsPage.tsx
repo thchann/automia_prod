@@ -6,7 +6,6 @@ import {
   startInstagramOAuth,
   updateAutomation,
 } from "@automia/api";
-import type { InstagramOAuthFailureReason } from "@automia/api";
 import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageProvider";
@@ -17,6 +16,18 @@ function findAutomationForType(
   typeId: string,
 ): AutomationItem | undefined {
   return automations.find((a) => a.automation_type_id === typeId);
+}
+
+function accountIdentitySubtitle(
+  conn: AutomationItem | undefined,
+  tx: (en: string, es: string) => string,
+): string {
+  if (!conn) return tx("Instagram account", "Cuenta de Instagram");
+  const displayName = conn.platform_display_name?.trim();
+  if (displayName) return displayName;
+  const username = conn.platform_username?.trim();
+  if (username) return username.startsWith("@") ? username : `@${username}`;
+  return tx("Instagram account", "Cuenta de Instagram");
 }
 
 const AutomationsPage = () => {
@@ -35,26 +46,9 @@ const AutomationsPage = () => {
   const types = typesData?.types ?? [];
   const automations = automationsData?.automations ?? [];
 
-  const instagramOAuthMessage = (reason: InstagramOAuthFailureReason): string => {
-    const m: Record<InstagramOAuthFailureReason, [string, string]> = {
-      no_token: ["Sign in again to connect Instagram.", "Inicia sesión de nuevo para conectar Instagram."],
-      fetch_failed: ["Could not reach the server. Check your connection.", "No se pudo conectar al servidor."],
-      not_json: ["Unexpected response from the server. Try again later.", "Respuesta inesperada del servidor."],
-      no_authorize_url: ["Could not get the Instagram login link.", "No se obtuvo el enlace de inicio de sesión de Instagram."],
-      redirect_no_location: ["OAuth redirect failed (missing Location). Contact support.", "La redirección OAuth falló. Contacta soporte."],
-      opaque_redirect: ["OAuth redirect failed (browser limitation). The API should return JSON with authorize_url.", "Fallo de redirección OAuth. El servidor debe devolver JSON con authorize_url."],
-      http_error: ["The server rejected the request. Try again or contact support.", "El servidor rechazó la solicitud."],
-    };
-    const pair = m[reason];
-    return tx(pair[0], pair[1]);
-  };
-
   const connectInstagram = async () => {
     try {
-      const result = await startInstagramOAuth();
-      if (result.ok === false) {
-        toast.error(instagramOAuthMessage(result.reason));
-      }
+      await startInstagramOAuth();
     } catch {
       toast.error(tx("Could not start Instagram connection", "No se pudo conectar Instagram"));
     }
@@ -100,6 +94,11 @@ const AutomationsPage = () => {
                   <div>
                     <div className="font-semibold">{t.name}</div>
                     <p className="text-sm text-muted-foreground line-clamp-2">{t.description ?? t.code}</p>
+                    {conn ? (
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                        {accountIdentitySubtitle(conn, tx)}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="mt-auto flex h-8 items-center justify-between pr-1">
                     {isIg ? (

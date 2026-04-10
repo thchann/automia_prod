@@ -243,6 +243,22 @@ export function AutomationManageDialog({
                 <p className="text-sm text-foreground leading-relaxed">{typeItem.description ?? typeItem.code}</p>
               </div>
               <div>
+                <p className="text-sm text-muted-foreground mb-1">{tx("Platform display name", "Nombre visible de plataforma")}</p>
+                <p className="text-sm text-foreground">
+                  {detail.platform_display_name?.trim() || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{tx("Platform username", "Usuario de plataforma")}</p>
+                <p className="text-sm text-foreground">
+                  {detail.platform_username?.trim()
+                    ? detail.platform_username.startsWith("@")
+                      ? detail.platform_username
+                      : `@${detail.platform_username}`
+                    : "—"}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground mb-2">{tx("Run state", "Estado de ejecucion")}</p>
                 <div className="flex items-center gap-3">
                   <button

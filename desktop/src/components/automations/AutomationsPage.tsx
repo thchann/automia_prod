@@ -180,7 +180,13 @@ export function AutomationsPage() {
   };
 
   /** Do not surface `platform_page_id` in the UI. */
-  const accountSubtitle = () => tx("Instagram account", "Cuenta de Instagram");
+  const accountSubtitle = (automation: AutomationItem) => {
+    const displayName = automation.platform_display_name?.trim();
+    if (displayName) return displayName;
+    const username = automation.platform_username?.trim();
+    if (username) return username.startsWith("@") ? username : `@${username}`;
+    return tx("Instagram account", "Cuenta de Instagram");
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 text-foreground">
@@ -324,7 +330,7 @@ export function AutomationsPage() {
                     </div>
                     <div>
                       <div className="font-semibold">{typeItem.name}</div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{accountSubtitle()}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{accountSubtitle(conn)}</p>
                     </div>
                     <div className="mt-auto flex h-8 items-center pr-1">
                       <Button
