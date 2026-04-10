@@ -7,6 +7,9 @@ import type {
   LeadResponse,
   LeadUpdate,
   LeadsListResponse,
+  NeoAutoCarPreviewWire,
+  NeoAutoImportResponse,
+  NeoAutoImportResponseRaw,
 } from "./types";
 
 /** API wire field for Tiptap JSON (see message contract). App code uses `notes_document`. */
@@ -76,4 +79,23 @@ export function carUpdateToWire(body: CarUpdate): Record<string, unknown> {
     out[WIRE_NOTES] = notes_document;
   }
   return out;
+}
+
+/** NeoAuto `car_preview` wire → `CarCreate` (maps `notes_json` → `notes_document`). */
+export function neoAutoCarPreviewFromWire(raw: NeoAutoCarPreviewWire): CarCreate {
+  const { notes_json, notes_document, ...rest } = raw;
+  const out = { ...rest } as CarCreate;
+  if (notes_document !== undefined) {
+    out.notes_document = notes_document;
+  } else if (notes_json !== undefined) {
+    out.notes_document = notes_json as LeadNotesDocumentJson | null;
+  }
+  return out;
+}
+
+export function neoAutoImportResponseFromWire(raw: NeoAutoImportResponseRaw): NeoAutoImportResponse {
+  return {
+    ...(raw.message !== undefined ? { message: raw.message } : {}),
+    car_preview: neoAutoCarPreviewFromWire(raw.car_preview),
+  };
 }

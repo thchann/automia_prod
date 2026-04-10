@@ -510,6 +510,63 @@ export function CarEditDialog({
                     <Input value={form.car_type || ""} onChange={(e) => setForm({ ...form, car_type: e.target.value || null })} />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Transmission", "Transmisión")}</label>
+                    <Input
+                      value={form.transmission ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, transmission: e.target.value.trim() || null })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Color", "Color")}</label>
+                    <Input
+                      value={form.color ?? ""}
+                      onChange={(e) => setForm({ ...form, color: e.target.value.trim() || null })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Fuel", "Combustible")}</label>
+                    <Input
+                      value={form.fuel ?? ""}
+                      onChange={(e) => setForm({ ...form, fuel: e.target.value.trim() || null })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">
+                      {tx("Manufacture year", "Año de fabricación")}
+                    </label>
+                    <Input
+                      type="number"
+                      value={form.manufacture_year ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const n = v === "" ? null : parseInt(v, 10);
+                        setForm({
+                          ...form,
+                          manufacture_year: n !== null && Number.isFinite(n) ? n : null,
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">
+                      {tx("Vehicle condition", "Condición del vehículo")}
+                    </label>
+                    <Input
+                      value={form.vehicle_condition ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, vehicle_condition: e.target.value.trim() || null })
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

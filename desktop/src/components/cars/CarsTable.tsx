@@ -50,7 +50,7 @@ interface CarsTableProps {
   onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => Car | Promise<Car>;
-  onAddCarFromUrl: (url: string) => void | Promise<void>;
+  onAddCarFromUrl: (url: string) => Car | Promise<Car>;
 }
 
 const PAGE_SIZE = 9;
@@ -322,9 +322,10 @@ export function CarsTable({
     if (!url) return;
     setAddingViaUrl(true);
     void Promise.resolve(onAddCarFromUrl(url))
-      .then(() => {
+      .then((car) => {
         setAddViaUrlOpen(false);
         setUrlToImport("");
+        beginEditCar(car);
       })
       .catch((error: unknown) => {
         const message =

@@ -23,7 +23,7 @@ import {
 } from "@/lib/apiMappers";
 import { buildDraftCar } from "@/lib/draftLeadCar";
 import { isDraftRecordId } from "@/lib/draftIds";
-import { toast } from "@/components/ui/sonner";
+import { neoAutoPreviewToDraftCar } from "@/lib/neoAutoPreviewToCar";
 
 export function CarsPage() {
   const { tx } = useLanguage();
@@ -79,15 +79,9 @@ export function CarsPage() {
     return buildDraftCar(tx);
   };
 
-  const handleAddCarFromUrl = async (url: string): Promise<void> => {
-    await importCarFromNeoAuto({ url });
-    await queryClient.invalidateQueries({ queryKey: ["cars"] });
-    toast.success(
-      tx(
-        "Car imported from NeoAuto URL.",
-        "Auto importado desde URL de NeoAuto.",
-      ),
-    );
+  const handleAddCarFromUrl = async (url: string): Promise<Car> => {
+    const res = await importCarFromNeoAuto({ url });
+    return neoAutoPreviewToDraftCar(res.car_preview);
   };
 
   return (

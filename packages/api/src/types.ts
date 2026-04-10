@@ -218,8 +218,24 @@ export interface NeoAutoImportRequest {
   url: string;
 }
 
+/**
+ * Wire shape for `car_preview` on `POST /import/neoauto` (may include `notes_json` instead of `notes_document`).
+ */
+export type NeoAutoCarPreviewWire = Omit<CarCreate, "notes_document"> & {
+  notes_json?: LeadNotesDocumentJson | null;
+  notes_document?: LeadNotesDocumentJson | null;
+};
+
+/** Raw JSON from `POST /import/neoauto` before normalization. */
+export interface NeoAutoImportResponseRaw {
+  message?: string;
+  car_preview: NeoAutoCarPreviewWire;
+}
+
+/** Normalized import response (`car_preview` is `CarCreate` with `notes_document`). */
 export interface NeoAutoImportResponse {
-  message: string;
+  message?: string;
+  car_preview: CarCreate;
 }
 
 export interface AutomationTypeItem {
