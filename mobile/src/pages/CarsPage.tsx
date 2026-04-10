@@ -175,7 +175,13 @@ const CarsPage = () => {
                 {car.year} {car.brand} {car.model}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {car.car_type || "—"} · {car.owner_type === "owned" ? tx("owned", "propio") : car.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")}
+                {car.car_type || "—"} · {car.owner_type === "owned"
+                  ? tx("owned", "propio")
+                  : car.owner_type === "client"
+                    ? tx("client", "cliente")
+                    : car.owner_type === "advisor"
+                      ? tx("advisor", "asesor")
+                      : tx("web listing", "listado web")}
               </p>
             </div>
             <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -221,7 +227,16 @@ const CarsPage = () => {
             <DetailRow label={tx("Listing Price", "Precio de lista")} value={fmt(selected.price)} />
             <DetailRow label={tx("Desired Price", "Precio deseado")} value={fmt(selected.desired_price)} />
             <DetailRow label={tx("Type", "Tipo")} value={selected.car_type} />
-            <DetailRow label={tx("Owner Type", "Tipo de dueño")} value={selected.owner_type === "owned" ? tx("owned", "propio") : selected.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")} />
+            <DetailRow
+              label={tx("Owner Type", "Tipo de dueño")}
+              value={selected.owner_type === "owned"
+                ? tx("owned", "propio")
+                : selected.owner_type === "client"
+                  ? tx("client", "cliente")
+                  : selected.owner_type === "advisor"
+                    ? tx("advisor", "asesor")
+                    : tx("web listing", "listado web")}
+            />
             <DetailRow label={tx("Status", "Estado")} value={selected.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")} />
             <DetailRow
               label={tx("Listed", "Publicado")}

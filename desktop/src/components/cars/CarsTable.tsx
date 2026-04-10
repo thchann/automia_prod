@@ -19,7 +19,8 @@ import {
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { getCar } from "@automia/api";
+import { ApiError, getCar } from "@automia/api";
+import { toast } from "@/components/ui/sonner";
 import { mapCarFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
@@ -49,7 +50,7 @@ interface CarsTableProps {
   onUpdateLead: (lead: Lead) => void;
   onDeleteCar: (id: string) => void;
   onAddCar: () => Car | Promise<Car>;
-  onAddCarFromUrl: (url: string) => Car | Promise<Car>;
+  onAddCarFromUrl: (url: string) => void | Promise<void>;
 }
 
 const PAGE_SIZE = 9;
@@ -213,6 +214,7 @@ export function CarsTable({
       case "owned": return "bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400";
       case "client": return "bg-purple-50 text-purple-500 dark:bg-purple-500/10 dark:text-purple-400";
       case "advisor": return "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
+      case "web_listing": return "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400";
       default: return "bg-muted text-muted-foreground";
     }
   };
@@ -320,10 +322,22 @@ export function CarsTable({
     if (!url) return;
     setAddingViaUrl(true);
     void Promise.resolve(onAddCarFromUrl(url))
-      .then((created) => {
+      .then(() => {
         setAddViaUrlOpen(false);
         setUrlToImport("");
-        beginEditCar(created);
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "";
+        toast.error(
+          message
+            ? tx(`Could not import car from URL: ${message}`, `No se pudo importar el auto desde URL: ${message}`)
+            : tx("Could not import car from URL.", "No se pudo importar el auto desde URL."),
+        );
       })
       .finally(() => setAddingViaUrl(false));
   };
@@ -532,7 +546,13 @@ export function CarsTable({
                   {visibleColumns.includes("listed") && <TableCell>{formatShortDate(car.listed_at, locale)}</TableCell>}
                   {visibleColumns.includes("owner") && <TableCell>
                     <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${ownerStyle(car.owner_type)}`}>
-                      {car.owner_type === "owned" ? tx("owned", "propio") : car.owner_type === "client" ? tx("client", "cliente") : tx("advisor", "asesor")}
+                      {car.owner_type === "owned"
+                        ? tx("owned", "propio")
+                        : car.owner_type === "client"
+                          ? tx("client", "cliente")
+                          : car.owner_type === "advisor"
+                            ? tx("advisor", "asesor")
+                            : tx("web listing", "listado web")}
                     </span>
                   </TableCell>}
                   {visibleColumns.includes("status") && <TableCell>

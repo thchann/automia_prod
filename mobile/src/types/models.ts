@@ -1,6 +1,6 @@
 export type LeadType = "pending" | "buyer" | "seller";
 export type CarStatus = "available" | "sold";
-export type OwnerType = "owned" | "client" | "advisor";
+export type OwnerType = "owned" | "client" | "advisor" | "web_listing";
 
 export interface Lead {
   id: string;
@@ -45,6 +45,11 @@ export interface Car {
   desired_price: number | null;
   car_type: string | null;
   listed_at: string | null;
+  transmission: string | null;
+  color: string | null;
+  fuel: string | null;
+  manufacture_year: number | null;
+  vehicle_condition: string | null;
   owner_type: OwnerType;
   status: CarStatus;
   attachments: Array<{ type: string; url: string; filename: string }> | null;

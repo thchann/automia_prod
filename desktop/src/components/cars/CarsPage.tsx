@@ -3,6 +3,7 @@ import {
   ApiError,
   createCar,
   deleteCar,
+  importCarFromNeoAuto,
   listCars,
   listLeads,
   updateCar,
@@ -22,7 +23,6 @@ import {
 } from "@/lib/apiMappers";
 import { buildDraftCar } from "@/lib/draftLeadCar";
 import { isDraftRecordId } from "@/lib/draftIds";
-import { extractCarDataFromUrl } from "@/lib/carUrlExtractors";
 import { toast } from "@/components/ui/sonner";
 
 export function CarsPage() {
@@ -79,31 +79,15 @@ export function CarsPage() {
     return buildDraftCar(tx);
   };
 
-  const handleAddCarFromUrl = async (url: string): Promise<Car> => {
-    const draft = buildDraftCar(tx);
-    try {
-      const parsed = await extractCarDataFromUrl(url);
-      return {
-        ...draft,
-        ...(parsed.brand ? { brand: parsed.brand } : {}),
-        ...(parsed.model ? { model: parsed.model } : {}),
-        ...(parsed.year != null ? { year: parsed.year } : {}),
-        ...(parsed.mileage != null ? { mileage: parsed.mileage } : {}),
-        ...(parsed.price != null ? { price: parsed.price } : {}),
-        ...(parsed.owner_type ? { owner_type: parsed.owner_type } : {}),
-        ...(parsed.status ? { status: parsed.status } : {}),
-        ...(parsed.listed_at ? { listed_at: parsed.listed_at } : {}),
-        ...(parsed.car_type ? { car_type: parsed.car_type } : {}),
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      toast.error(
-        message
-          ? tx(`Could not import car from URL: ${message}`, `No se pudo importar el auto desde URL: ${message}`)
-          : tx("Could not import car from URL.", "No se pudo importar el auto desde URL."),
-      );
-      return draft;
-    }
+  const handleAddCarFromUrl = async (url: string): Promise<void> => {
+    await importCarFromNeoAuto({ url });
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
+    toast.success(
+      tx(
+        "Car imported from NeoAuto URL.",
+        "Auto importado desde URL de NeoAuto.",
+      ),
+    );
   };
 
   return (

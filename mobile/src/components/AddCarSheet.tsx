@@ -21,7 +21,7 @@ interface AddCarSheetProps {
 }
 
 const carTypes = ["sedan", "suv", "sports", "truck", "coupe", "hatchback", "van"];
-const ownerTypes: OwnerType[] = ["owned", "client", "advisor"];
+const ownerTypes: OwnerType[] = ["owned", "client", "advisor", "web_listing"];
 const statuses: CarStatus[] = ["available", "sold"];
 
 const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetProps) => {
@@ -184,7 +184,13 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
             className="w-full bg-muted rounded-md px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30">
             {ownerTypes.map((t) => (
               <option key={t} value={t}>
-                {t === "owned" ? tx("owned", "propio") : t === "client" ? tx("client", "cliente") : tx("advisor", "asesor")}
+                {t === "owned"
+                  ? tx("owned", "propio")
+                  : t === "client"
+                    ? tx("client", "cliente")
+                    : t === "advisor"
+                      ? tx("advisor", "asesor")
+                      : tx("web listing", "listado web")}
               </option>
             ))}
           </select>

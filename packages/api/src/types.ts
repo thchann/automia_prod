@@ -152,6 +152,11 @@ export interface CarResponse {
   desired_price: number | string | null;
   car_type: string | null;
   listed_at: string | null;
+  transmission: string | null;
+  color: string | null;
+  fuel: string | null;
+  manufacture_year: number | null;
+  vehicle_condition: string | null;
   owner_type: string;
   status: string;
   attachments: CarAttachmentsJson | null;
@@ -172,6 +177,11 @@ export interface CarCreate {
   desired_price: number | null;
   car_type: string | null;
   listed_at: string | null;
+  transmission?: string | null;
+  color?: string | null;
+  fuel?: string | null;
+  manufacture_year?: number | null;
+  vehicle_condition?: string | null;
   owner_type: string;
   status: string;
   attachments?: CarAttachmentsJson | null;
@@ -188,6 +198,11 @@ export interface CarUpdate {
   desired_price?: number | null;
   car_type?: string | null;
   listed_at?: string | null;
+  transmission?: string | null;
+  color?: string | null;
+  fuel?: string | null;
+  manufacture_year?: number | null;
+  vehicle_condition?: string | null;
   owner_type?: string;
   status?: string;
   attachments?: CarAttachmentsJson | null;
@@ -197,6 +212,14 @@ export interface CarUpdate {
 
 export interface CarsListResponse {
   cars: CarResponse[];
+}
+
+export interface NeoAutoImportRequest {
+  url: string;
+}
+
+export interface NeoAutoImportResponse {
+  message: string;
 }
 
 export interface AutomationTypeItem {

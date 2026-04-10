@@ -478,6 +478,7 @@ export function CarEditDialog({
                       <option value="owned">{tx("Owned", "Propio")}</option>
                       <option value="client">{tx("Client", "Cliente")}</option>
                       <option value="advisor">{tx("Advisor", "Asesor")}</option>
+                      <option value="web_listing">{tx("Web listing", "Listado web")}</option>
                     </select>
                   </div>
                   <div>

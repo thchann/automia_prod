@@ -29,7 +29,12 @@ export interface Car {
   desired_price: number | null;
   car_type: string | null;
   listed_at: string | null;
-  owner_type: "owned" | "client" | "advisor";
+  transmission: string | null;
+  color: string | null;
+  fuel: string | null;
+  manufacture_year: number | null;
+  vehicle_condition: string | null;
+  owner_type: "owned" | "client" | "advisor" | "web_listing";
   status: "available" | "sold";
   attachments: CarAttachment[] | null;
   /** Legacy plain-text notes from API. */
