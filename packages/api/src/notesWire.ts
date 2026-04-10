@@ -93,7 +93,7 @@ export function carUpdateToWire(body: CarUpdate): Record<string, unknown> {
 }
 
 /**
- * Normalizes `POST /import/neoauto` bodies when `apiRequest` returns a string (non-JSON
+ * Normalizes `POST /cars/import/neoauto` bodies when `apiRequest` returns a string (non-JSON
  * Content-Type), or when the backend uses `carPreview` / wraps under `data`.
  */
 export function parseNeoAutoImportResponseBody(raw: unknown): NeoAutoImportResponseRaw {

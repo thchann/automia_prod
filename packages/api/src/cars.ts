@@ -49,7 +49,7 @@ export async function deleteCar(id: string): Promise<{ message: string }> {
 export async function importCarFromNeoAuto(
   body: NeoAutoImportRequest,
 ): Promise<NeoAutoImportResponse> {
-  const raw = await apiRequest<unknown>("/import/neoauto", {
+  const raw = await apiRequest<unknown>("/cars/import/neoauto", {
     method: "POST",
     body: JSON.stringify(body),
   });
