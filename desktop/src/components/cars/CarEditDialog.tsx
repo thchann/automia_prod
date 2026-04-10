@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,9 +23,10 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Car, CarAttachment, Lead } from "@/types/leads";
 import { getLeadsForCar } from "@/lib/leadCarLinks";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
+  deleteCarAttachment,
   exportCarNotes,
   presignCarAttachmentDownload,
   uploadCarAttachmentsToBucket,
@@ -55,6 +66,11 @@ export function CarEditDialog({
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
   const [fileDropActive, setFileDropActive] = useState(false);
   const [rightPanel, setRightPanel] = useState<"files" | "notes">("notes");
+  const [pendingAttachmentDelete, setPendingAttachmentDelete] = useState<{
+    storage_key: string;
+    filename?: string;
+  } | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
   useEffect(() => {
     setRightPanel("notes");
   }, [car?.id]);
@@ -121,12 +137,69 @@ export function CarEditDialog({
     setAttachments(merged.length ? merged : null);
   };
 
-  const removeAttachment = (index: number) => {
+  const removeAttachmentLocal = (index: number) => {
     const current = attachmentList;
     const removed = current[index];
     if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
     const next = current.filter((_, i) => i !== index);
     setAttachments(next.length ? next : null);
+  };
+
+  const requestRemoveAttachment = (index: number) => {
+    const att = attachmentList[index];
+    if (!att) return;
+    if (isDraftRecordId(car.id)) {
+      removeAttachmentLocal(index);
+      return;
+    }
+    if (att.url?.startsWith("blob:") || !att.storage_key) {
+      removeAttachmentLocal(index);
+      return;
+    }
+    setPendingAttachmentDelete({ storage_key: att.storage_key, filename: att.filename });
+  };
+
+  const confirmDeletePendingAttachment = () => {
+    void (async () => {
+      if (!pendingAttachmentDelete || !car) return;
+      const { storage_key } = pendingAttachmentDelete;
+      setDeletingAttachment(true);
+      try {
+        await deleteCarAttachment(car.id, { storage_key });
+        setAttachments((prev) => {
+          const list = prev ?? [];
+          const next = list.filter((a) => a.storage_key !== storage_key);
+          return next.length ? next : null;
+        });
+        setPendingAttachmentDelete(null);
+        toast.success(tx("Attachment removed.", "Adjunto eliminado."));
+      } catch (e) {
+        if (e instanceof ApiError) {
+          if (e.status === 503) {
+            toast.error(
+              tx(
+                "File storage is not available.",
+                "El almacenamiento de archivos no está disponible.",
+              ),
+            );
+          } else if (e.status === 403) {
+            toast.error(
+              tx("You cannot remove this attachment.", "No puedes eliminar este adjunto."),
+            );
+          } else if (e.status === 404) {
+            toast.error(tx("Attachment not found.", "Adjunto no encontrado."));
+          } else {
+            toast.error(
+              e.message || tx("Could not remove attachment.", "No se pudo eliminar el adjunto."),
+            );
+          }
+        } else {
+          toast.error(tx("Could not remove attachment.", "No se pudo eliminar el adjunto."));
+        }
+      } finally {
+        setDeletingAttachment(false);
+      }
+    })();
   };
 
   const renameAttachment = (index: number, filename: string) => {
@@ -261,6 +334,7 @@ export function CarEditDialog({
     : "";
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex flex-col max-h-[90vh] w-[calc(100vw-10vh)] max-w-none gap-0 p-0 sm:max-w-[min(1360px,calc(100vw-10vh))] overflow-hidden"
@@ -530,7 +604,7 @@ export function CarEditDialog({
                               size="sm"
                               type="button"
                               title={tx("Remove", "Quitar")}
-                              onClick={() => removeAttachment(idx)}
+                              onClick={() => requestRemoveAttachment(idx)}
                               className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -625,5 +699,52 @@ export function CarEditDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog
+      open={pendingAttachmentDelete != null}
+      onOpenChange={(next) => {
+        if (!next) setPendingAttachmentDelete(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tx("Delete attachment?", "¿Eliminar adjunto?")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingAttachmentDelete?.filename
+              ? tx(
+                  `“${pendingAttachmentDelete.filename}” will be removed from storage. This cannot be undone.`,
+                  `“${pendingAttachmentDelete.filename}” se eliminará del almacenamiento. No se puede deshacer.`,
+                )
+              : tx(
+                  "This file will be removed from storage. This cannot be undone.",
+                  "Este archivo se eliminará del almacenamiento. No se puede deshacer.",
+                )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deletingAttachment}>
+            {tx("Cancel", "Cancelar")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="inline-flex items-center justify-center bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deletingAttachment}
+            onClick={(e) => {
+              e.preventDefault();
+              confirmDeletePendingAttachment();
+            }}
+          >
+            {deletingAttachment ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                {tx("Deleting…", "Eliminando…")}
+              </>
+            ) : (
+              tx("Delete", "Eliminar")
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

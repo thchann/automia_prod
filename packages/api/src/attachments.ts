@@ -29,6 +29,35 @@ export type AttachmentWireItem = {
   size_bytes?: number;
 };
 
+export type AttachmentDeleteRequest = {
+  storage_key: string;
+};
+
+export type AttachmentDeleteResponse = {
+  message: string;
+  trashed_key: string;
+};
+
+export async function deleteLeadAttachment(
+  leadId: string,
+  body: AttachmentDeleteRequest,
+): Promise<AttachmentDeleteResponse> {
+  return apiRequest<AttachmentDeleteResponse>(`/leads/${leadId}/attachments`, {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteCarAttachment(
+  carId: string,
+  body: AttachmentDeleteRequest,
+): Promise<AttachmentDeleteResponse> {
+  return apiRequest<AttachmentDeleteResponse>(`/cars/${carId}/attachments`, {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
 export async function presignLeadAttachmentUpload(
   leadId: string,
   body: PresignUploadBody,

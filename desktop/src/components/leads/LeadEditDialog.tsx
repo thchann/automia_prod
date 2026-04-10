@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,9 +22,10 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
+  deleteLeadAttachment,
   exportLeadNotes,
   presignLeadAttachmentDownload,
   uploadLeadAttachmentsToBucket,
@@ -51,6 +62,11 @@ export function LeadEditDialog({
   const [attachments, setAttachments] = useState<CarAttachment[]>([]);
   const [fileDropActive, setFileDropActive] = useState(false);
   const [rightPanel, setRightPanel] = useState<"files" | "notes">("notes");
+  const [pendingAttachmentDelete, setPendingAttachmentDelete] = useState<{
+    storage_key: string;
+    filename?: string;
+  } | null>(null);
+  const [deletingAttachment, setDeletingAttachment] = useState(false);
   useEffect(() => {
     setRightPanel("notes");
   }, [lead?.id]);
@@ -204,10 +220,63 @@ export function LeadEditDialog({
     setAttachments([...attachmentList, ...added].slice(0, MAX_ATTACHMENTS));
   };
 
-  const removeAttachment = (index: number) => {
+  const removeAttachmentLocal = (index: number) => {
     const removed = attachmentList[index];
     if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
     setAttachments(attachmentList.filter((_, i) => i !== index));
+  };
+
+  const requestRemoveAttachment = (index: number) => {
+    const att = attachmentList[index];
+    if (!att) return;
+    if (isDraftRecordId(lead.id)) {
+      removeAttachmentLocal(index);
+      return;
+    }
+    if (att.url?.startsWith("blob:") || !att.storage_key) {
+      removeAttachmentLocal(index);
+      return;
+    }
+    setPendingAttachmentDelete({ storage_key: att.storage_key, filename: att.filename });
+  };
+
+  const confirmDeletePendingAttachment = () => {
+    void (async () => {
+      if (!pendingAttachmentDelete || !lead) return;
+      const { storage_key } = pendingAttachmentDelete;
+      setDeletingAttachment(true);
+      try {
+        await deleteLeadAttachment(lead.id, { storage_key });
+        setAttachments((prev) => prev.filter((a) => a.storage_key !== storage_key));
+        setPendingAttachmentDelete(null);
+        toast.success(tx("Attachment removed.", "Adjunto eliminado."));
+      } catch (e) {
+        if (e instanceof ApiError) {
+          if (e.status === 503) {
+            toast.error(
+              tx(
+                "File storage is not available.",
+                "El almacenamiento de archivos no está disponible.",
+              ),
+            );
+          } else if (e.status === 403) {
+            toast.error(
+              tx("You cannot remove this attachment.", "No puedes eliminar este adjunto."),
+            );
+          } else if (e.status === 404) {
+            toast.error(tx("Attachment not found.", "Adjunto no encontrado."));
+          } else {
+            toast.error(
+              e.message || tx("Could not remove attachment.", "No se pudo eliminar el adjunto."),
+            );
+          }
+        } else {
+          toast.error(tx("Could not remove attachment.", "No se pudo eliminar el adjunto."));
+        }
+      } finally {
+        setDeletingAttachment(false);
+      }
+    })();
   };
 
   const renameAttachment = (index: number, filename: string) => {
@@ -273,6 +342,7 @@ export function LeadEditDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex flex-col max-h-[90vh] w-[calc(100vw-10vh)] max-w-none gap-0 p-0 sm:max-w-[min(1360px,calc(100vw-10vh))] overflow-hidden"
@@ -601,7 +671,7 @@ export function LeadEditDialog({
                               size="sm"
                               type="button"
                               title={tx("Remove", "Quitar")}
-                              onClick={() => removeAttachment(idx)}
+                              onClick={() => requestRemoveAttachment(idx)}
                               className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -698,5 +768,52 @@ export function LeadEditDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog
+      open={pendingAttachmentDelete != null}
+      onOpenChange={(next) => {
+        if (!next) setPendingAttachmentDelete(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tx("Delete attachment?", "¿Eliminar adjunto?")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingAttachmentDelete?.filename
+              ? tx(
+                  `“${pendingAttachmentDelete.filename}” will be removed from storage. This cannot be undone.`,
+                  `“${pendingAttachmentDelete.filename}” se eliminará del almacenamiento. No se puede deshacer.`,
+                )
+              : tx(
+                  "This file will be removed from storage. This cannot be undone.",
+                  "Este archivo se eliminará del almacenamiento. No se puede deshacer.",
+                )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deletingAttachment}>
+            {tx("Cancel", "Cancelar")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="inline-flex items-center justify-center bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deletingAttachment}
+            onClick={(e) => {
+              e.preventDefault();
+              confirmDeletePendingAttachment();
+            }}
+          >
+            {deletingAttachment ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                {tx("Deleting…", "Eliminando…")}
+              </>
+            ) : (
+              tx("Delete", "Eliminar")
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
