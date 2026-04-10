@@ -5,6 +5,7 @@ import {
   carsListFromWire,
   carUpdateToWire,
   neoAutoImportResponseFromWire,
+  parseNeoAutoImportResponseBody,
 } from "./notesWire";
 import type {
   CarCreate,
@@ -13,7 +14,6 @@ import type {
   CarUpdate,
   NeoAutoImportRequest,
   NeoAutoImportResponse,
-  NeoAutoImportResponseRaw,
 } from "./types";
 
 export async function listCars(): Promise<CarsListResponse> {
@@ -49,11 +49,11 @@ export async function deleteCar(id: string): Promise<{ message: string }> {
 export async function importCarFromNeoAuto(
   body: NeoAutoImportRequest,
 ): Promise<NeoAutoImportResponse> {
-  const raw = await apiRequest<NeoAutoImportResponseRaw>("/import/neoauto", {
+  const raw = await apiRequest<unknown>("/import/neoauto", {
     method: "POST",
     body: JSON.stringify(body),
   });
-  return neoAutoImportResponseFromWire(raw);
+  return neoAutoImportResponseFromWire(parseNeoAutoImportResponseBody(raw));
 }
 
 /**
