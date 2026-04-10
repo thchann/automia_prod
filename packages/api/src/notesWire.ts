@@ -17,9 +17,11 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Backend OpenAPI uses `car` for the preview; older/alternate shapes use `car_preview` / `carPreview`. */
 function extractCarPreviewWire(rec: Record<string, unknown>): unknown {
   if ("car_preview" in rec && rec.car_preview !== undefined) return rec.car_preview;
   if ("carPreview" in rec && rec.carPreview !== undefined) return rec.carPreview;
+  if ("car" in rec && rec.car !== undefined) return rec.car;
   return undefined;
 }
 
@@ -94,7 +96,7 @@ export function carUpdateToWire(body: CarUpdate): Record<string, unknown> {
 
 /**
  * Normalizes `POST /cars/import/neoauto` bodies when `apiRequest` returns a string (non-JSON
- * Content-Type), or when the backend uses `carPreview` / wraps under `data`.
+ * Content-Type), or when the backend uses `car` (OpenAPI), `carPreview`, or wraps under `data`.
  */
 export function parseNeoAutoImportResponseBody(raw: unknown): NeoAutoImportResponseRaw {
   let parsed: unknown = raw;
@@ -107,7 +109,7 @@ export function parseNeoAutoImportResponseBody(raw: unknown): NeoAutoImportRespo
   }
 
   if (!isPlainRecord(parsed)) {
-    throw new ApiError(502, "Import response missing car_preview");
+    throw new ApiError(502, "Import response missing car or car_preview");
   }
 
   let previewWire = extractCarPreviewWire(parsed);
@@ -122,7 +124,7 @@ export function parseNeoAutoImportResponseBody(raw: unknown): NeoAutoImportRespo
   }
 
   if (!isPlainRecord(previewWire)) {
-    throw new ApiError(502, "Import response missing car_preview");
+    throw new ApiError(502, "Import response missing car or car_preview");
   }
 
   const out: NeoAutoImportResponseRaw = {

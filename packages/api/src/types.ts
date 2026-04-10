@@ -226,7 +226,7 @@ export type NeoAutoCarPreviewWire = Omit<CarCreate, "notes_document"> & {
   notes_document?: LeadNotesDocumentJson | null;
 };
 
-/** Raw JSON from `POST /cars/import/neoauto` before normalization. */
+/** Raw JSON from `POST /cars/import/neoauto` before normalization (API may send `car` instead of `car_preview`). */
 export interface NeoAutoImportResponseRaw {
   message?: string;
   car_preview: NeoAutoCarPreviewWire;
