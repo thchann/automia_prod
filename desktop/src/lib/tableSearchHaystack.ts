@@ -109,6 +109,11 @@ export function buildCarSearchHaystack(car: Car): string {
     car.price != null ? String(car.price) : "",
     car.desired_price != null ? String(car.desired_price) : "",
     car.car_type,
+    car.transmission,
+    car.color,
+    car.fuel,
+    car.manufacture_year != null ? String(car.manufacture_year) : "",
+    car.vehicle_condition,
     car.owner_type,
     car.status,
     formatShortDate(car.listed_at),
@@ -192,6 +197,11 @@ export const CAR_SEARCH_COLUMN_IDS = [
   "price",
   "desired",
   "carType",
+  "transmission",
+  "color",
+  "fuel",
+  "manufactureYear",
+  "vehicleCondition",
   "listed",
   "owner",
   "status",
@@ -208,6 +218,11 @@ export const CAR_SEARCH_COLUMN_LABELS: Record<CarSearchColumnId, string> = {
   price: "Price",
   desired: "Desired",
   carType: "Car type",
+  transmission: "Transmission",
+  color: "Color",
+  fuel: "Fuel",
+  manufactureYear: "Manufacture year",
+  vehicleCondition: "Vehicle condition",
   listed: "Listed",
   owner: "Owner",
   status: "Status",
@@ -234,6 +249,13 @@ export function buildCarSearchHaystackForColumns(
   if (active.has("desired") && car.desired_price != null)
     parts.push(String(car.desired_price));
   if (active.has("carType") && car.car_type) parts.push(car.car_type);
+  if (active.has("transmission") && car.transmission) parts.push(car.transmission);
+  if (active.has("color") && car.color) parts.push(car.color);
+  if (active.has("fuel") && car.fuel) parts.push(car.fuel);
+  if (active.has("manufactureYear") && car.manufacture_year != null)
+    parts.push(String(car.manufacture_year));
+  if (active.has("vehicleCondition") && car.vehicle_condition)
+    parts.push(car.vehicle_condition);
   if (active.has("listed"))
     parts.push(formatShortDate(car.listed_at));
   if (active.has("owner")) parts.push(car.owner_type);

@@ -512,6 +512,11 @@ export function CarsTable({
               {visibleColumns.includes("price") && <TableHead className="min-w-[96px]">{tx("Price", "Precio")}</TableHead>}
               {visibleColumns.includes("desired") && <TableHead className="min-w-[100px]">{tx("Desired", "Deseado")}</TableHead>}
               {visibleColumns.includes("carType") && <TableHead className="min-w-[88px]">{tx("Car type", "Tipo de auto")}</TableHead>}
+              {visibleColumns.includes("transmission") && <TableHead className="min-w-[100px]">{tx("Transmission", "Transmisión")}</TableHead>}
+              {visibleColumns.includes("color") && <TableHead className="min-w-[96px]">{tx("Color", "Color")}</TableHead>}
+              {visibleColumns.includes("fuel") && <TableHead className="min-w-[88px]">{tx("Fuel", "Combustible")}</TableHead>}
+              {visibleColumns.includes("manufactureYear") && <TableHead className="min-w-[96px]">{tx("Manufacture year", "Año de fabricación")}</TableHead>}
+              {visibleColumns.includes("vehicleCondition") && <TableHead className="min-w-[120px]">{tx("Vehicle condition", "Condición")}</TableHead>}
               {visibleColumns.includes("listed") && <TableHead className="min-w-[100px]">{tx("Listed", "Publicado")}</TableHead>}
               {visibleColumns.includes("owner") && <TableHead className="min-w-[100px]">{tx("Owner", "Propietario")}</TableHead>}
               {visibleColumns.includes("status") && <TableHead className="min-w-[96px]">{tx("Status", "Estado")}</TableHead>}
@@ -544,20 +549,45 @@ export function CarsTable({
                   {visibleColumns.includes("price") && <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString(locale)}` : "—"}</TableCell>}
                   {visibleColumns.includes("desired") && <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString(locale)}` : "—"}</TableCell>}
                   {visibleColumns.includes("carType") && <TableCell className="capitalize">{car.car_type || tx("N/A", "N/D")}</TableCell>}
+                  {visibleColumns.includes("transmission") && (
+                    <TableCell className="max-w-[140px] capitalize">{car.transmission?.trim() || "—"}</TableCell>
+                  )}
+                  {visibleColumns.includes("color") && (
+                    <TableCell className="max-w-[140px]">{car.color?.trim() || "—"}</TableCell>
+                  )}
+                  {visibleColumns.includes("fuel") && (
+                    <TableCell className="capitalize">{car.fuel?.trim() || "—"}</TableCell>
+                  )}
+                  {visibleColumns.includes("manufactureYear") && (
+                    <TableCell>{car.manufacture_year != null ? String(car.manufacture_year) : "—"}</TableCell>
+                  )}
+                  {visibleColumns.includes("vehicleCondition") && (
+                    <TableCell className="capitalize">{car.vehicle_condition?.trim() || "—"}</TableCell>
+                  )}
                   {visibleColumns.includes("listed") && <TableCell>{formatShortDate(car.listed_at, locale)}</TableCell>}
                   {visibleColumns.includes("owner") && <TableCell>
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${ownerStyle(car.owner_type)}`}>
+                    <span
+                      className={cn(
+                        "inline-flex max-w-full items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
+                        ownerStyle(car.owner_type),
+                      )}
+                    >
                       {car.owner_type === "owned"
                         ? tx("owned", "propio")
                         : car.owner_type === "client"
                           ? tx("client", "cliente")
                           : car.owner_type === "advisor"
                             ? tx("advisor", "asesor")
-                            : tx("web listing", "listado web")}
+                            : tx("Web listing", "Listado web")}
                     </span>
                   </TableCell>}
                   {visibleColumns.includes("status") && <TableCell>
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${statusStyle(car.status)}`}>
+                    <span
+                      className={cn(
+                        "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
+                        statusStyle(car.status),
+                      )}
+                    >
                       {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
                     </span>
                   </TableCell>}
@@ -869,6 +899,16 @@ function translateCarColumn(label: string) {
       return "Deseado";
     case "Car type":
       return "Tipo de auto";
+    case "Transmission":
+      return "Transmisión";
+    case "Color":
+      return "Color";
+    case "Fuel":
+      return "Combustible";
+    case "Manufacture year":
+      return "Año de fabricación";
+    case "Vehicle condition":
+      return "Condición";
     case "Listed":
       return "Publicado";
     case "Owner":
