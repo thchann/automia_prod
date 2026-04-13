@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { createCar, updateCar, type CarCreate } from "@automia/api";
+import { createCar, updateCar } from "@automia/api";
 import DetailSheet from "@/components/DetailSheet";
 import type { Car, CarStatus, OwnerType } from "@/types/models";
 import { carToUpdatePayload } from "@/lib/apiMappers";
+import { carFormToCreate } from "@/lib/entityMappers";
+import { isDraftRecordId } from "@/lib/draftIds";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,11 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
   const [price, setPrice] = useState("");
   const [desiredPrice, setDesiredPrice] = useState("");
   const [carType, setCarType] = useState("");
+  const [transmission, setTransmission] = useState("");
+  const [color, setColor] = useState("");
+  const [fuel, setFuel] = useState("");
+  const [manufactureYear, setManufactureYear] = useState("");
+  const [vehicleCondition, setVehicleCondition] = useState("");
   const [ownerType, setOwnerType] = useState<OwnerType>("owned");
   const [status, setStatus] = useState<CarStatus>("available");
   const [attachments, setAttachments] = useState<Car["attachments"]>(initialCar?.attachments ?? null);
@@ -53,6 +60,13 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
     setPrice(initialCar.price != null ? String(initialCar.price) : "");
     setDesiredPrice(initialCar.desired_price != null ? String(initialCar.desired_price) : "");
     setCarType(initialCar.car_type ?? "");
+    setTransmission(initialCar.transmission ?? "");
+    setColor(initialCar.color ?? "");
+    setFuel(initialCar.fuel ?? "");
+    setManufactureYear(
+      initialCar.manufacture_year != null ? String(initialCar.manufacture_year) : "",
+    );
+    setVehicleCondition(initialCar.vehicle_condition ?? "");
     setOwnerType(initialCar.owner_type ?? "owned");
     setStatus(initialCar.status ?? "available");
     setAttachments(initialCar.attachments ?? null);
@@ -60,7 +74,9 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
 
   const reset = () => {
     setBrand(""); setModel(""); setYear(""); setMileage("");
-    setPrice(""); setDesiredPrice(""); setCarType(""); setOwnerType("owned"); setStatus("available");
+    setPrice(""); setDesiredPrice(""); setCarType("");
+    setTransmission(""); setColor(""); setFuel(""); setManufactureYear(""); setVehicleCondition("");
+    setOwnerType("owned"); setStatus("available");
     setAttachments(null);
   };
 
@@ -115,40 +131,47 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
     const priceNum = price ? parseFloat(price) : null;
     const desiredNum = desiredPrice ? parseFloat(desiredPrice) : null;
     const safeAtt = attachmentsForApi(attachments);
+    const myRaw = manufactureYear.trim();
+    const myParsed = myRaw === "" ? null : parseInt(myRaw, 10);
+    const manufacture_year =
+      myParsed !== null && Number.isFinite(myParsed) ? myParsed : null;
 
-    if (initialCar) {
+    const now = new Date().toISOString();
+    const merged: Car = {
+      id: initialCar?.id ?? "",
+      user_id: initialCar?.user_id ?? "",
+      brand: brand.trim(),
+      model: model.trim(),
+      year: yearNum,
+      mileage: mileageNum,
+      price: priceNum,
+      desired_price: desiredNum,
+      car_type: carType || null,
+      listed_at: initialCar?.listed_at ?? now,
+      transmission: transmission.trim() || null,
+      color: color.trim() || null,
+      fuel: fuel.trim() || null,
+      manufacture_year,
+      vehicle_condition: vehicleCondition.trim() || null,
+      owner_type: ownerType,
+      status,
+      attachments: attachments ?? null,
+      created_at: initialCar?.created_at ?? now,
+      updated_at: initialCar ? now : null,
+      ...(initialCar?.notes !== undefined ? { notes: initialCar.notes } : {}),
+      ...(initialCar?.notes_document !== undefined
+        ? { notes_document: initialCar.notes_document }
+        : {}),
+    };
+
+    if (initialCar && !isDraftRecordId(initialCar.id)) {
       const attForApi = safeAtt ?? attachmentsForApi(initialCar.attachments);
-      const updated: Car = {
-        ...initialCar,
-        brand: brand.trim(),
-        model: model.trim(),
-        year: yearNum,
-        mileage: mileageNum,
-        price: priceNum,
-        desired_price: desiredNum,
-        car_type: carType || null,
-        listed_at: initialCar.listed_at,
-        owner_type: ownerType,
-        status,
-        attachments: attachments ?? null,
-        updated_at: new Date().toISOString(),
-      };
-      await updateCar(initialCar.id, carToUpdatePayload({ ...updated, attachments: attForApi }));
+      await updateCar(
+        initialCar.id,
+        carToUpdatePayload({ ...merged, attachments: attForApi }),
+      );
     } else {
-      const body: CarCreate = {
-        brand: brand.trim(),
-        model: model.trim(),
-        year: yearNum,
-        mileage: mileageNum,
-        price: priceNum,
-        desired_price: desiredNum,
-        car_type: carType || null,
-        listed_at: new Date().toISOString(),
-        owner_type: ownerType,
-        status,
-        attachments: safeAtt,
-      };
-      await createCar(body);
+      await createCar(carFormToCreate(merged));
     }
     await Promise.resolve(onSaved?.());
     reset();
@@ -177,6 +200,38 @@ const AddCarSheet = ({ open, onClose, onSaved, initialCar = null }: AddCarSheetP
             {carTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
+
+        <Field
+          label={tx("Transmission", "Transmisión")}
+          value={transmission}
+          onChange={setTransmission}
+          placeholder={tx("e.g. Automatic", "ej. Automática")}
+        />
+        <Field
+          label={tx("Color", "Color")}
+          value={color}
+          onChange={setColor}
+          placeholder={tx("e.g. Metallic gray", "ej. Gris metálico")}
+        />
+        <Field
+          label={tx("Fuel", "Combustible")}
+          value={fuel}
+          onChange={setFuel}
+          placeholder={tx("e.g. Gasoline", "ej. Gasolina")}
+        />
+        <Field
+          label={tx("Manufacture year", "Año de fabricación")}
+          value={manufactureYear}
+          onChange={setManufactureYear}
+          placeholder="2017"
+          type="number"
+        />
+        <Field
+          label={tx("Vehicle condition", "Condición del vehículo")}
+          value={vehicleCondition}
+          onChange={setVehicleCondition}
+          placeholder={tx("e.g. Used", "ej. Usado")}
+        />
 
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueño")}</label>

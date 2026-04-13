@@ -1,6 +1,29 @@
 import { format } from "date-fns";
 import type { Car, Lead } from "@/types/models";
 
+/** Flatten Tiptap JSON (`notes_document`) for fuzzy search. */
+export function extractPlainTextFromNotesDocument(doc: unknown): string {
+  if (doc === null || doc === undefined) return "";
+  if (typeof doc === "string") return doc;
+  if (typeof doc !== "object" || Array.isArray(doc)) return "";
+
+  const parts: string[] = [];
+  const walk = (node: unknown) => {
+    if (node === null || node === undefined) return;
+    if (typeof node === "string") {
+      parts.push(node);
+      return;
+    }
+    if (typeof node !== "object" || Array.isArray(node)) return;
+    const o = node as Record<string, unknown>;
+    if (typeof o.text === "string") parts.push(o.text);
+    const content = o.content;
+    if (Array.isArray(content)) content.forEach(walk);
+  };
+  walk(doc);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 function formatShortDate(s: string | null) {
   if (!s) return "";
   try {
@@ -34,14 +57,69 @@ export function summarizeBuyerCriteria(lead: Lead): string {
   const hasYears =
     lead.desired_year_min != null || lead.desired_year_max != null;
   if (hasYears) {
-    parts.push(
-      `Years ${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`,
-    );
+    parts.push(`${lead.desired_year_min ?? "—"}–${lead.desired_year_max ?? "—"}`);
   }
   if (lead.desired_mileage_max != null) {
-    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} mi`);
+    parts.push(`≤${lead.desired_mileage_max.toLocaleString()} km`);
   }
   return parts.length ? parts.join(" · ") : "—";
+}
+
+export function buildLeadSearchHaystack(
+  lead: Lead,
+  car: Car | undefined,
+  statusName: string,
+): string {
+  const carLine = car ? `${car.year} ${car.brand} ${car.model}` : "";
+  const notesPlain = [
+    extractPlainTextFromNotesDocument(lead.notes_document),
+    lead.notes,
+  ]
+    .filter((p) => p != null && String(p).trim() !== "")
+    .join(" ");
+  const parts = [
+    lead.name,
+    lead.instagram_handle,
+    lead.phone,
+    lead.lead_type,
+    carLine,
+    summarizeBuyerCriteria(lead),
+    notesPlain,
+    lead.source,
+    statusName,
+    formatShortDate(lead.created_at),
+    formatShortDate(lead.updated_at),
+  ];
+  return parts.filter((p) => p != null && String(p).trim() !== "").join(" ");
+}
+
+export function buildCarSearchHaystack(car: Car): string {
+  const notesPlain = [
+    extractPlainTextFromNotesDocument(car.notes_document),
+    car.notes,
+  ]
+    .filter((p) => p != null && String(p).trim() !== "")
+    .join(" ");
+  const parts = [
+    car.brand,
+    car.model,
+    String(car.year),
+    car.mileage != null ? String(car.mileage) : "",
+    car.price != null ? String(car.price) : "",
+    car.desired_price != null ? String(car.desired_price) : "",
+    car.car_type,
+    car.transmission,
+    car.color,
+    car.fuel,
+    car.manufacture_year != null ? String(car.manufacture_year) : "",
+    car.vehicle_condition,
+    car.owner_type,
+    car.status,
+    formatShortDate(car.listed_at),
+    formatShortDate(car.created_at),
+    notesPlain,
+  ];
+  return parts.filter((p) => p != null && String(p).trim() !== "").join(" ");
 }
 
 /** Desktop parity column ids (sender id removed). */
@@ -98,7 +176,11 @@ export function buildLeadSearchHaystackForColumns(
   }
   if (active.has("status") && statusName) parts.push(statusName);
   if (active.has("source") && lead.source) parts.push(lead.source);
-  if (active.has("notes") && lead.notes) parts.push(lead.notes);
+  if (active.has("notes")) {
+    const fromDoc = extractPlainTextFromNotesDocument(lead.notes_document);
+    if (fromDoc) parts.push(fromDoc);
+    if (lead.notes?.trim()) parts.push(lead.notes);
+  }
   if (active.has("created")) parts.push(formatShortDate(lead.created_at));
   if (active.has("updated")) parts.push(formatShortDate(lead.updated_at));
   return parts.join(" ");
@@ -112,10 +194,16 @@ export const CAR_SEARCH_COLUMN_IDS = [
   "price",
   "desired",
   "carType",
+  "transmission",
+  "color",
+  "fuel",
+  "manufactureYear",
+  "vehicleCondition",
   "listed",
   "owner",
   "status",
   "added",
+  "notes",
 ] as const;
 export type CarSearchColumnId = (typeof CAR_SEARCH_COLUMN_IDS)[number];
 
@@ -127,10 +215,16 @@ export const CAR_SEARCH_COLUMN_LABELS: Record<CarSearchColumnId, string> = {
   price: "Price",
   desired: "Desired",
   carType: "Car type",
+  transmission: "Transmission",
+  color: "Color",
+  fuel: "Fuel",
+  manufactureYear: "Manufacture year",
+  vehicleCondition: "Vehicle condition",
   listed: "Listed",
   owner: "Owner",
   status: "Status",
   added: "Added",
+  notes: "Notes",
 };
 
 export function defaultCarSearchColumns(): Set<CarSearchColumnId> {
@@ -151,10 +245,22 @@ export function buildCarSearchHaystackForColumns(
   if (active.has("desired") && car.desired_price != null)
     parts.push(String(car.desired_price));
   if (active.has("carType") && car.car_type) parts.push(car.car_type);
+  if (active.has("transmission") && car.transmission) parts.push(car.transmission);
+  if (active.has("color") && car.color) parts.push(car.color);
+  if (active.has("fuel") && car.fuel) parts.push(car.fuel);
+  if (active.has("manufactureYear") && car.manufacture_year != null)
+    parts.push(String(car.manufacture_year));
+  if (active.has("vehicleCondition") && car.vehicle_condition)
+    parts.push(car.vehicle_condition);
   if (active.has("listed")) parts.push(formatShortDate(car.listed_at));
   if (active.has("owner")) parts.push(car.owner_type);
   if (active.has("status")) parts.push(car.status);
   if (active.has("added")) parts.push(formatShortDate(car.created_at));
+  if (active.has("notes")) {
+    const fromDoc = extractPlainTextFromNotesDocument(car.notes_document);
+    if (fromDoc) parts.push(fromDoc);
+    if (car.notes?.trim()) parts.push(car.notes);
+  }
   return parts.filter((p) => p.trim() !== "").join(" ");
 }
 

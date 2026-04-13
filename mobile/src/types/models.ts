@@ -1,3 +1,5 @@
+import type { LeadNotesDocumentJson } from "@automia/api";
+
 export type LeadType = "pending" | "buyer" | "seller";
 export type CarStatus = "available" | "sold";
 export type OwnerType = "owned" | "client" | "advisor" | "web_listing";
@@ -11,6 +13,8 @@ export interface Lead {
   instagram_handle: string | null;
   phone: string | null;
   notes: string | null;
+  /** Tiptap JSON from API (search indexing). */
+  notes_document?: LeadNotesDocumentJson | null;
   status_id: string | null;
   /**
    * Primary / legacy single match (kept for compatibility).
@@ -53,6 +57,8 @@ export interface Car {
   owner_type: OwnerType;
   status: CarStatus;
   attachments: Array<{ type: string; url: string; filename: string }> | null;
+  notes?: string | null;
+  notes_document?: LeadNotesDocumentJson | null;
   created_at: string;
   updated_at: string | null;
 }

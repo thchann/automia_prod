@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, listCars } from "@automia/api";
+import { ApiError, importCarFromNeoAuto, listCars } from "@automia/api";
 import type { Car, CarStatus } from "@/types/models";
 import { mapCarFromApi } from "@/lib/apiMappers";
 import DetailSheet, { DetailRow } from "@/components/DetailSheet";
@@ -23,6 +23,15 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { toast } from "@/components/ui/sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { neoAutoPreviewToDraftCar } from "@/lib/neoAutoPreviewToCar";
 
 const CarsPage = () => {
   const { tx, locale } = useLanguage();
@@ -46,6 +55,9 @@ const CarsPage = () => {
   const [selected, setSelected] = useState<Car | null>(null);
   const [editingCar, setEditingCar] = useState<Car | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [addViaUrlOpen, setAddViaUrlOpen] = useState(false);
+  const [urlToImport, setUrlToImport] = useState("");
+  const [addingViaUrl, setAddingViaUrl] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilters, setStatusFilters] = useState<Set<CarStatus>>(() => new Set());
@@ -108,6 +120,15 @@ const CarsPage = () => {
               {tx("Manual entry", "Entrada manual")}
             </DropdownMenuItem>
             <DropdownMenuItem disabled>{tx("Import CSV", "Importar CSV")}</DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                setEditingCar(null);
+                setUrlToImport("");
+                setAddViaUrlOpen(true);
+              }}
+            >
+              {tx("Add via URL", "Agregar por URL")}
+            </DropdownMenuItem>
             <DropdownMenuItem disabled>{tx("From Instagram", "Desde Instagram")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -174,14 +195,18 @@ const CarsPage = () => {
               <p className="text-sm font-bold truncate">
                 {car.year} {car.brand} {car.model}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {car.car_type || "—"} · {car.owner_type === "owned"
-                  ? tx("owned", "propio")
-                  : car.owner_type === "client"
-                    ? tx("client", "cliente")
-                    : car.owner_type === "advisor"
-                      ? tx("advisor", "asesor")
-                      : tx("web listing", "listado web")}
+              <p className="text-[11px] text-muted-foreground mt-0.5 flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                <span>{car.car_type || "—"}</span>
+                <span aria-hidden>·</span>
+                <span className="whitespace-nowrap">
+                  {car.owner_type === "owned"
+                    ? tx("owned", "propio")
+                    : car.owner_type === "client"
+                      ? tx("client", "cliente")
+                      : car.owner_type === "advisor"
+                        ? tx("advisor", "asesor")
+                        : tx("Web listing", "Listado web")}
+                </span>
               </p>
             </div>
             <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -228,6 +253,20 @@ const CarsPage = () => {
             <DetailRow label={tx("Desired Price", "Precio deseado")} value={fmt(selected.desired_price)} />
             <DetailRow label={tx("Type", "Tipo")} value={selected.car_type} />
             <DetailRow
+              label={tx("Transmission", "Transmisión")}
+              value={selected.transmission?.trim() || null}
+            />
+            <DetailRow label={tx("Color", "Color")} value={selected.color?.trim() || null} />
+            <DetailRow label={tx("Fuel", "Combustible")} value={selected.fuel?.trim() || null} />
+            <DetailRow
+              label={tx("Manufacture year", "Año de fabricación")}
+              value={selected.manufacture_year != null ? String(selected.manufacture_year) : null}
+            />
+            <DetailRow
+              label={tx("Vehicle condition", "Condición")}
+              value={selected.vehicle_condition?.trim() || null}
+            />
+            <DetailRow
               label={tx("Owner Type", "Tipo de dueño")}
               value={selected.owner_type === "owned"
                 ? tx("owned", "propio")
@@ -235,7 +274,7 @@ const CarsPage = () => {
                   ? tx("client", "cliente")
                   : selected.owner_type === "advisor"
                     ? tx("advisor", "asesor")
-                    : tx("web listing", "listado web")}
+                    : tx("Web listing", "Listado web")}
             />
             <DetailRow label={tx("Status", "Estado")} value={selected.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")} />
             <DetailRow
@@ -258,6 +297,76 @@ const CarsPage = () => {
         }}
         initialCar={editingCar}
       />
+
+      <Dialog
+        open={addViaUrlOpen}
+        onOpenChange={(open) => {
+          setAddViaUrlOpen(open);
+          if (!open) {
+            setUrlToImport("");
+            setAddingViaUrl(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>{tx("Add car via URL", "Agregar auto por URL")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={urlToImport}
+              onChange={(e) => setUrlToImport(e.target.value)}
+              placeholder="https://neoauto.com/auto/..."
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "Sites supported: NeoAuto (more coming soon).",
+                "Sitios compatibles: NeoAuto (más próximamente).",
+              )}
+            </p>
+            <Button
+              type="button"
+              className="w-full"
+              disabled={addingViaUrl || !urlToImport.trim()}
+              onClick={() => {
+                const url = urlToImport.trim();
+                if (!url) return;
+                setAddingViaUrl(true);
+                void importCarFromNeoAuto({ url })
+                  .then((res) => {
+                    setAddViaUrlOpen(false);
+                    setUrlToImport("");
+                    setEditingCar(neoAutoPreviewToDraftCar(res.car_preview));
+                    setShowAdd(true);
+                  })
+                  .catch((error: unknown) => {
+                    const message =
+                      error instanceof ApiError
+                        ? error.message
+                        : error instanceof Error
+                          ? error.message
+                          : "";
+                    toast.error(
+                      message
+                        ? tx(
+                            `Could not import car from URL: ${message}`,
+                            `No se pudo importar el auto desde URL: ${message}`,
+                          )
+                        : tx(
+                            "Could not import car from URL.",
+                            "No se pudo importar el auto desde URL.",
+                          ),
+                    );
+                  })
+                  .finally(() => setAddingViaUrl(false));
+              }}
+            >
+              {addingViaUrl ? tx("Importing…", "Importando…") : tx("Import", "Importar")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

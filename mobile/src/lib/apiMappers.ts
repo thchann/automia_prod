@@ -1,6 +1,7 @@
 import type {
   CarResponse,
   CarUpdate,
+  LeadNotesDocumentJson,
   LeadResponse,
   LeadStatusResponse,
   LeadUpdate,
@@ -44,6 +45,10 @@ export function mapCarFromApi(c: CarResponse): Car {
     owner_type: c.owner_type as Car["owner_type"],
     status: c.status as Car["status"],
     attachments: (c.attachments as Car["attachments"]) ?? null,
+    ...(c.notes !== undefined ? { notes: c.notes } : {}),
+    ...(c.notes_document !== undefined
+      ? { notes_document: c.notes_document as LeadNotesDocumentJson | null }
+      : {}),
     created_at: c.created_at,
     updated_at: c.updated_at,
   };
@@ -64,6 +69,9 @@ export function mapLeadFromApi(r: LeadResponse, statuses?: LeadStatus[]): Lead {
     instagram_handle: r.instagram_handle,
     phone: r.phone,
     notes: r.notes,
+    ...(r.notes_document !== undefined
+      ? { notes_document: r.notes_document as LeadNotesDocumentJson | null }
+      : {}),
     created_at: r.created_at,
     updated_at: r.updated_at,
     desired_budget_min: num(r.desired_budget_min),
@@ -96,6 +104,8 @@ export function carToUpdatePayload(car: Car): CarUpdate {
     owner_type: car.owner_type,
     status: car.status,
     attachments: car.attachments as CarUpdate["attachments"],
+    ...(car.notes !== undefined ? { notes: car.notes } : {}),
+    ...(car.notes_document !== undefined ? { notes_document: car.notes_document } : {}),
   };
 }
 
@@ -109,6 +119,7 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
     instagram_handle: lead.instagram_handle,
     phone: lead.phone,
     notes: lead.notes,
+    ...(lead.notes_document !== undefined ? { notes_document: lead.notes_document } : {}),
     desired_budget_min: lead.desired_budget_min,
     desired_budget_max: lead.desired_budget_max,
     desired_mileage_max: lead.desired_mileage_max,
