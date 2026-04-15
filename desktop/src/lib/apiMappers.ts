@@ -1,13 +1,15 @@
-import type {
-  CarCreate,
-  CarResponse,
-  CarUpdate,
-  LeadCreate,
-  LeadNotesDocumentJson,
-  LeadResponse,
-  LeadStatusResponse,
-  LeadUpdate,
-  LeadsListResponse,
+import {
+  addLeadCarLink,
+  removeLeadCarLink,
+  type CarCreate,
+  type CarResponse,
+  type CarUpdate,
+  type LeadCreate,
+  type LeadNotesDocumentJson,
+  type LeadResponse,
+  type LeadStatusResponse,
+  type LeadUpdate,
+  type LeadsListResponse,
 } from "@automia/api";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Car, CarAttachment, Lead, LeadStatus } from "@/types/leads";
@@ -226,6 +228,38 @@ export function leadToUpdatePayload(lead: Lead): LeadUpdate {
     payload.notes_document = lead.notes_document as LeadUpdate["notes_document"];
   }
   return payload;
+}
+
+/** Same as `leadToUpdatePayload` but omits `car_id` / `car_ids` — links are persisted via junction APIs. */
+export function leadToUpdatePayloadOmitCarLinks(lead: Lead): LeadUpdate {
+  const full = leadToUpdatePayload(lead);
+  const { car_id: _a, car_ids: _b, ...rest } = full;
+  return rest;
+}
+
+/** Derive primary + ordered ids from `GET /leads/:id/cars` (matches junction order). */
+export function leadCarLinkFieldsFromApiCars(cars: CarResponse[]): LeadCarLinkFields {
+  const ids = cars.map((c) => c.id);
+  return {
+    car_id: ids[0] ?? null,
+    car_ids: ids.length ? ids : null,
+  };
+}
+
+/** Sync `lead_car_links` to match `nextIds` (set equality vs `prevIds`). */
+export async function syncLeadCarJunctionLinks(
+  leadId: string,
+  prevIds: string[],
+  nextIds: string[],
+): Promise<void> {
+  const prev = new Set(prevIds);
+  const next = new Set(nextIds);
+  for (const id of prev) {
+    if (!next.has(id)) await removeLeadCarLink(leadId, id);
+  }
+  for (const id of next) {
+    if (!prev.has(id)) await addLeadCarLink(leadId, { car_id: id });
+  }
 }
 
 export function leadToCreatePayload(lead: Lead): LeadCreate {

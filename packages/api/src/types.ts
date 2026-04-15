@@ -107,6 +107,16 @@ export interface LeadCreate {
   notes_document?: LeadNotesDocumentJson | null;
 }
 
+/** `POST /cars/{car_id}/leads` */
+export interface CarLeadLinkCreateRequest {
+  lead_id: string;
+}
+
+/** `POST /leads/{lead_id}/cars` */
+export interface LeadCarLinkCreateRequest {
+  car_id: string;
+}
+
 export interface LeadUpdate {
   lead_type?: string | null;
   status_id?: string | null;

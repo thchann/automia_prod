@@ -24,7 +24,10 @@ import {
   patchLeadsListCache,
   leadToCreatePayload,
   leadToUpdatePayload,
+  leadToUpdatePayloadOmitCarLinks,
+  syncLeadCarJunctionLinks,
 } from "@/lib/apiMappers";
+import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 import { buildDraftLead } from "@/lib/draftLeadCar";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { toast } from "@/components/ui/sonner";
@@ -125,8 +128,17 @@ export function LeadsPage() {
       }
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
     } else {
-      const data = await updateLead(updated.id, leadToUpdatePayload(updated));
-      patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
+      const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+      const prevRow = raw?.leads.find((l) => l.id === updated.id);
+      const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
+      const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+      const nextIds = getAllCarIdsForLead(updated);
+
+      await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+
+      await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      await queryClient.invalidateQueries({ queryKey: ["cars"] });
     }
   };
 

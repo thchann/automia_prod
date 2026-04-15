@@ -13,6 +13,7 @@ import {
   listAutomations,
   updateCar,
   updateLead,
+  removeLeadCarLink,
   type AutomationItem,
   type LeadsListResponse,
 } from "@automia/api";
@@ -33,7 +34,6 @@ import {
   leadToCreatePayload,
   leadToUpdatePayload,
 } from "@/lib/apiMappers";
-import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 import { isDraftRecordId } from "@/lib/draftIds";
 import {
   DASHBOARD_PLACEHOLDER_WIDGETS,
@@ -508,18 +508,9 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         onUnlinkLeadFromCar={async (leadId, carId) => {
           const lead = leads.find((l) => l.id === leadId);
           if (!lead || isDraftRecordId(lead.id)) return;
-          const nextIds = getAllCarIdsForLead(lead).filter((id) => id !== carId);
-          const data = await updateLead(lead.id, {
-            car_id: nextIds[0] ?? null,
-            car_ids: nextIds.length ? nextIds : null,
-          });
-          patchLeadsListCache(
-            queryClient,
-            mergeLeadResponseWithClientCarLinks(data, {
-              car_id: nextIds[0] ?? null,
-              car_ids: nextIds.length ? nextIds : null,
-            }),
-          );
+          await removeLeadCarLink(leadId, carId);
+          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          await queryClient.invalidateQueries({ queryKey: ["cars"] });
         }}
       />
       <LeadEditDialog

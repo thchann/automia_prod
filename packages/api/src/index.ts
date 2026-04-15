@@ -24,6 +24,7 @@ export * from "./auth";
 export * from "./leads";
 export * from "./leadStatuses";
 export * from "./cars";
+export * from "./leadCarLinks";
 export * from "./attachments";
 export * from "./automations";
 export * from "./oauth";

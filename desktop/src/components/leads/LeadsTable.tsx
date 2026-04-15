@@ -322,24 +322,6 @@ export function LeadsTable({
     return leads.find((l) => l.id === id) ?? null;
   }, [selected, leads]);
 
-  const moveCarOrderForSelectedLead = (carId: string, delta: -1 | 1) => {
-    if (!selectedLeadForUnmatch) return;
-    const ids = getAllCarIdsForLead(selectedLeadForUnmatch);
-    const i = ids.indexOf(carId);
-    if (i < 0) return;
-    const j = i + delta;
-    if (j < 0 || j >= ids.length) return;
-    const next = [...ids];
-    [next[i], next[j]] = [next[j], next[i]];
-    const now = new Date().toISOString();
-    onUpdateLead({
-      ...selectedLeadForUnmatch,
-      car_id: next[0] ?? null,
-      car_ids: next.length ? next : null,
-      updated_at: now,
-    });
-  };
-
   const connectedCarsFromSelectedLead = useMemo(() => {
     if (!selectedLeadForUnmatch) return [];
     const ids = getAllCarIdsForLead(selectedLeadForUnmatch);
@@ -931,8 +913,7 @@ export function LeadsTable({
                     ? getAllCarIdsForLead(selectedLeadForUnmatch)
                     : [];
                   const idx = orderedIds.indexOf(car.id);
-                  const canMoveUp = idx > 0;
-                  const canMoveDown = idx >= 0 && idx < orderedIds.length - 1;
+                  const reorderDisabled = true;
                   return (
                     <div
                       key={car.id}
@@ -950,9 +931,11 @@ export function LeadsTable({
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 shrink-0"
-                          disabled={!canMoveUp}
-                          title={tx("Move up", "Subir")}
-                          onClick={() => moveCarOrderForSelectedLead(car.id, -1)}
+                          disabled={reorderDisabled}
+                          title={tx(
+                            "Order is fixed by link time (reorder API not available).",
+                            "El orden sigue la fecha del vínculo (reordenar no disponible).",
+                          )}
                         >
                           <ArrowUp className="h-4 w-4" />
                         </Button>
@@ -961,9 +944,11 @@ export function LeadsTable({
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 shrink-0"
-                          disabled={!canMoveDown}
-                          title={tx("Move down", "Bajar")}
-                          onClick={() => moveCarOrderForSelectedLead(car.id, 1)}
+                          disabled={reorderDisabled}
+                          title={tx(
+                            "Order is fixed by link time (reorder API not available).",
+                            "El orden sigue la fecha del vínculo (reordenar no disponible).",
+                          )}
                         >
                           <ArrowDown className="h-4 w-4" />
                         </Button>

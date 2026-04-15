@@ -8,6 +8,7 @@ import {
   listLeads,
   updateCar,
   updateLead,
+  type LeadsListResponse,
 } from "@automia/api";
 import { CarsTable } from "./CarsTable";
 import { Car, Lead } from "@/types/leads";
@@ -15,12 +16,12 @@ import { useLanguage } from "@/i18n/LanguageProvider";
 import {
   mapCarFromApi,
   mapLeadFromApi,
-  mergeLeadResponseWithClientCarLinks,
-  patchLeadsListCache,
   carToCreatePayload,
   carToUpdatePayload,
-  leadToUpdatePayload,
+  leadToUpdatePayloadOmitCarLinks,
+  syncLeadCarJunctionLinks,
 } from "@/lib/apiMappers";
+import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 import { buildDraftCar } from "@/lib/draftLeadCar";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { neoAutoPreviewToDraftCar } from "@/lib/neoAutoPreviewToCar";
@@ -71,8 +72,17 @@ export function CarsPage() {
   };
 
   const handleUpdateLead = async (updated: Lead) => {
-    const data = await updateLead(updated.id, leadToUpdatePayload(updated));
-    patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
+    const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+    const prevRow = raw?.leads.find((l) => l.id === updated.id);
+    const previousLead = prevRow ? mapLeadFromApi(prevRow) : null;
+    const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+    const nextIds = getAllCarIdsForLead(updated);
+
+    await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+
+    await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 
   const handleAddCar = (): Car => {
