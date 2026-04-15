@@ -523,6 +523,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
             await queryClient.invalidateQueries({ queryKey: ["leads"] });
           }
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
+          await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
         }}
       />
       <LeadEditDialog
@@ -555,6 +556,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
               await queryClient.invalidateQueries({ queryKey: ["leads"] });
             }
             await queryClient.invalidateQueries({ queryKey: ["cars"] });
+            await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
           }
           setEditLead(null);
         }}

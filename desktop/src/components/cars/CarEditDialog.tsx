@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Car, CarAttachment, Lead } from "@/types/leads";
 import { getLeadsForCar } from "@/lib/leadCarLinks";
+import { useLeadsLinkedToCar } from "@/hooks/useLeadsLinkedToCar";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
 import {
@@ -100,10 +101,11 @@ export function CarEditDialog({
     }
   }, [open]);
 
-  const linkedLeads = useMemo(
-    () => (car ? getLeadsForCar(car.id, leads ?? []) : []),
-    [car, leads],
-  );
+  const { data: junctionLeads } = useLeadsLinkedToCar(car?.id, { enabled: open });
+  const linkedLeads = useMemo(() => {
+    if (junctionLeads !== undefined) return junctionLeads;
+    return car ? getLeadsForCar(car.id, leads ?? []) : [];
+  }, [junctionLeads, car, leads]);
   const showDesiredPrice = linkedLeads.some((l) => l.lead_type === "seller");
 
   if (!car) return null;

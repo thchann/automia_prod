@@ -19,9 +19,10 @@ import {
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { ApiError, getCar } from "@automia/api";
+import { ApiError, getCar, listLeadsForCar } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
-import { mapCarFromApi } from "@/lib/apiMappers";
+import { mapCarFromApi, mapLeadFromApi } from "@/lib/apiMappers";
+import { useLeadsLinkedToCar } from "@/hooks/useLeadsLinkedToCar";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -257,6 +258,20 @@ export function CarsTable({
   const selectedCar =
     selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
 
+  const { data: junctionLeadsForSelection } = useLeadsLinkedToCar(selectedCar?.id, {
+    enabled: selected.size === 1 && !!selectedCar,
+  });
+  const linkedForBulkBar =
+    junctionLeadsForSelection ??
+    (selectedCar ? getLeadsForCar(selectedCar.id, leads) : []);
+
+  const { data: junctionLeadsForUnmatch } = useLeadsLinkedToCar(pendingUnmatchCar?.id, {
+    enabled: !!pendingUnmatchCar,
+  });
+  const linkedForUnmatchDialog =
+    junctionLeadsForUnmatch ??
+    (pendingUnmatchCar ? getLeadsForCar(pendingUnmatchCar.id, leads) : []);
+
   /** Link one or more cars to a lead in one update (bulk match must not loop — each loop saw stale `leads`). */
   const assignCarsToLead = (leadId: string, carIds: string[]) => {
     const lead = leads.find((l) => l.id === leadId);
@@ -273,13 +288,14 @@ export function CarsTable({
     assignCarsToLead(leadId, [carId]);
   };
 
-  const unmatchCar = (carId: string) => {
+  const unmatchCar = async (carId: string) => {
+    const rows = await listLeadsForCar(carId);
     const now = new Date().toISOString();
-    for (const lead of leads) {
-      const current = getAllCarIdsForLead(lead);
-      if (!current.includes(carId)) continue;
-      const nextIds = current.filter((id) => id !== carId);
-      onUpdateLead({
+    for (const row of rows) {
+      const fromList = leads.find((l) => l.id === row.id);
+      const lead = fromList ?? mapLeadFromApi(row);
+      const nextIds = getAllCarIdsForLead(lead).filter((id) => id !== carId);
+      await onUpdateLead({
         ...lead,
         car_id: nextIds[0] ?? null,
         car_ids: nextIds.length ? nextIds : null,
@@ -667,7 +683,7 @@ export function CarsTable({
 
               {(() => {
                 if (selected.size !== 1) return null;
-                const linked = selectedCar ? getLeadsForCar(selectedCar.id, leads) : [];
+                const linked = linkedForBulkBar;
                 return (
                   <Button
                     variant="outline"
@@ -854,7 +870,7 @@ export function CarsTable({
             <AlertDialogTitle>{tx("Unmatch car", "Desvincular auto")}</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingUnmatchCar ? (() => {
-                const linked = getLeadsForCar(pendingUnmatchCar.id, leads);
+                const linked = linkedForUnmatchDialog;
                 if (linked.length === 0) return tx("This car has no match.", "Este auto no tiene vínculo.");
                 const names = linked.map((l) => l.name || tx("Unnamed", "Sin nombre")).join(", ");
                 return tx(
@@ -869,9 +885,10 @@ export function CarsTable({
             <AlertDialogAction
               onClick={() => {
                 if (!pendingUnmatchCar) return;
-                unmatchCar(pendingUnmatchCar.id);
-                setPendingUnmatchCar(null);
-                setSelected(new Set());
+                void unmatchCar(pendingUnmatchCar.id).finally(() => {
+                  setPendingUnmatchCar(null);
+                  setSelected(new Set());
+                });
               }}
             >
               {tx("Unmatch", "Desvincular")}

@@ -88,6 +88,7 @@ export function CarsPage() {
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
     }
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
+    await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
   };
 
   const handleAddCar = (): Car => {
