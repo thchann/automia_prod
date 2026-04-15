@@ -33,17 +33,15 @@ export function LeadsFunnel({
   const [editLead, setEditLead] = useState<Lead | null>(null);
 
   const beginEditLead = (l: Lead) => {
+    setEditLead(l);
     if (isDraftRecordId(l.id)) {
-      setEditLead(l);
       return;
     }
     void (async () => {
       try {
         const r = await getLead(l.id);
         setEditLead(mapLeadFromApi(r, statuses));
-      } catch {
-        setEditLead(l);
-      }
+      } catch {}
     })();
   };
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);

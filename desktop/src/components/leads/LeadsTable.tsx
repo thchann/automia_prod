@@ -111,8 +111,8 @@ export function LeadsTable({
   const [editLead, setEditLead] = useState<Lead | null>(null);
 
   const beginEditLead = (l: Lead) => {
+    setEditLead(l);
     if (isDraftRecordId(l.id)) {
-      setEditLead(l);
       return;
     }
     void (async () => {
@@ -120,9 +120,7 @@ export function LeadsTable({
         const r = await getLead(l.id);
         const merged = await hydrateLeadResponseCarLinks(l.id, r);
         setEditLead(mapLeadFromApi(merged, statuses));
-      } catch {
-        setEditLead(l);
-      }
+      } catch {}
     })();
   };
   const [matchLead, setMatchLead] = useState<Lead | null>(null);

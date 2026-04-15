@@ -108,17 +108,15 @@ export function CarsTable({
   const [editCar, setEditCar] = useState<Car | null>(null);
 
   const beginEditCar = (c: Car) => {
+    setEditCar(c);
     if (isDraftRecordId(c.id)) {
-      setEditCar(c);
       return;
     }
     void (async () => {
       try {
         const r = await getCar(c.id);
         setEditCar(mapCarFromApi(r));
-      } catch {
-        setEditCar(c);
-      }
+      } catch {}
     })();
   };
 

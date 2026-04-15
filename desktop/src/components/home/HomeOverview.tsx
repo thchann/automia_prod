@@ -196,8 +196,8 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
   }, [leadsData, statuses]);
 
   const beginEditLead = (l: Lead) => {
+    setEditLead(l);
     if (isDraftRecordId(l.id)) {
-      setEditLead(l);
       return;
     }
     void (async () => {
@@ -205,24 +205,20 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         const r = await getLead(l.id);
         const merged = await hydrateLeadResponseCarLinks(l.id, r);
         setEditLead(mapLeadFromApi(merged, statuses));
-      } catch {
-        setEditLead(l);
-      }
+      } catch {}
     })();
   };
 
   const beginEditCar = (c: CarType) => {
+    setEditCar(c);
     if (isDraftRecordId(c.id)) {
-      setEditCar(c);
       return;
     }
     void (async () => {
       try {
         const r = await getCar(c.id);
         setEditCar(mapCarFromApi(r));
-      } catch {
-        setEditCar(c);
-      }
+      } catch {}
     })();
   };
 
