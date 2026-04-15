@@ -21,6 +21,7 @@ import {
   mapLeadFromApi,
   mapStatusFromApi,
   mergeLeadResponseWithClientCarLinks,
+  patchLeadRowWithJunctionCars,
   patchLeadsListCache,
   leadToCreatePayload,
   leadToUpdatePayload,
@@ -136,8 +137,12 @@ export function LeadsPage() {
 
       await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
 
-      await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+      try {
+        await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+      } catch {
+        await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }
       await queryClient.invalidateQueries({ queryKey: ["cars"] });
     }
   };

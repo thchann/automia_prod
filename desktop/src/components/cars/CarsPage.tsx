@@ -19,6 +19,7 @@ import {
   carToCreatePayload,
   carToUpdatePayload,
   leadToUpdatePayloadOmitCarLinks,
+  patchLeadRowWithJunctionCars,
   syncLeadCarJunctionLinks,
 } from "@/lib/apiMappers";
 import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
@@ -80,8 +81,12 @@ export function CarsPage() {
 
     await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
 
-    await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
-    await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+    try {
+      await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+    } catch {
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    }
     await queryClient.invalidateQueries({ queryKey: ["cars"] });
   };
 

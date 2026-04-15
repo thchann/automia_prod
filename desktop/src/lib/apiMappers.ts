@@ -1,5 +1,6 @@
 import {
   addLeadCarLink,
+  listCarsForLead,
   removeLeadCarLink,
   type CarCreate,
   type CarResponse,
@@ -244,6 +245,26 @@ export function leadCarLinkFieldsFromApiCars(cars: CarResponse[]): LeadCarLinkFi
     car_id: ids[0] ?? null,
     car_ids: ids.length ? ids : null,
   };
+}
+
+/** When list/GET omit `car_id`/`car_ids`, overlay links from the junction table. */
+export async function hydrateLeadResponseCarLinks(leadId: string, row: LeadResponse): Promise<LeadResponse> {
+  try {
+    const linkedCars = await listCarsForLead(leadId);
+    return mergeLeadResponseWithClientCarLinks(row, leadCarLinkFieldsFromApiCars(linkedCars));
+  } catch {
+    return row;
+  }
+}
+
+/** After junction mutations, merge `GET /leads/:id/cars` into the list cache (list/PUT may omit links). */
+export async function patchLeadRowWithJunctionCars(
+  queryClient: QueryClient,
+  leadId: string,
+  leadRowFromUpdate: LeadResponse,
+): Promise<void> {
+  const merged = await hydrateLeadResponseCarLinks(leadId, leadRowFromUpdate);
+  patchLeadsListCache(queryClient, merged);
 }
 
 /** Sync `lead_car_links` to match `nextIds` (set equality vs `prevIds`). */

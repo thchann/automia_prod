@@ -42,7 +42,7 @@ import {
 import { matchLeadToCars } from "@/lib/matchLeadToCars";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
-import { mapLeadFromApi } from "@/lib/apiMappers";
+import { hydrateLeadResponseCarLinks, mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 
@@ -118,7 +118,8 @@ export function LeadsTable({
     void (async () => {
       try {
         const r = await getLead(l.id);
-        setEditLead(mapLeadFromApi(r, statuses));
+        const merged = await hydrateLeadResponseCarLinks(l.id, r);
+        setEditLead(mapLeadFromApi(merged, statuses));
       } catch {
         setEditLead(l);
       }

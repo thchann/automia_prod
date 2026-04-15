@@ -11,6 +11,7 @@ import {
   listLeadStatuses,
   listLeads,
   listAutomations,
+  getLead,
   updateCar,
   updateLead,
   removeLeadCarLink,
@@ -27,13 +28,18 @@ import {
   mapCarFromApi,
   mapLeadFromApi,
   mapStatusFromApi,
+  hydrateLeadResponseCarLinks,
   mergeLeadResponseWithClientCarLinks,
+  patchLeadRowWithJunctionCars,
   patchLeadsListCache,
   carToCreatePayload,
   carToUpdatePayload,
   leadToCreatePayload,
   leadToUpdatePayload,
+  leadToUpdatePayloadOmitCarLinks,
+  syncLeadCarJunctionLinks,
 } from "@/lib/apiMappers";
+import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
 import { isDraftRecordId } from "@/lib/draftIds";
 import {
   DASHBOARD_PLACEHOLDER_WIDGETS,
@@ -197,7 +203,8 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
     void (async () => {
       try {
         const r = await getLead(l.id);
-        setEditLead(mapLeadFromApi(r, statuses));
+        const merged = await hydrateLeadResponseCarLinks(l.id, r);
+        setEditLead(mapLeadFromApi(merged, statuses));
       } catch {
         setEditLead(l);
       }
@@ -509,7 +516,12 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
           const lead = leads.find((l) => l.id === leadId);
           if (!lead || isDraftRecordId(lead.id)) return;
           await removeLeadCarLink(leadId, carId);
-          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          try {
+            const row = await getLead(leadId);
+            await patchLeadRowWithJunctionCars(queryClient, leadId, row);
+          } catch {
+            await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          }
           await queryClient.invalidateQueries({ queryKey: ["cars"] });
         }}
       />
@@ -529,8 +541,20 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
             }
             await queryClient.invalidateQueries({ queryKey: ["leads"] });
           } else {
-            const data = await updateLead(updated.id, leadToUpdatePayload(updated));
-            patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, updated));
+            const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+            const prevRow = raw?.leads.find((l) => l.id === updated.id);
+            const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
+            const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+            const nextIds = getAllCarIdsForLead(updated);
+
+            await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+            const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+            try {
+              await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+            } catch {
+              await queryClient.invalidateQueries({ queryKey: ["leads"] });
+            }
+            await queryClient.invalidateQueries({ queryKey: ["cars"] });
           }
           setEditLead(null);
         }}
