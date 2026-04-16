@@ -839,14 +839,6 @@ export function CarEditDialog({
                       )}
                     </TableBody>
                   </Table>
-                  {pendingUnlinkLeadIds.size > 0 || pendingLinkLeadIds.size > 0 ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {tx(
-                        "Connection changes are staged and will persist when you click Save changes.",
-                        "Los cambios de conexión quedan en borrador y se guardan al hacer clic en Guardar cambios.",
-                      )}
-                    </p>
-                  ) : null}
                 </div>
                 </div>
               </div>
