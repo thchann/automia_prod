@@ -1,4 +1,5 @@
 import {
+  ApiError,
   addLeadCarLink,
   listCarsForLead,
   removeLeadCarLink,
@@ -276,10 +277,24 @@ export async function syncLeadCarJunctionLinks(
   const prev = new Set(prevIds);
   const next = new Set(nextIds);
   for (const id of prev) {
-    if (!next.has(id)) await removeLeadCarLink(leadId, id);
+    if (!next.has(id)) {
+      try {
+        await removeLeadCarLink(leadId, id);
+      } catch (e) {
+        // Idempotent delete: if link is already gone, do not block saving other lead fields.
+        if (!(e instanceof ApiError && e.status === 404)) throw e;
+      }
+    }
   }
   for (const id of next) {
-    if (!prev.has(id)) await addLeadCarLink(leadId, { car_id: id });
+    if (!prev.has(id)) {
+      try {
+        await addLeadCarLink(leadId, { car_id: id });
+      } catch (e) {
+        // Idempotent add: if link already exists, continue so lead update still persists.
+        if (!(e instanceof ApiError && e.status === 409)) throw e;
+      }
+    }
   }
 }
 
