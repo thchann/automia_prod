@@ -27,6 +27,8 @@
         var path = location.pathname;
         if (path.startsWith("/m")) return;
         if (document.cookie.indexOf("automia_desktop=1") !== -1) return;
+        // Local dev: always load the desktop shell (there is no `/m` route in this Vite app).
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
         if (path !== "/" && path !== "") return;
 
         function isMobileUa(ua) {

@@ -24,6 +24,7 @@ import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
+import { LEAD_STATUS_PALETTE, normalizeLeadStatusColor } from "@/lib/leadStatusColors";
 
 interface LeadsFunnelProps {
   leads: Lead[];
@@ -62,7 +63,7 @@ export function LeadsFunnel({
   };
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [editingColor, setEditingColor] = useState("#6B7280");
+  const [editingColor, setEditingColor] = useState<string>(LEAD_STATUS_PALETTE[0]);
   const statusEditAreaRef = useRef<HTMLDivElement | null>(null);
   const saveColumnNameRef = useRef<() => void>(() => {});
   /** Prevents duplicate commits when `pointerdown` and `blur` fire in the same interaction. */
@@ -105,7 +106,7 @@ export function LeadsFunnel({
     statusEditCommitLockRef.current = false;
     setEditingColumnId(status.id);
     setEditingName(status.name);
-    setEditingColor(status.color || "#6B7280");
+    setEditingColor(normalizeLeadStatusColor(status.color));
   };
 
   const saveColumnName = () => {
@@ -166,14 +167,14 @@ export function LeadsFunnel({
       id: `s_${Date.now()}`,
       name: tx("New Column", "Nueva columna"),
       display_order: statuses.length,
-      color: "#6B7280",
+      color: LEAD_STATUS_PALETTE[0],
       is_default: false,
       created_at: new Date().toISOString(),
     };
     onUpdateStatuses([...statuses, newStatus]);
   };
 
-  const getStatusColor = (status: LeadStatus) => status.color || "#6B7280";
+  const getStatusColor = (status: LeadStatus) => normalizeLeadStatusColor(status.color);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 h-full">
@@ -200,18 +201,33 @@ export function LeadsFunnel({
                   {editingColumnId === status.id ? (
                     <div
                       ref={statusEditAreaRef}
-                      className="flex min-w-0 flex-1 items-center gap-2"
+                      className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
                     >
-                      <input
-                        type="color"
+                      <div
+                        role="group"
                         aria-label={tx("Status color", "Color del estado")}
-                        value={editingColor}
-                        onChange={(e) => setEditingColor(e.target.value)}
-                        onBlur={(e) => {
-                          if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
-                        }}
-                        className="h-7 w-7 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
-                      />
+                        className="flex shrink-0 flex-wrap gap-1"
+                      >
+                        {LEAD_STATUS_PALETTE.map((hex) => (
+                          <button
+                            key={hex}
+                            type="button"
+                            aria-label={hex}
+                            aria-pressed={editingColor.toUpperCase() === hex}
+                            title={hex}
+                            className={`h-6 w-6 shrink-0 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                              editingColor.toUpperCase() === hex
+                                ? "border-foreground ring-2 ring-offset-1 ring-offset-background ring-foreground"
+                                : "border-border"
+                            }`}
+                            style={{ backgroundColor: hex }}
+                            onClick={() => setEditingColor(hex)}
+                            onBlur={(e) => {
+                              if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
+                            }}
+                          />
+                        ))}
+                      </div>
                       <Input
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}

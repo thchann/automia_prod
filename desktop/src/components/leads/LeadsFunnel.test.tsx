@@ -127,8 +127,7 @@ describe("LeadsFunnel status actions", () => {
     fireEvent.pointerDown(screen.getAllByRole("button", { name: "Status actions" })[0]);
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
 
-    const colorInput = screen.getByLabelText("Status color") as HTMLInputElement;
-    fireEvent.change(colorInput, { target: { value: "#ff0000" } });
+    fireEvent.click(screen.getByRole("button", { name: "#EF4444" }));
     const nameInput = screen.getByDisplayValue("New");
     fireEvent.change(nameInput, { target: { value: "New Name" } });
     fireEvent.blur(nameInput);
@@ -138,7 +137,7 @@ describe("LeadsFunnel status actions", () => {
     });
     const next = onUpdateStatuses.mock.calls[0][0] as LeadStatus[];
     expect(next[0].name).toBe("New Name");
-    expect(next[0].color).toBe("#ff0000");
+    expect(next[0].color).toBe("#EF4444");
   });
 });
 

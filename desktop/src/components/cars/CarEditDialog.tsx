@@ -24,6 +24,7 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
@@ -631,58 +632,78 @@ export function CarEditDialog({
               </div>
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-                <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                <div className="rounded-lg border border-border/80 bg-muted/25 p-2 sm:p-3">
                   <p className="mb-2 text-xs font-medium text-muted-foreground">
                     {tx("Linked leads", "Leads vinculados")}
                   </p>
-                  {linkedLeadsVisible.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">{tx("No linked leads.", "Sin leads vinculados.")}</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {linkedLeadsVisible.map((lead) => (
-                        <li
-                          key={lead.id}
-                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {lead.name ?? tx("Unknown lead", "Lead desconocido")}
-                            </p>
-                            <span className="text-[11px] text-muted-foreground capitalize">
-                              {lead.lead_type === "buyer"
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="h-10 px-3">{tx("Lead", "Lead")}</TableHead>
+                        <TableHead className="h-10 w-[100px] px-3">{tx("Type", "Tipo")}</TableHead>
+                        <TableHead className="h-10 w-[120px] px-2 text-right">
+                          {tx("Actions", "Acciones")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {linkedLeadsVisible.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={3}
+                            className="px-3 py-6 text-center text-xs text-muted-foreground"
+                          >
+                            {tx(
+                              "No linked leads. You can unlink all connections from this car.",
+                              "Sin leads vinculados. Puedes dejar este auto sin conexiones.",
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        linkedLeadsVisible.map((leadRow) => (
+                          <TableRow key={leadRow.id}>
+                            <TableCell className="max-w-[200px] px-3 py-2 align-middle">
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {leadRow.name ?? tx("Unknown lead", "Lead desconocido")}
+                              </p>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-middle text-xs capitalize text-muted-foreground">
+                              {leadRow.lead_type === "buyer"
                                 ? tx("buyer", "comprador")
-                                : lead.lead_type === "seller"
+                                : leadRow.lead_type === "seller"
                                   ? tx("seller", "vendedor")
                                   : tx("pending", "pendiente")}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {onOpenLinkedLead ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 shrink-0 text-xs"
-                                onClick={() => onOpenLinkedLead(lead)}
-                              >
-                                {tx("Open", "Abrir")}
-                              </Button>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-transparent text-[10px] font-semibold text-destructive opacity-0 transition-opacity hover:border-destructive hover:bg-destructive/10 group-hover:opacity-100"
-                              aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
-                              onClick={() =>
-                                setPendingUnlinkLeadIds((prev) => new Set(prev).add(lead.id))
-                              }
-                            >
-                              <X className="h-3 w-3" aria-hidden />
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                            </TableCell>
+                            <TableCell className="px-2 py-2 text-right align-middle">
+                              <div className="flex items-center justify-end gap-1">
+                                {onOpenLinkedLead ? (
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-7 shrink-0 text-xs"
+                                    onClick={() => onOpenLinkedLead(leadRow)}
+                                  >
+                                    {tx("Open", "Abrir")}
+                                  </Button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
+                                  aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
+                                  onClick={() =>
+                                    setPendingUnlinkLeadIds((prev) => new Set(prev).add(leadRow.id))
+                                  }
+                                >
+                                  <X className="h-4 w-4" aria-hidden />
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                   {pendingUnlinkLeadIds.size > 0 ? (
                     <p className="mt-2 text-xs text-muted-foreground">
                       {tx(

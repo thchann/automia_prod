@@ -23,6 +23,7 @@ import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
 import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
@@ -86,7 +87,8 @@ export function LeadEditDialog({
   const effectiveLead = {
     ...lead,
     ...form,
-    car_id: form.car_id ?? lead.car_id,
+    /** Use `!== undefined` so explicit `null` clears legacy `car_id` when unlinking all cars. */
+    car_id: form.car_id !== undefined ? form.car_id : lead.car_id,
     car_ids: form.car_ids !== undefined ? form.car_ids : lead.car_ids,
   } as Lead;
   const linkedCarIds = getAllCarIdsForLead(effectiveLead);
@@ -349,30 +351,6 @@ export function LeadEditDialog({
                       ))}
                     </select>
                   </div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">{tx("Add linked car", "Agregar auto vinculado")}</label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    value=""
-                    disabled={carsAvailableToLink.length === 0}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      if (id) addLinkedCar(id);
-                      e.currentTarget.value = "";
-                    }}
-                  >
-                    <option value="">
-                      {carsAvailableToLink.length === 0
-                        ? tx("All cars already linked", "Todos los autos ya están vinculados")
-                        : tx("Choose a car to link…", "Elige un auto para vincular…")}
-                    </option>
-                    {carsAvailableToLink.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.year} {c.brand} {c.model}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 {leadType === "buyer" && (
@@ -661,57 +639,74 @@ export function LeadEditDialog({
                       ))}
                     </select>
                   </div>
-                  <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                  <div className="rounded-lg border border-border/80 bg-muted/25 p-2 sm:p-3">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       {tx("Linked cars", "Autos vinculados")}
                     </p>
-                    {linkedRows.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">{tx("No linked cars.", "Sin autos vinculados.")}</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {linkedRows.map((row) => (
-                          <li
-                            key={row.type === "car" ? row.car.id : `orphan-${row.id}`}
-                            className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
-                          >
-                            <div className="min-w-0">
-                              {row.type === "car" ? (
-                                <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="h-10 px-3">{tx("Vehicle", "Vehículo")}</TableHead>
+                          <TableHead className="h-10 w-[100px] px-3">{tx("Inventory", "Inventario")}</TableHead>
+                          <TableHead className="h-10 w-14 px-2 text-right">
+                            <span className="sr-only">{tx("Actions", "Acciones")}</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {linkedRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={3}
+                              className="px-3 py-6 text-center text-xs text-muted-foreground"
+                            >
+                              {tx("No linked cars.", "Sin autos vinculados.")}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          linkedRows.map((row) => (
+                            <TableRow key={row.type === "car" ? row.car.id : `orphan-${row.id}`}>
+                              <TableCell className="max-w-[200px] px-3 py-2 align-middle">
+                                {row.type === "car" ? (
                                   <p className="truncate text-sm font-medium text-foreground">
                                     {row.car.year} {row.car.brand} {row.car.model}
                                   </p>
-                                  <span className="text-[11px] text-muted-foreground capitalize">
-                                    {row.car.status === "sold"
-                                      ? tx("sold", "vendido")
-                                      : tx("available", "disponible")}
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <p className="truncate text-sm font-medium text-foreground">
-                                    {tx("Unknown car (not in inventory)", "Auto desconocido (no en inventario)")}
-                                  </p>
-                                  <span
-                                    className="block truncate font-mono text-[11px] text-muted-foreground"
-                                    title={row.id}
-                                  >
-                                    {row.id}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
-                              aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
-                              onClick={() => removeLinkedCar(row.type === "car" ? row.car.id : row.id)}
-                            >
-                              <X className="h-4 w-4" aria-hidden />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                                ) : (
+                                  <>
+                                    <p className="truncate text-sm font-medium text-foreground">
+                                      {tx("Unknown car (not in inventory)", "Auto desconocido (no en inventario)")}
+                                    </p>
+                                    <span
+                                      className="block truncate font-mono text-[11px] text-muted-foreground"
+                                      title={row.id}
+                                    >
+                                      {row.id}
+                                    </span>
+                                  </>
+                                )}
+                              </TableCell>
+                              <TableCell className="px-3 py-2 align-middle text-xs capitalize text-muted-foreground">
+                                {row.type === "car"
+                                  ? row.car.status === "sold"
+                                    ? tx("sold", "vendido")
+                                    : tx("available", "disponible")
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="px-2 py-2 text-right align-middle">
+                                <button
+                                  type="button"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
+                                  aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
+                                  onClick={() => removeLinkedCar(row.type === "car" ? row.car.id : row.id)}
+                                >
+                                  <X className="h-4 w-4" aria-hidden />
+                                </button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
