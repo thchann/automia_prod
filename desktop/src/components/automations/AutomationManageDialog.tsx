@@ -207,9 +207,9 @@ export function AutomationManageDialog({
           </DialogHeader>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-2 md:divide-x md:divide-y-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y md:grid-cols-[0.9fr_1.35fr] md:divide-x md:divide-y-0">
           {/* Column 1 — details + controls */}
-          <div className="flex min-h-[280px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
+          <div className="flex min-h-0 flex-col md:min-h-[min(520px,calc(90vh-10rem))]">
             <div className="shrink-0 px-4 pt-3 pb-2">
               <p className="text-sm font-semibold text-foreground">
                 {tx("Automation details", "Detalles de la automatización")}
@@ -285,10 +285,10 @@ export function AutomationManageDialog({
           </div>
 
           {/* Column 2 — settings */}
-          <div className="flex min-h-[320px] flex-col min-h-0 md:min-h-[min(520px,calc(90vh-10rem))]">
+          <div className="flex min-h-0 flex-col md:min-h-[min(520px,calc(90vh-10rem))]">
             {isIgDm ? (
-              <div className="h-full overflow-y-auto px-4 pb-4 pt-3">
-                <div className="space-y-2">
+              <div className="flex h-full min-h-0 flex-col px-4 pb-4 pt-3">
+                <div className="flex min-h-0 flex-1 flex-col gap-2">
                   <p className="text-sm font-medium text-foreground">
                     {tx("Instagram DM settings", "Configuracion de DM de Instagram")}
                   </p>
@@ -307,7 +307,7 @@ export function AutomationManageDialog({
                     <ToggleGroupItem value="static">{tx("Static reply", "Respuesta fija")}</ToggleGroupItem>
                   </ToggleGroup>
                   {dmMode === "ai" ? (
-                    <div className="space-y-1">
+                    <div className="flex min-h-0 flex-1 flex-col gap-1">
                       <p className="text-xs text-muted-foreground">
                         {tx("Custom instructions (optional)", "Instrucciones personalizadas (opcional)")}
                       </p>
@@ -315,7 +315,7 @@ export function AutomationManageDialog({
                         value={dmInstructions}
                         onChange={(e) => setDmInstructions(e.target.value)}
                         maxLength={AI_MAX_CHARS}
-                        rows={5}
+                        className="min-h-[16rem] flex-1 resize-none"
                         placeholder={tx(
                           "Tell the bot how to respond (tone, goals, routing to website, etc.).",
                           "Indica como debe responder el bot (tono, objetivos, envio al sitio web, etc.).",
@@ -326,7 +326,7 @@ export function AutomationManageDialog({
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="flex min-h-0 flex-1 flex-col gap-1">
                       <p className="text-xs text-muted-foreground">
                         {tx("Fixed reply (required)", "Respuesta fija (obligatoria)")}
                       </p>
@@ -334,7 +334,7 @@ export function AutomationManageDialog({
                         value={dmStaticMessage}
                         onChange={(e) => setDmStaticMessage(e.target.value)}
                         maxLength={STATIC_MAX_CHARS}
-                        rows={4}
+                        className="min-h-[16rem] flex-1 resize-none"
                         placeholder={tx("Write the exact message to send.", "Escribe el mensaje exacto a enviar.")}
                       />
                       <p className="text-[11px] text-muted-foreground">
@@ -358,20 +358,18 @@ export function AutomationManageDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
+          <Button type="button" variant="outline" onClick={requestClose} disabled={savingDm}>
+            {tx("Close", "Cerrar")}
+          </Button>
           {isIgDm ? (
             <Button
               type="button"
-              size="sm"
-              className="rounded-full"
               disabled={savingDm}
               onClick={() => void saveDmSettings()}
             >
               {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={requestClose}>
-            {tx("Close", "Cerrar")}
-          </Button>
         </DialogFooter>
         </DialogContent>
       </Dialog>
