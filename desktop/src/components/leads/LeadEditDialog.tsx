@@ -492,7 +492,7 @@ export function LeadEditDialog({
 
           {/* Columns 2–3 — Files or Notes (single panel, spans two grid columns) */}
           <div className="flex h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
-            <div className="shrink-0 border-b border-border px-4 pt-2">
+            <div className="shrink-0 border-b border-border px-4 pt-2 pb-1">
               <div className="flex items-center gap-4">
                 {([
                   ["files", tx("Files", "Archivos")],
@@ -518,7 +518,7 @@ export function LeadEditDialog({
 
             {rightPanel === "files" ? (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div className="shrink-0 px-4 pb-2">
+                <div className="shrink-0 px-4 pt-3 pb-2">
                   <p className="text-xs text-muted-foreground">
                     {tx("Attached files appear above the upload area.", "Los archivos adjuntos aparecen arriba del área de subida.")}
                   </p>
@@ -652,7 +652,7 @@ export function LeadEditDialog({
                 </div>
               </div>
             ) : rightPanel === "notes" ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 sm:px-4 sm:pb-4">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-2 sm:px-4 sm:pt-3 sm:pb-4">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={lead.id}
@@ -672,7 +672,7 @@ export function LeadEditDialog({
                 />
               </div>
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4">
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Add linked car", "Agregar auto vinculado")}</label>
