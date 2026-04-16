@@ -233,7 +233,6 @@ export function LeadsFunnel({
                                 style={{ backgroundColor: hex }}
                                 aria-hidden
                               />
-                              <span className="text-xs font-mono">{hex}</span>
                               {editingColor.toUpperCase() === hex ? (
                                 <span className="ml-auto text-[11px] text-muted-foreground">
                                   {tx("Selected", "Seleccionado")}
