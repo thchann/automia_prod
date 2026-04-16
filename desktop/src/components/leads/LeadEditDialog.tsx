@@ -218,6 +218,7 @@ export function LeadEditDialog({
       try {
         const ok = await persistLeadChanges();
         if (!ok) return;
+        toast.success(tx("Saved", "Guardado"));
         onOpenChange(false);
       } finally {
         setIsSaving(false);
@@ -230,6 +231,7 @@ export function LeadEditDialog({
     try {
       const ok = await persistLeadChanges();
       if (!ok) return;
+      toast.success(tx("Saved", "Guardado"));
       setExitPromptOpen(false);
       onOpenChange(false);
     } finally {

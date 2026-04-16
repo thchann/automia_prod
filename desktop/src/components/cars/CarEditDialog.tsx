@@ -320,6 +320,7 @@ export function CarEditDialog({
       try {
         const ok = await persistCarChanges();
         if (!ok) return;
+        toast.success(tx("Saved", "Guardado"));
         onOpenChange(false);
       } finally {
         setIsSaving(false);
@@ -332,6 +333,7 @@ export function CarEditDialog({
     try {
       const ok = await persistCarChanges();
       if (!ok) return;
+      toast.success(tx("Saved", "Guardado"));
       setExitPromptOpen(false);
       onOpenChange(false);
     } finally {

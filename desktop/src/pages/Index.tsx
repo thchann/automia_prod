@@ -7,7 +7,7 @@ import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { HomeOverview } from "@/components/home/HomeOverview";
 
-const FADE_DURATION_MS = 150;
+const FADE_DURATION_MS = 250;
 
 const Index = () => {
   const [activeItem, setActiveItem] = useState("Home");

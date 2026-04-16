@@ -138,7 +138,7 @@ export function AutomationManageDialog({
       await updateAutomationConfig(detail.id, { config: next });
       await queryClient.invalidateQueries({ queryKey: ["automations"] });
       await queryClient.invalidateQueries({ queryKey: ["automation", detail.id] });
-      toast.success(tx("DM settings saved.", "Configuracion de DM guardada."));
+      toast.success(tx("Saved", "Guardado"));
       return true;
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
