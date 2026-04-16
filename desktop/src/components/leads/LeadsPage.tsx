@@ -9,6 +9,7 @@ import {
   listCars,
   listLeadStatuses,
   listLeads,
+  uploadLeadAttachmentsToBucket,
   updateLead,
   updateLeadStatus,
   type LeadsListResponse,
@@ -128,7 +129,26 @@ export function LeadsPage() {
     if (isDraftRecordId(updated.id)) {
       const created = await createLead(leadToCreatePayload(updated));
       const mapped = mapLeadFromApi(created, statuses);
-      const extra = leadToUpdatePayload(updated);
+      const nextAttachments = updated.attachments ?? null;
+      const hasDraftBlobAttachments = !!nextAttachments?.some((a) => a.url?.startsWith("blob:"));
+      let uploadedAttachments = nextAttachments;
+
+      if (hasDraftBlobAttachments && nextAttachments) {
+        const uploaded = await uploadLeadAttachmentsToBucket(mapped.id, nextAttachments);
+        uploadedAttachments = uploaded.map((u) => ({
+          type: u.type,
+          ...(u.url ? { url: u.url } : {}),
+          ...(u.storage_key ? { storage_key: u.storage_key } : {}),
+          filename: u.filename,
+          content_type: u.content_type,
+          size_bytes: u.size_bytes,
+        }));
+      }
+
+      const extra = leadToUpdatePayload({
+        ...updated,
+        ...(uploadedAttachments !== undefined ? { attachments: uploadedAttachments } : {}),
+      });
       if (extra.attachments !== undefined) {
         await updateLead(mapped.id, { attachments: extra.attachments });
       }

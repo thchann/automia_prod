@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Link2,
   Pencil,
@@ -140,6 +140,7 @@ export function LeadsTable({
   const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
     () => defaultLeadSearchColumns(),
   );
+  const lastHandledGenerateSignalRef = useRef(0);
 
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
   const getCar = (id: string | null) => cars.find((c) => c.id === id);
@@ -354,6 +355,8 @@ export function LeadsTable({
 
   useEffect(() => {
     if (generateLeadSignal <= 0) return;
+    if (lastHandledGenerateSignalRef.current === generateLeadSignal) return;
+    lastHandledGenerateSignalRef.current = generateLeadSignal;
     void Promise.resolve(onAddLead()).then((created) => {
       beginEditLead(created);
     });
