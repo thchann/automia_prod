@@ -145,6 +145,7 @@ export function LeadsFunnel({
       const el = statusEditAreaRef.current;
       const target = ev.target as Node | null;
       if (!el || !target) return;
+      if (target instanceof HTMLElement && target.closest("[data-status-color-menu='true']")) return;
       if (el.contains(target)) return;
       saveColumnNameRef.current();
     };
@@ -210,9 +211,6 @@ export function LeadsFunnel({
                             aria-label={tx("Status color", "Color del estado")}
                             title={tx("Status color", "Color del estado")}
                             className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background"
-                            onBlur={(e) => {
-                              if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
-                            }}
                           >
                             <span
                               className="h-4 w-4 rounded-full border border-border/60"
@@ -221,11 +219,15 @@ export function LeadsFunnel({
                             />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-fit min-w-0">
+                        <DropdownMenuContent
+                          align="start"
+                          className="w-fit min-w-0"
+                          data-status-color-menu="true"
+                        >
                           {LEAD_STATUS_PALETTE.map((hex) => (
                             <DropdownMenuItem
                               key={hex}
-                              onClick={() => setEditingColor(hex)}
+                              onSelect={() => setEditingColor(hex)}
                               className="flex items-center gap-2"
                             >
                               <span
