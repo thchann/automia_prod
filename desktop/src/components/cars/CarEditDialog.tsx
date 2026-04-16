@@ -25,6 +25,7 @@ import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
@@ -57,6 +58,8 @@ export function CarEditDialog({
   const [fileDropActive, setFileDropActive] = useState(false);
   const [rightPanel, setRightPanel] = useState<"files" | "notes" | "connections">("notes");
   const [pendingUnlinkLeadIds, setPendingUnlinkLeadIds] = useState<Set<string>>(new Set());
+  const [exitPromptOpen, setExitPromptOpen] = useState(false);
+  const [savingFromExitPrompt, setSavingFromExitPrompt] = useState(false);
   useEffect(() => {
     setRightPanel("notes");
   }, [car?.id]);
@@ -196,67 +199,103 @@ export function CarEditDialog({
     })();
   };
 
+  const hasUnsavedChanges = (() => {
+    const formChanged = JSON.stringify(form) !== JSON.stringify({ ...car });
+    const attachmentsChanged =
+      JSON.stringify(attachmentList) !== JSON.stringify(car.attachments ?? []);
+    const notesChanged =
+      JSON.stringify(notesDocRef.current ?? null) !== JSON.stringify(car.notes_document ?? null);
+    const linksChanged = pendingUnlinkLeadIds.size > 0;
+    return formChanged || attachmentsChanged || notesChanged || linksChanged;
+  })();
+
+  const requestClose = () => {
+    if (!hasUnsavedChanges) {
+      onOpenChange(false);
+      return;
+    }
+    setExitPromptOpen(true);
+  };
+
+  const persistCarChanges = async (): Promise<boolean> => {
+    await notesEditorRef.current?.flushPendingSave();
+
+    let nextAttachments: CarAttachment[] | null = attachmentList.length > 0 ? attachmentList : null;
+    if (
+      nextAttachments &&
+      nextAttachments.length > 0 &&
+      !isDraftRecordId(car.id) &&
+      nextAttachments.some((a) => a.url?.startsWith("blob:"))
+    ) {
+      try {
+        const uploaded = await uploadCarAttachmentsToBucket(car.id, nextAttachments);
+        nextAttachments = uploaded.map((u) => ({
+          type: u.type,
+          ...(u.url ? { url: u.url } : {}),
+          ...(u.storage_key ? { storage_key: u.storage_key } : {}),
+          filename: u.filename,
+          content_type: u.content_type,
+          size_bytes: u.size_bytes,
+        }));
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 503) {
+          toast.error(
+            tx(
+              "File uploads are unavailable: server storage is not configured.",
+              "Las subidas no estan disponibles: el almacenamiento del servidor no esta configurado.",
+            ),
+          );
+        } else {
+          toast.error(
+            tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
+          );
+        }
+        return false;
+      }
+    }
+
+    const resolvedAttachments =
+      nextAttachments && nextAttachments.length > 0
+        ? nextAttachments
+        : car.attachments !== undefined
+          ? null
+          : undefined;
+
+    await Promise.resolve(
+      onSave({
+        ...car,
+        ...form,
+        ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
+        ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
+        updated_at: new Date().toISOString(),
+      } as Car),
+    );
+    if (onUnlinkLeadFromCar) {
+      for (const leadId of pendingUnlinkLeadIds) {
+        await Promise.resolve(onUnlinkLeadFromCar(leadId, car.id));
+      }
+    }
+    return true;
+  };
+
   const handleSave = () => {
     void (async () => {
-      await notesEditorRef.current?.flushPendingSave();
-
-      let nextAttachments: CarAttachment[] | null = attachmentList.length > 0 ? attachmentList : null;
-      if (
-        nextAttachments &&
-        nextAttachments.length > 0 &&
-        !isDraftRecordId(car.id) &&
-        nextAttachments.some((a) => a.url?.startsWith("blob:"))
-      ) {
-        try {
-          const uploaded = await uploadCarAttachmentsToBucket(car.id, nextAttachments);
-          nextAttachments = uploaded.map((u) => ({
-            type: u.type,
-            ...(u.url ? { url: u.url } : {}),
-            ...(u.storage_key ? { storage_key: u.storage_key } : {}),
-            filename: u.filename,
-            content_type: u.content_type,
-            size_bytes: u.size_bytes,
-          }));
-        } catch (e) {
-          if (e instanceof ApiError && e.status === 503) {
-            toast.error(
-              tx(
-                "File uploads are unavailable: server storage is not configured.",
-                "Las subidas no estan disponibles: el almacenamiento del servidor no esta configurado.",
-              ),
-            );
-          } else {
-            toast.error(
-              tx("Could not upload attachments. Try again.", "No se pudieron subir los adjuntos. Reintenta."),
-            );
-          }
-          return;
-        }
-      }
-
-      const resolvedAttachments =
-        nextAttachments && nextAttachments.length > 0
-          ? nextAttachments
-          : car.attachments !== undefined
-            ? null
-            : undefined;
-
-      await Promise.resolve(
-        onSave({
-          ...car,
-          ...form,
-          ...(resolvedAttachments !== undefined ? { attachments: resolvedAttachments } : {}),
-          ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
-          updated_at: new Date().toISOString(),
-        } as Car),
-      );
-      if (onUnlinkLeadFromCar) {
-        for (const leadId of pendingUnlinkLeadIds) {
-          await Promise.resolve(onUnlinkLeadFromCar(leadId, car.id));
-        }
-      }
+      const ok = await persistCarChanges();
+      if (!ok) return;
       onOpenChange(false);
     })();
+  };
+
+  const handleSaveAndExitFromPrompt = async () => {
+    setSavingFromExitPrompt(true);
+    try {
+      const ok = await persistCarChanges();
+      if (!ok) return;
+      setExitPromptOpen(false);
+      onOpenChange(false);
+    } finally {
+      setSavingFromExitPrompt(false);
+    }
   };
 
   const listedAtInputValue = form.listed_at
@@ -273,10 +312,18 @@ export function CarEditDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          onOpenChange(true);
+          return;
+        }
+        requestClose();
+      }}
+    >
       <DialogContent
         className="flex flex-col max-h-[90vh] w-[calc(100vw-10vh)] max-w-none gap-0 p-0 sm:max-w-[min(1360px,calc(100vw-10vh))] overflow-hidden"
-        onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="shrink-0 border-b px-6 pt-6 pb-4 pr-14">
           <DialogHeader>
@@ -719,13 +766,31 @@ export function CarEditDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={requestClose}>
             {tx("Cancel", "Cancelar")}
           </Button>
           <Button onClick={handleSave}>{tx("Save changes", "Guardar cambios")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <UnsavedChangesDialog
+      open={exitPromptOpen}
+      onOpenChange={setExitPromptOpen}
+      onSaveAndExit={handleSaveAndExitFromPrompt}
+      onDiscardAndExit={() => {
+        setExitPromptOpen(false);
+        onOpenChange(false);
+      }}
+      saving={savingFromExitPrompt}
+      title={tx("Save your changes before leaving?", "¿Guardar cambios antes de salir?")}
+      description={tx(
+        "You have unsaved edits in this modal.",
+        "Tienes cambios sin guardar en este modal.",
+      )}
+      saveLabel={tx("Save and exit", "Guardar y salir")}
+      discardLabel={tx("Discard", "Descartar")}
+      cancelLabel={tx("Keep editing", "Seguir editando")}
+    />
 
     </>
   );

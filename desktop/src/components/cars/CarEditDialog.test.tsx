@@ -103,7 +103,7 @@ describe("CarEditDialog save-only staged connections", () => {
     });
   });
 
-  it("discard on Cancel does not persist staged unlink", async () => {
+  it("prompts to save or discard when cancelling with unsaved changes", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const onUnlink = vi.fn().mockResolvedValue(undefined);
     const onOpenChange = vi.fn();
@@ -122,9 +122,14 @@ describe("CarEditDialog save-only staged connections", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unlink lead from car" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
+    expect(screen.getByText("Save your changes before leaving?")).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+
     expect(onSave).not.toHaveBeenCalled();
     expect(onUnlink).not.toHaveBeenCalled();
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 });
 

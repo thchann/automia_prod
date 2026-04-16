@@ -203,31 +203,46 @@ export function LeadsFunnel({
                       ref={statusEditAreaRef}
                       className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
                     >
-                      <div
-                        role="group"
-                        aria-label={tx("Status color", "Color del estado")}
-                        className="flex shrink-0 flex-wrap gap-1"
-                      >
-                        {LEAD_STATUS_PALETTE.map((hex) => (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <button
-                            key={hex}
                             type="button"
-                            aria-label={hex}
-                            aria-pressed={editingColor.toUpperCase() === hex}
-                            title={hex}
-                            className={`h-6 w-6 shrink-0 rounded-full border-2 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                              editingColor.toUpperCase() === hex
-                                ? "border-foreground ring-2 ring-offset-1 ring-offset-background ring-foreground"
-                                : "border-border"
-                            }`}
-                            style={{ backgroundColor: hex }}
-                            onClick={() => setEditingColor(hex)}
+                            aria-label={tx("Status color", "Color del estado")}
+                            title={tx("Status color", "Color del estado")}
+                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background"
                             onBlur={(e) => {
                               if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
                             }}
-                          />
-                        ))}
-                      </div>
+                          >
+                            <span
+                              className="h-4 w-4 rounded-full border border-border/60"
+                              style={{ backgroundColor: editingColor }}
+                              aria-hidden
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-44">
+                          {LEAD_STATUS_PALETTE.map((hex) => (
+                            <DropdownMenuItem
+                              key={hex}
+                              onClick={() => setEditingColor(hex)}
+                              className="flex items-center gap-2"
+                            >
+                              <span
+                                className="h-4 w-4 rounded-full border border-border/60"
+                                style={{ backgroundColor: hex }}
+                                aria-hidden
+                              />
+                              <span className="text-xs font-mono">{hex}</span>
+                              {editingColor.toUpperCase() === hex ? (
+                                <span className="ml-auto text-[11px] text-muted-foreground">
+                                  {tx("Selected", "Seleccionado")}
+                                </span>
+                              ) : null}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Input
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
