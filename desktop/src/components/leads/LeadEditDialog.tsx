@@ -22,6 +22,12 @@ import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "./LeadNotesEditor";
 import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
+import {
+  getEditableLeadFormState,
+  serializeAttachments,
+  serializeLeadFormState,
+  serializeNotesDocument,
+} from "@/lib/editDialogDirtyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 
@@ -61,6 +67,9 @@ export function LeadEditDialog({
   const notesEditorRef = useRef<LeadNotesEditorHandle | null>(null);
   const hydratedLeadIdRef = useRef<string | null>(null);
   const attachmentsRef = useRef<CarAttachment[]>([]);
+  const initialFormSerializedRef = useRef<string>("");
+  const initialAttachmentsSerializedRef = useRef<string>("");
+  const initialNotesSerializedRef = useRef<string>("");
   attachmentsRef.current = attachments;
   const { tx } = useLanguage();
 
@@ -69,14 +78,21 @@ export function LeadEditDialog({
     if (!open || !lead) return;
     if (hydratedLeadIdRef.current === lead.id) return;
     hydratedLeadIdRef.current = lead.id;
-    setForm({ ...lead });
+    const nextForm = getEditableLeadFormState(lead);
+    setForm(nextForm);
     setAttachments(lead.attachments ?? []);
     notesDocRef.current = lead.notes_document;
+    initialFormSerializedRef.current = serializeLeadFormState(nextForm);
+    initialAttachmentsSerializedRef.current = serializeAttachments(lead.attachments);
+    initialNotesSerializedRef.current = serializeNotesDocument(lead.notes_document, lead.notes);
   }, [open, lead]);
 
   useEffect(() => {
     if (open) return;
     hydratedLeadIdRef.current = null;
+    initialFormSerializedRef.current = "";
+    initialAttachmentsSerializedRef.current = "";
+    initialNotesSerializedRef.current = "";
     for (const att of attachmentsRef.current) {
       if (att.url?.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
@@ -124,11 +140,10 @@ export function LeadEditDialog({
 
   const hasUnsavedChanges = (() => {
     if (!isHydrated) return false;
-    const formChanged = JSON.stringify(form) !== JSON.stringify({ ...lead });
-    const attachmentsChanged =
-      JSON.stringify(attachmentList) !== JSON.stringify(lead.attachments ?? []);
+    const formChanged = serializeLeadFormState(form) !== initialFormSerializedRef.current;
+    const attachmentsChanged = serializeAttachments(attachmentList) !== initialAttachmentsSerializedRef.current;
     const notesChanged =
-      JSON.stringify(notesDocRef.current ?? null) !== JSON.stringify(lead.notes_document ?? null);
+      serializeNotesDocument(notesDocRef.current, lead.notes) !== initialNotesSerializedRef.current;
     return formChanged || attachmentsChanged || notesChanged;
   })();
 

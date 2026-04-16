@@ -31,6 +31,7 @@ import {
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import { normalizeNotesDocument } from "@/lib/editDialogDirtyState";
 import {
   Bold,
   ChevronDown,
@@ -64,38 +65,11 @@ const TEXT_COLORS = [
   { key: "orange", hex: "#ea580c" },
 ];
 
-function isDocJson(value: unknown): value is JSONContent {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    (value as { type?: string }).type === "doc"
-  );
-}
-
-function legacyNotesToDoc(notes: string | null | undefined): JSONContent {
-  if (!notes?.trim()) {
-    return { type: "doc", content: [{ type: "paragraph" }] };
-  }
-  const blocks = notes
-    .split(/\n{2,}/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return {
-    type: "doc",
-    content: blocks.map((text) => ({
-      type: "paragraph" as const,
-      content: [{ type: "text" as const, text }],
-    })),
-  };
-}
-
 function parseInitialContent(
   notesDocument: unknown | null | undefined,
   legacyNotes: string | null | undefined,
 ): JSONContent {
-  if (isDocJson(notesDocument)) return notesDocument;
-  return legacyNotesToDoc(legacyNotes);
+  return normalizeNotesDocument(notesDocument, legacyNotes);
 }
 
 /** Stable key for editor init; must never throw (bad API data would otherwise white-screen the app). */

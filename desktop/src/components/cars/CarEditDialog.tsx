@@ -23,6 +23,12 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { LeadNotesEditor, type LeadNotesEditorHandle } from "@/components/leads/LeadNotesEditor";
+import {
+  getEditableCarFormState,
+  serializeAttachments,
+  serializeCarFormState,
+  serializeNotesDocument,
+} from "@/lib/editDialogDirtyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 
@@ -71,6 +77,9 @@ export function CarEditDialog({
   const notesEditorRef = useRef<LeadNotesEditorHandle | null>(null);
   const hydratedCarIdRef = useRef<string | null>(null);
   const attachmentsListRef = useRef<CarAttachment[]>([]);
+  const initialFormSerializedRef = useRef<string>("");
+  const initialAttachmentsSerializedRef = useRef<string>("");
+  const initialNotesSerializedRef = useRef<string>("");
   const { tx } = useLanguage();
 
   const attachmentList = attachments ?? [];
@@ -80,9 +89,13 @@ export function CarEditDialog({
     if (!open || !car) return;
     if (hydratedCarIdRef.current === car.id) return;
     hydratedCarIdRef.current = car.id;
-    setForm({ ...car });
+    const nextForm = getEditableCarFormState(car);
+    setForm(nextForm);
     setAttachments(car.attachments ?? null);
     notesDocRef.current = car.notes_document;
+    initialFormSerializedRef.current = serializeCarFormState(nextForm);
+    initialAttachmentsSerializedRef.current = serializeAttachments(car.attachments);
+    initialNotesSerializedRef.current = serializeNotesDocument(car.notes_document, car.notes);
     setPendingUnlinkLeadIds(new Set());
     setPendingLinkLeadIds(new Set());
   }, [open, car]);
@@ -90,6 +103,9 @@ export function CarEditDialog({
   useEffect(() => {
     if (open) return;
     hydratedCarIdRef.current = null;
+    initialFormSerializedRef.current = "";
+    initialAttachmentsSerializedRef.current = "";
+    initialNotesSerializedRef.current = "";
     for (const att of attachmentsListRef.current) {
       if (att.url?.startsWith("blob:")) URL.revokeObjectURL(att.url);
     }
@@ -216,11 +232,10 @@ export function CarEditDialog({
 
   const hasUnsavedChanges = (() => {
     if (!isHydrated) return false;
-    const formChanged = JSON.stringify(form) !== JSON.stringify({ ...car });
-    const attachmentsChanged =
-      JSON.stringify(attachmentList) !== JSON.stringify(car.attachments ?? []);
+    const formChanged = serializeCarFormState(form) !== initialFormSerializedRef.current;
+    const attachmentsChanged = serializeAttachments(attachmentList) !== initialAttachmentsSerializedRef.current;
     const notesChanged =
-      JSON.stringify(notesDocRef.current ?? null) !== JSON.stringify(car.notes_document ?? null);
+      serializeNotesDocument(notesDocRef.current, car.notes) !== initialNotesSerializedRef.current;
     const linksChanged = pendingUnlinkLeadIds.size > 0 || pendingLinkLeadIds.size > 0;
     return formChanged || attachmentsChanged || notesChanged || linksChanged;
   })();
