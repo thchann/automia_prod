@@ -57,9 +57,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
   const [collapsed, setCollapsed] = useState(false);
   const { tx } = useLanguage();
 
-  // Fixed row height; icon uses a fixed-width slot so it stays anchored while sidebar expands.
+  // Same left inset expanded/collapsed; fixed row height so icon-only rows match icon+label height.
   const navButtonClass =
-    "flex h-9 w-full shrink-0 items-center rounded-md text-sm leading-none";
+    "flex h-9 w-full shrink-0 items-center justify-start gap-3 rounded-md pl-3 pr-2 text-sm leading-none";
 
   const NavButton = ({
     label,
@@ -81,7 +81,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
           if (!disabled) onActiveItemChange(label);
         }}
         disabled={disabled}
-        className={`${navButtonClass} justify-start pr-2 ${
+        className={`${navButtonClass} ${
           disabled
             ? "text-muted-foreground/60 cursor-not-allowed"
             : isActive
@@ -90,11 +90,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         }`}
         title={collapsed ? undefined : label}
       >
-        <span className="inline-flex h-9 w-[52px] shrink-0 items-center justify-center" aria-hidden>
-          <Icon className="h-4 w-4 shrink-0" />
-        </span>
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
         {!collapsed && (
-          <span className="min-w-0 flex-1 truncate pl-1 text-left">
+          <span className="min-w-0 flex-1 truncate text-left">
             {tx(displayLabel, translateSidebar(displayLabel))}
           </span>
         )}
@@ -161,9 +159,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className={`flex h-9 w-full shrink-0 items-center text-muted-foreground hover:text-foreground ${
-            collapsed ? "justify-center px-0" : "justify-start pl-3 pr-2"
-          }`}
+          className="flex h-9 w-full shrink-0 items-center justify-start pl-3 pr-2 text-muted-foreground hover:text-foreground"
           aria-label={collapsed ? tx("Expand sidebar", "Expandir barra lateral") : tx("Collapse sidebar", "Colapsar barra lateral")}
         >
           <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
