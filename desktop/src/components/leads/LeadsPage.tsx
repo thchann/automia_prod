@@ -223,37 +223,18 @@ export function LeadsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
-      </div>
-
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex items-center gap-0 border-b border-border">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-                tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-              {tab === t.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="relative pb-1">
+        <div className="relative shrink-0">
           <Button size="sm" onClick={() => setShowGenerateMenu((v) => !v)}>
-            + {tx("Generate Lead", "Generar lead")} <ChevronDown className="h-3 w-3 ml-1" />
+            + {tx("Generate Lead", "Generar lead")} <ChevronDown className="ml-1 h-3 w-3" />
           </Button>
           {showGenerateMenu && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
+            <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-popover py-1 shadow-lg">
               <button
                 type="button"
-                className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
+                className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-surface-hover"
                 onClick={() => {
                   setTab("table");
                   setGenerateLeadSignal((s) => s + 1);
@@ -264,14 +245,14 @@ export function LeadsPage() {
               </button>
               <button
                 type="button"
-                className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                className="w-full cursor-not-allowed px-4 py-2 text-left text-sm text-muted-foreground"
                 disabled
               >
                 {tx("Import CSV", "Importar CSV")}
               </button>
               <button
                 type="button"
-                className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                className="w-full cursor-not-allowed px-4 py-2 text-left text-sm text-muted-foreground"
                 disabled
               >
                 {tx("From Instagram", "Desde Instagram")}
@@ -279,6 +260,21 @@ export function LeadsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center gap-0 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+            {tab === t.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+          </button>
+        ))}
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
