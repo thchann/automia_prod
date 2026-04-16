@@ -1,5 +1,6 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 type UnsavedChangesDialogProps = {
   open: boolean;
@@ -34,12 +35,19 @@ export function UnsavedChangesDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
-          <Button type="button" variant="outline" onClick={onDiscardAndExit}>
+          <AlertDialogCancel disabled={saving}>{cancelLabel}</AlertDialogCancel>
+          <Button type="button" variant="outline" onClick={onDiscardAndExit} disabled={saving}>
             {discardLabel}
           </Button>
           <AlertDialogAction onClick={() => void onSaveAndExit()} disabled={saving}>
-            {saving ? `${saveLabel}…` : saveLabel}
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {saveLabel}…
+              </>
+            ) : (
+              saveLabel
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

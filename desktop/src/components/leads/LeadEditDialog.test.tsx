@@ -75,6 +75,39 @@ function makeCars(): Car[] {
 }
 
 describe("LeadEditDialog save-only staged connections", () => {
+  it("ignores same-record prop refreshes when nothing was edited", () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onOpenChange = vi.fn();
+    const lead = makeLead();
+    const { rerender } = render(
+      <LeadEditDialog
+        lead={lead}
+        open
+        onOpenChange={onOpenChange}
+        onSave={onSave}
+        statuses={[]}
+        cars={makeCars()}
+      />,
+    );
+
+    rerender(
+      <LeadEditDialog
+        lead={{ ...lead, updated_at: "2024-02-01T00:00:00Z" }}
+        open
+        onOpenChange={onOpenChange}
+        onSave={onSave}
+        statuses={[]}
+        cars={makeCars()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("Save your changes before leaving?")).not.toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("closes directly when nothing changed", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const onOpenChange = vi.fn();
