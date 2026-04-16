@@ -9,10 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
   exportLeadNotes,
@@ -54,6 +53,7 @@ export function LeadEditDialog({
   const [rightPanel, setRightPanel] = useState<"files" | "notes" | "connections">("notes");
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const [savingFromExitPrompt, setSavingFromExitPrompt] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
     setRightPanel("notes");
   }, [lead?.id]);
@@ -197,9 +197,14 @@ export function LeadEditDialog({
 
   const handleSave = () => {
     void (async () => {
-      const ok = await persistLeadChanges();
-      if (!ok) return;
-      onOpenChange(false);
+      setIsSaving(true);
+      try {
+        const ok = await persistLeadChanges();
+        if (!ok) return;
+        onOpenChange(false);
+      } finally {
+        setIsSaving(false);
+      }
     })();
   };
 
@@ -487,22 +492,28 @@ export function LeadEditDialog({
 
           {/* Columns 2–3 — Files or Notes (single panel, spans two grid columns) */}
           <div className="flex h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
-            <div className="shrink-0 px-4 pt-3 pb-2">
-              <ToggleGroup
-                type="single"
-                value={rightPanel}
-                onValueChange={(v) => {
-                  if (v === "files" || v === "notes" || v === "connections") setRightPanel(v);
-                }}
-                variant="outline"
-                size="sm"
-                className="justify-start"
-                aria-label={tx("Files, notes, or connections", "Archivos, notas o conexiones")}
-              >
-                <ToggleGroupItem value="files">{tx("Files", "Archivos")}</ToggleGroupItem>
-                <ToggleGroupItem value="notes">{tx("Notes", "Notas")}</ToggleGroupItem>
-                <ToggleGroupItem value="connections">{tx("Connections", "Conexiones")}</ToggleGroupItem>
-              </ToggleGroup>
+            <div className="shrink-0 border-b border-border px-4 pt-2">
+              <div className="flex items-center gap-4">
+                {([
+                  ["files", tx("Files", "Archivos")],
+                  ["notes", tx("Notes", "Notas")],
+                  ["connections", tx("Connections", "Conexiones")],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRightPanel(key)}
+                    className={`relative px-1 py-2 text-sm font-medium transition-colors ${
+                      rightPanel === key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                    {rightPanel === key ? (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {rightPanel === "files" ? (
@@ -763,10 +774,19 @@ export function LeadEditDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
-          <Button variant="outline" onClick={requestClose}>
+          <Button variant="outline" onClick={requestClose} disabled={isSaving}>
             {tx("Cancel", "Cancelar")}
           </Button>
-          <Button onClick={handleSave}>{tx("Save changes", "Guardar cambios")}</Button>
+          <Button onClick={handleSave} disabled={isSaving} className={isSaving ? "opacity-80" : undefined}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {tx("Saving changes…", "Guardando cambios…")}
+              </>
+            ) : (
+              tx("Save changes", "Guardar cambios")
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

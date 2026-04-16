@@ -712,6 +712,9 @@ export function CarsTable({
         onSave={onUpdateCar}
         onNotesDocumentAutosave={onNotesDocumentAutosave}
         leads={leads}
+        onLinkLeadToCar={(leadId, carId) => {
+          assignCarToLead(carId, leadId);
+        }}
         onUnlinkLeadFromCar={unlinkLeadFromCar}
       />
 

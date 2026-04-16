@@ -76,6 +76,16 @@ function makeLead(): Lead {
   };
 }
 
+function makeSecondLead(): Lead {
+  return {
+    ...makeLead(),
+    id: "lead-2",
+    name: "Second Lead",
+    car_id: null,
+    car_ids: null,
+  };
+}
+
 describe("CarEditDialog save-only staged connections", () => {
   it("does not persist unlink until Save changes", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
@@ -92,7 +102,7 @@ describe("CarEditDialog save-only staged connections", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Connections" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connections" }));
     fireEvent.click(screen.getByRole("button", { name: "Unlink lead from car" }));
     expect(onUnlink).not.toHaveBeenCalled();
 
@@ -118,7 +128,7 @@ describe("CarEditDialog save-only staged connections", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Connections" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connections" }));
     fireEvent.click(screen.getByRole("button", { name: "Unlink lead from car" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -130,6 +140,35 @@ describe("CarEditDialog save-only staged connections", () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(onUnlink).not.toHaveBeenCalled();
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("stages and persists linking a lead from connections tab", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onLink = vi.fn().mockResolvedValue(undefined);
+    const onUnlink = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CarEditDialog
+        car={makeCar()}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        leads={[makeLead(), makeSecondLead()]}
+        onLinkLeadToCar={onLink}
+        onUnlinkLeadFromCar={onUnlink}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Connections" }));
+    fireEvent.change(screen.getByDisplayValue("Choose a lead to link…"), {
+      target: { value: "lead-2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onLink).toHaveBeenCalledWith("lead-2", "car-1");
+    });
+    expect(onUnlink).not.toHaveBeenCalled();
   });
 });
 

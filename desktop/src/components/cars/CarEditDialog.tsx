@@ -9,12 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Car, CarAttachment, Lead } from "@/types/leads";
 import { getLeadsForCar } from "@/lib/leadCarLinks";
 import { useLeadsLinkedToCar } from "@/hooks/useLeadsLinkedToCar";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
   exportCarNotes,
@@ -42,6 +41,8 @@ interface CarEditDialogProps {
   onOpenLinkedLead?: (lead: Lead) => void;
   /** Optional: sever the connection between this car and a linked lead. */
   onUnlinkLeadFromCar?: (leadId: string, carId: string) => void;
+  /** Optional: create a lead-car connection from this dialog. */
+  onLinkLeadToCar?: (leadId: string, carId: string) => void | Promise<void>;
 }
 
 export function CarEditDialog({
@@ -52,14 +53,17 @@ export function CarEditDialog({
   leads,
   onOpenLinkedLead,
   onUnlinkLeadFromCar,
+  onLinkLeadToCar,
 }: CarEditDialogProps) {
   const [form, setForm] = useState<Partial<Car>>({});
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
   const [fileDropActive, setFileDropActive] = useState(false);
   const [rightPanel, setRightPanel] = useState<"files" | "notes" | "connections">("notes");
   const [pendingUnlinkLeadIds, setPendingUnlinkLeadIds] = useState<Set<string>>(new Set());
+  const [pendingLinkLeadIds, setPendingLinkLeadIds] = useState<Set<string>>(new Set());
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const [savingFromExitPrompt, setSavingFromExitPrompt] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
     setRightPanel("notes");
   }, [car?.id]);
@@ -80,6 +84,7 @@ export function CarEditDialog({
     setAttachments(car.attachments ?? null);
     notesDocRef.current = car.notes_document;
     setPendingUnlinkLeadIds(new Set());
+    setPendingLinkLeadIds(new Set());
   }, [open, car]);
 
   useEffect(() => {
@@ -95,7 +100,16 @@ export function CarEditDialog({
     if (junctionLeads !== undefined) return junctionLeads;
     return car ? getLeadsForCar(car.id, leads ?? []) : [];
   }, [junctionLeads, car, leads]);
-  const linkedLeadsVisible = linkedLeads.filter((l) => !pendingUnlinkLeadIds.has(l.id));
+  const linkedLeadsVisible = useMemo(() => {
+    const base = linkedLeads.filter((l) => !pendingUnlinkLeadIds.has(l.id));
+    const existing = new Set(base.map((l) => l.id));
+    const extra = (leads ?? []).filter((l) => pendingLinkLeadIds.has(l.id) && !existing.has(l.id));
+    return [...base, ...extra];
+  }, [linkedLeads, pendingUnlinkLeadIds, pendingLinkLeadIds, leads]);
+  const leadsAvailableToLink = useMemo(() => {
+    const visibleIds = new Set(linkedLeadsVisible.map((l) => l.id));
+    return (leads ?? []).filter((l) => !visibleIds.has(l.id));
+  }, [leads, linkedLeadsVisible]);
   const showDesiredPrice = linkedLeadsVisible.some((l) => l.lead_type === "seller");
 
   if (!car) return null;
@@ -205,7 +219,7 @@ export function CarEditDialog({
       JSON.stringify(attachmentList) !== JSON.stringify(car.attachments ?? []);
     const notesChanged =
       JSON.stringify(notesDocRef.current ?? null) !== JSON.stringify(car.notes_document ?? null);
-    const linksChanged = pendingUnlinkLeadIds.size > 0;
+    const linksChanged = pendingUnlinkLeadIds.size > 0 || pendingLinkLeadIds.size > 0;
     return formChanged || attachmentsChanged || notesChanged || linksChanged;
   })();
 
@@ -270,6 +284,11 @@ export function CarEditDialog({
         updated_at: new Date().toISOString(),
       } as Car),
     );
+    if (onLinkLeadToCar) {
+      for (const leadId of pendingLinkLeadIds) {
+        await Promise.resolve(onLinkLeadToCar(leadId, car.id));
+      }
+    }
     if (onUnlinkLeadFromCar) {
       for (const leadId of pendingUnlinkLeadIds) {
         await Promise.resolve(onUnlinkLeadFromCar(leadId, car.id));
@@ -280,9 +299,14 @@ export function CarEditDialog({
 
   const handleSave = () => {
     void (async () => {
-      const ok = await persistCarChanges();
-      if (!ok) return;
-      onOpenChange(false);
+      setIsSaving(true);
+      try {
+        const ok = await persistCarChanges();
+        if (!ok) return;
+        onOpenChange(false);
+      } finally {
+        setIsSaving(false);
+      }
     })();
   };
 
@@ -506,22 +530,28 @@ export function CarEditDialog({
           </div>
 
           <div className="flex h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
-            <div className="shrink-0 px-4 pt-3 pb-2">
-              <ToggleGroup
-                type="single"
-                value={rightPanel}
-                onValueChange={(v) => {
-                  if (v === "files" || v === "notes" || v === "connections") setRightPanel(v);
-                }}
-                variant="outline"
-                size="sm"
-                className="justify-start"
-                aria-label={tx("Files, notes, or connections", "Archivos, notas o conexiones")}
-              >
-                <ToggleGroupItem value="files">{tx("Files", "Archivos")}</ToggleGroupItem>
-                <ToggleGroupItem value="notes">{tx("Notes", "Notas")}</ToggleGroupItem>
-                <ToggleGroupItem value="connections">{tx("Connections", "Conexiones")}</ToggleGroupItem>
-              </ToggleGroup>
+            <div className="shrink-0 border-b border-border px-4 pt-2">
+              <div className="flex items-center gap-4">
+                {([
+                  ["files", tx("Files", "Archivos")],
+                  ["notes", tx("Notes", "Notas")],
+                  ["connections", tx("Connections", "Conexiones")],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRightPanel(key)}
+                    className={`relative px-1 py-2 text-sm font-medium transition-colors ${
+                      rightPanel === key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                    {rightPanel === key ? (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {rightPanel === "files" ? (
@@ -679,6 +709,39 @@ export function CarEditDialog({
               </div>
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-sm text-muted-foreground">
+                      {tx("Add linked lead", "Agregar lead vinculado")}
+                    </label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      value=""
+                      disabled={leadsAvailableToLink.length === 0}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (!id) return;
+                        setPendingUnlinkLeadIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(id);
+                          return next;
+                        });
+                        setPendingLinkLeadIds((prev) => new Set(prev).add(id));
+                        e.currentTarget.value = "";
+                      }}
+                    >
+                      <option value="">
+                        {leadsAvailableToLink.length === 0
+                          ? tx("All leads already linked", "Todos los leads ya están vinculados")
+                          : tx("Choose a lead to link…", "Elige un lead para vincular…")}
+                      </option>
+                      {leadsAvailableToLink.map((leadOption) => (
+                        <option key={leadOption.id} value={leadOption.id}>
+                          {(leadOption.name ?? tx("Unknown lead", "Lead desconocido"))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 <div className="rounded-lg border border-border/80 bg-muted/25 p-2 sm:p-3">
                   <p className="mb-2 text-xs font-medium text-muted-foreground">
                     {tx("Linked leads", "Leads vinculados")}
@@ -738,9 +801,17 @@ export function CarEditDialog({
                                   type="button"
                                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
                                   aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
-                                  onClick={() =>
-                                    setPendingUnlinkLeadIds((prev) => new Set(prev).add(leadRow.id))
-                                  }
+                                  onClick={() => {
+                                    if (pendingLinkLeadIds.has(leadRow.id)) {
+                                      setPendingLinkLeadIds((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(leadRow.id);
+                                        return next;
+                                      });
+                                      return;
+                                    }
+                                    setPendingUnlinkLeadIds((prev) => new Set(prev).add(leadRow.id));
+                                  }}
                                 >
                                   <X className="h-4 w-4" aria-hidden />
                                 </button>
@@ -751,14 +822,15 @@ export function CarEditDialog({
                       )}
                     </TableBody>
                   </Table>
-                  {pendingUnlinkLeadIds.size > 0 ? (
+                  {pendingUnlinkLeadIds.size > 0 || pendingLinkLeadIds.size > 0 ? (
                     <p className="mt-2 text-xs text-muted-foreground">
                       {tx(
-                        "Unlinked leads are staged and will persist when you click Save changes.",
-                        "Los desvínculos quedan en borrador y se guardan al hacer clic en Guardar cambios.",
+                        "Connection changes are staged and will persist when you click Save changes.",
+                        "Los cambios de conexión quedan en borrador y se guardan al hacer clic en Guardar cambios.",
                       )}
                     </p>
                   ) : null}
+                </div>
                 </div>
               </div>
             )}
@@ -766,10 +838,19 @@ export function CarEditDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
-          <Button variant="outline" onClick={requestClose}>
+          <Button variant="outline" onClick={requestClose} disabled={isSaving}>
             {tx("Cancel", "Cancelar")}
           </Button>
-          <Button onClick={handleSave}>{tx("Save changes", "Guardar cambios")}</Button>
+          <Button onClick={handleSave} disabled={isSaving} className={isSaving ? "opacity-80" : undefined}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {tx("Saving changes…", "Guardando cambios…")}
+              </>
+            ) : (
+              tx("Save changes", "Guardar cambios")
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

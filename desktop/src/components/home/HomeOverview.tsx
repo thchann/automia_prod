@@ -11,9 +11,9 @@ import {
   listLeadStatuses,
   listLeads,
   listAutomations,
-  getLead,
   updateCar,
   updateLead,
+  addLeadCarLink,
   removeLeadCarLink,
   type AutomationItem,
   type LeadsListResponse,
@@ -507,6 +507,19 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         onOpenLinkedLead={(lead) => {
           setEditCar(null);
           beginEditLead(lead);
+        }}
+        onLinkLeadToCar={async (leadId, carId) => {
+          const lead = leads.find((l) => l.id === leadId);
+          if (!lead || isDraftRecordId(lead.id)) return;
+          await addLeadCarLink(leadId, { car_id: carId });
+          try {
+            const row = await getLead(leadId);
+            await patchLeadRowWithJunctionCars(queryClient, leadId, row);
+          } catch {
+            await queryClient.invalidateQueries({ queryKey: ["leads"] });
+          }
+          await queryClient.invalidateQueries({ queryKey: ["cars"] });
+          await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
         }}
         onUnlinkLeadFromCar={async (leadId, carId) => {
           const lead = leads.find((l) => l.id === leadId);

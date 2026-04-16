@@ -88,7 +88,7 @@ describe("LeadEditDialog save-only staged connections", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Connections" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connections" }));
     fireEvent.click(screen.getByRole("button", { name: "Unlink car from lead" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -111,7 +111,7 @@ describe("LeadEditDialog save-only staged connections", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Connections" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connections" }));
     fireEvent.click(screen.getByRole("button", { name: "Unlink car from lead" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
