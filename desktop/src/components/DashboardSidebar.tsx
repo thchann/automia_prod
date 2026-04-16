@@ -57,7 +57,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
   const [collapsed, setCollapsed] = useState(false);
   const { tx } = useLanguage();
 
-  // Fixed row height; when collapsed, center icons instead of relying on left/right padding.
+  // Fixed row height; icon uses a fixed-width slot so it stays anchored while sidebar expands.
   const navButtonClass =
     "flex h-9 w-full shrink-0 items-center rounded-md text-sm leading-none";
 
@@ -81,11 +81,7 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
           if (!disabled) onActiveItemChange(label);
         }}
         disabled={disabled}
-        className={`${navButtonClass} ${
-          collapsed
-            ? "justify-center px-0"
-            : "justify-start gap-3 pl-3 pr-2"
-        } ${
+        className={`${navButtonClass} justify-start pr-2 ${
           disabled
             ? "text-muted-foreground/60 cursor-not-allowed"
             : isActive
@@ -94,9 +90,11 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         }`}
         title={collapsed ? undefined : label}
       >
-        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="inline-flex h-9 w-[52px] shrink-0 items-center justify-center" aria-hidden>
+          <Icon className="h-4 w-4 shrink-0" />
+        </span>
         {!collapsed && (
-          <span className="min-w-0 flex-1 truncate text-left">
+          <span className="min-w-0 flex-1 truncate pl-1 text-left">
             {tx(displayLabel, translateSidebar(displayLabel))}
           </span>
         )}
