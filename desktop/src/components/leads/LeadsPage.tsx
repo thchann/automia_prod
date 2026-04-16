@@ -4,6 +4,7 @@ import {
   ApiError,
   createLead,
   createLeadStatus,
+  deleteLeadStatus,
   deleteLead,
   listCars,
   listLeadStatuses,
@@ -171,14 +172,42 @@ export function LeadsPage() {
 
   const handleUpdateStatuses = async (next: LeadStatus[]) => {
     const prev = statuses;
+    for (const old of prev) {
+      const stillPresent = next.some((s) => s.id === old.id);
+      if (!stillPresent && !old.id.startsWith("s_")) {
+        try {
+          await deleteLeadStatus(old.id);
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 409) {
+            toast.error(
+              tx(
+                "Cannot delete a status that is in use by leads.",
+                "No se puede eliminar un estado que está en uso por leads.",
+              ),
+            );
+          } else {
+            toast.error(tx("Could not delete status.", "No se pudo eliminar el estado."));
+          }
+          throw e;
+        }
+      }
+    }
+
     for (const s of next) {
       const old = prev.find((p) => p.id === s.id);
       if (!old && s.id.startsWith("s_")) {
-        await createLeadStatus({ name: s.name, display_order: s.display_order });
+        await createLeadStatus({ name: s.name, color: s.color ?? null, display_order: s.display_order });
         continue;
       }
-      if (old && old.name !== s.name && !s.id.startsWith("s_")) {
-        await updateLeadStatus(s.id, { name: s.name });
+      if (old && !s.id.startsWith("s_")) {
+        const nameChanged = old.name !== s.name;
+        const colorChanged = (old.color ?? null) !== (s.color ?? null);
+        if (nameChanged || colorChanged) {
+          await updateLeadStatus(s.id, {
+            ...(nameChanged ? { name: s.name } : {}),
+            ...(colorChanged ? { color: s.color ?? null } : {}),
+          });
+        }
       }
     }
     await queryClient.invalidateQueries({ queryKey: ["lead-statuses"] });

@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,10 +14,9 @@ import { Car, CarAttachment, Lead } from "@/types/leads";
 import { getLeadsForCar } from "@/lib/leadCarLinks";
 import { useLeadsLinkedToCar } from "@/hooks/useLeadsLinkedToCar";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
-  deleteCarAttachment,
   exportCarNotes,
   presignCarAttachmentDownload,
   uploadCarAttachmentsToBucket,
@@ -58,7 +47,6 @@ export function CarEditDialog({
   open,
   onOpenChange,
   onSave,
-  onNotesDocumentAutosave,
   leads,
   onOpenLinkedLead,
   onUnlinkLeadFromCar,
@@ -66,12 +54,8 @@ export function CarEditDialog({
   const [form, setForm] = useState<Partial<Car>>({});
   const [attachments, setAttachments] = useState<Car["attachments"]>(car?.attachments ?? null);
   const [fileDropActive, setFileDropActive] = useState(false);
-  const [rightPanel, setRightPanel] = useState<"files" | "notes">("notes");
-  const [pendingAttachmentDelete, setPendingAttachmentDelete] = useState<{
-    storage_key: string;
-    filename?: string;
-  } | null>(null);
-  const [deletingAttachment, setDeletingAttachment] = useState(false);
+  const [rightPanel, setRightPanel] = useState<"files" | "notes" | "connections">("notes");
+  const [pendingUnlinkLeadIds, setPendingUnlinkLeadIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     setRightPanel("notes");
   }, [car?.id]);
@@ -91,6 +75,7 @@ export function CarEditDialog({
     setForm({ ...car });
     setAttachments(car.attachments ?? null);
     notesDocRef.current = car.notes_document;
+    setPendingUnlinkLeadIds(new Set());
   }, [open, car]);
 
   useEffect(() => {
@@ -106,7 +91,8 @@ export function CarEditDialog({
     if (junctionLeads !== undefined) return junctionLeads;
     return car ? getLeadsForCar(car.id, leads ?? []) : [];
   }, [junctionLeads, car, leads]);
-  const showDesiredPrice = linkedLeads.some((l) => l.lead_type === "seller");
+  const linkedLeadsVisible = linkedLeads.filter((l) => !pendingUnlinkLeadIds.has(l.id));
+  const showDesiredPrice = linkedLeadsVisible.some((l) => l.lead_type === "seller");
 
   if (!car) return null;
 
@@ -145,63 +131,6 @@ export function CarEditDialog({
     if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
     const next = current.filter((_, i) => i !== index);
     setAttachments(next.length ? next : null);
-  };
-
-  const requestRemoveAttachment = (index: number) => {
-    const att = attachmentList[index];
-    if (!att) return;
-    if (isDraftRecordId(car.id)) {
-      removeAttachmentLocal(index);
-      return;
-    }
-    if (att.url?.startsWith("blob:") || !att.storage_key) {
-      removeAttachmentLocal(index);
-      return;
-    }
-    setPendingAttachmentDelete({ storage_key: att.storage_key, filename: att.filename });
-  };
-
-  const confirmDeletePendingAttachment = () => {
-    void (async () => {
-      if (!pendingAttachmentDelete || !car) return;
-      const { storage_key } = pendingAttachmentDelete;
-      setDeletingAttachment(true);
-      try {
-        await deleteCarAttachment(car.id, { storage_key });
-        setAttachments((prev) => {
-          const list = prev ?? [];
-          const next = list.filter((a) => a.storage_key !== storage_key);
-          return next.length ? next : null;
-        });
-        setPendingAttachmentDelete(null);
-        toast.success(tx("Attachment removed.", "Adjunto eliminado."));
-      } catch (e) {
-        if (e instanceof ApiError) {
-          if (e.status === 503) {
-            toast.error(
-              tx(
-                "File storage is not available.",
-                "El almacenamiento de archivos no está disponible.",
-              ),
-            );
-          } else if (e.status === 403) {
-            toast.error(
-              tx("You cannot remove this attachment.", "No puedes eliminar este adjunto."),
-            );
-          } else if (e.status === 404) {
-            toast.error(tx("Attachment not found.", "Adjunto no encontrado."));
-          } else {
-            toast.error(
-              e.message || tx("Could not remove attachment.", "No se pudo eliminar el adjunto."),
-            );
-          }
-        } else {
-          toast.error(tx("Could not remove attachment.", "No se pudo eliminar el adjunto."));
-        }
-      } finally {
-        setDeletingAttachment(false);
-      }
-    })();
   };
 
   const renameAttachment = (index: number, filename: string) => {
@@ -319,7 +248,13 @@ export function CarEditDialog({
           ...(notesDocRef.current !== undefined ? { notes_document: notesDocRef.current } : {}),
           updated_at: new Date().toISOString(),
         } as Car),
-      ).then(() => onOpenChange(false));
+      );
+      if (onUnlinkLeadFromCar) {
+        for (const leadId of pendingUnlinkLeadIds) {
+          await Promise.resolve(onUnlinkLeadFromCar(leadId, car.id));
+        }
+      }
+      onOpenChange(false);
     })();
   };
 
@@ -361,57 +296,6 @@ export function CarEditDialog({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
               <div className="grid gap-4">
-                {linkedLeads.length > 0 ? (
-                  <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">
-                      {tx("Linked leads", "Leads vinculados")}
-                    </p>
-                    <ul className="space-y-2">
-                      {linkedLeads.map((lead) => (
-                        <li
-                          key={lead.id}
-                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {lead.name ?? tx("Unknown lead", "Lead desconocido")}
-                            </p>
-                            <span className="text-[11px] text-muted-foreground capitalize">
-                              {lead.lead_type === "buyer"
-                                ? tx("buyer", "comprador")
-                                : lead.lead_type === "seller"
-                                  ? tx("seller", "vendedor")
-                                  : tx("pending", "pendiente")}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {onOpenLinkedLead ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 shrink-0 text-xs"
-                                onClick={() => onOpenLinkedLead(lead)}
-                              >
-                                {tx("Open", "Abrir")}
-                              </Button>
-                            ) : null}
-                            {onUnlinkLeadFromCar ? (
-                              <button
-                                type="button"
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-transparent text-[10px] font-semibold text-destructive opacity-0 transition-opacity hover:border-destructive hover:bg-destructive/10 group-hover:opacity-100"
-                                aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
-                                onClick={() => onUnlinkLeadFromCar(lead.id, car.id)}
-                              >
-                                <X className="h-3 w-3" aria-hidden />
-                              </button>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Brand", "Marca")}</label>
@@ -579,15 +463,16 @@ export function CarEditDialog({
                 type="single"
                 value={rightPanel}
                 onValueChange={(v) => {
-                  if (v === "files" || v === "notes") setRightPanel(v);
+                  if (v === "files" || v === "notes" || v === "connections") setRightPanel(v);
                 }}
                 variant="outline"
                 size="sm"
                 className="justify-start"
-                aria-label={tx("Files or notes", "Archivos o notas")}
+                aria-label={tx("Files, notes, or connections", "Archivos, notas o conexiones")}
               >
                 <ToggleGroupItem value="files">{tx("Files", "Archivos")}</ToggleGroupItem>
                 <ToggleGroupItem value="notes">{tx("Notes", "Notas")}</ToggleGroupItem>
+                <ToggleGroupItem value="connections">{tx("Connections", "Conexiones")}</ToggleGroupItem>
               </ToggleGroup>
             </div>
 
@@ -664,7 +549,7 @@ export function CarEditDialog({
                               size="sm"
                               type="button"
                               title={tx("Remove", "Quitar")}
-                              onClick={() => requestRemoveAttachment(idx)}
+                              onClick={() => removeAttachmentLocal(idx)}
                               className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -726,7 +611,7 @@ export function CarEditDialog({
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : rightPanel === "notes" ? (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 sm:px-4 sm:pb-4">
                 <LeadNotesEditor
                   ref={notesEditorRef}
@@ -741,11 +626,72 @@ export function CarEditDialog({
                   exportDownloadBasename={`car-${car.id}-notes`}
                   onPersist={async (json) => {
                     notesDocRef.current = json;
-                    if (!isDraftRecordId(car.id)) {
-                      await onNotesDocumentAutosave?.(car.id, json);
-                    }
                   }}
                 />
+              </div>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+                <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    {tx("Linked leads", "Leads vinculados")}
+                  </p>
+                  {linkedLeadsVisible.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{tx("No linked leads.", "Sin leads vinculados.")}</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {linkedLeadsVisible.map((lead) => (
+                        <li
+                          key={lead.id}
+                          className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {lead.name ?? tx("Unknown lead", "Lead desconocido")}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground capitalize">
+                              {lead.lead_type === "buyer"
+                                ? tx("buyer", "comprador")
+                                : lead.lead_type === "seller"
+                                  ? tx("seller", "vendedor")
+                                  : tx("pending", "pendiente")}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {onOpenLinkedLead ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 shrink-0 text-xs"
+                                onClick={() => onOpenLinkedLead(lead)}
+                              >
+                                {tx("Open", "Abrir")}
+                              </Button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-transparent text-[10px] font-semibold text-destructive opacity-0 transition-opacity hover:border-destructive hover:bg-destructive/10 group-hover:opacity-100"
+                              aria-label={tx("Unlink lead from car", "Desvincular lead del auto")}
+                              onClick={() =>
+                                setPendingUnlinkLeadIds((prev) => new Set(prev).add(lead.id))
+                              }
+                            >
+                              <X className="h-3 w-3" aria-hidden />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {pendingUnlinkLeadIds.size > 0 ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {tx(
+                        "Unlinked leads are staged and will persist when you click Save changes.",
+                        "Los desvínculos quedan en borrador y se guardan al hacer clic en Guardar cambios.",
+                      )}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>
@@ -760,51 +706,6 @@ export function CarEditDialog({
       </DialogContent>
     </Dialog>
 
-    <AlertDialog
-      open={pendingAttachmentDelete != null}
-      onOpenChange={(next) => {
-        if (!next) setPendingAttachmentDelete(null);
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{tx("Delete attachment?", "¿Eliminar adjunto?")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {pendingAttachmentDelete?.filename
-              ? tx(
-                  `“${pendingAttachmentDelete.filename}” will be removed from storage. This cannot be undone.`,
-                  `“${pendingAttachmentDelete.filename}” se eliminará del almacenamiento. No se puede deshacer.`,
-                )
-              : tx(
-                  "This file will be removed from storage. This cannot be undone.",
-                  "Este archivo se eliminará del almacenamiento. No se puede deshacer.",
-                )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deletingAttachment}>
-            {tx("Cancel", "Cancelar")}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="inline-flex items-center justify-center bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={deletingAttachment}
-            onClick={(e) => {
-              e.preventDefault();
-              confirmDeletePendingAttachment();
-            }}
-          >
-            {deletingAttachment ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                {tx("Deleting…", "Eliminando…")}
-              </>
-            ) : (
-              tx("Delete", "Eliminar")
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }

@@ -13,6 +13,9 @@
     "preview:desktop": "npm run preview -w @automia/desktop",
     "preview:mobile": "npm run preview -w @automia/mobile",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "test:desktop:unit": "npm run test -w @automia/desktop",
+    "test:desktop:e2e": "npx playwright test --config desktop/playwright.config.ts",
+    "test:critical": "npm run test:desktop:unit"
   }
 }

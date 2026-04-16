@@ -48,7 +48,7 @@ export function mapStatusFromApi(s: LeadStatusResponse): LeadStatus {
     id: s.id,
     name: s.name,
     display_order: s.display_order,
-    color: null,
+    color: s.color,
     is_default: false,
     created_at: s.created_at,
   };

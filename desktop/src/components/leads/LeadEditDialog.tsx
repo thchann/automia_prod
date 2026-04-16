@@ -1,15 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,10 +12,9 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Lead, LeadStatus, Car, CarAttachment } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
-import { Download, Eye, FileText, Loader2, Trash2, Upload, X } from "lucide-react";
+import { Download, Eye, FileText, Trash2, Upload, X } from "lucide-react";
 import {
   ApiError,
-  deleteLeadAttachment,
   exportLeadNotes,
   presignLeadAttachmentDownload,
   uploadLeadAttachmentsToBucket,
@@ -54,19 +43,13 @@ export function LeadEditDialog({
   open,
   onOpenChange,
   onSave,
-  onNotesDocumentAutosave,
   statuses,
   cars,
 }: LeadEditDialogProps) {
   const [form, setForm] = useState<Partial<Lead>>({});
   const [attachments, setAttachments] = useState<CarAttachment[]>([]);
   const [fileDropActive, setFileDropActive] = useState(false);
-  const [rightPanel, setRightPanel] = useState<"files" | "notes">("notes");
-  const [pendingAttachmentDelete, setPendingAttachmentDelete] = useState<{
-    storage_key: string;
-    filename?: string;
-  } | null>(null);
-  const [deletingAttachment, setDeletingAttachment] = useState(false);
+  const [rightPanel, setRightPanel] = useState<"files" | "notes" | "connections">("notes");
   useEffect(() => {
     setRightPanel("notes");
   }, [lead?.id]);
@@ -226,59 +209,6 @@ export function LeadEditDialog({
     setAttachments(attachmentList.filter((_, i) => i !== index));
   };
 
-  const requestRemoveAttachment = (index: number) => {
-    const att = attachmentList[index];
-    if (!att) return;
-    if (isDraftRecordId(lead.id)) {
-      removeAttachmentLocal(index);
-      return;
-    }
-    if (att.url?.startsWith("blob:") || !att.storage_key) {
-      removeAttachmentLocal(index);
-      return;
-    }
-    setPendingAttachmentDelete({ storage_key: att.storage_key, filename: att.filename });
-  };
-
-  const confirmDeletePendingAttachment = () => {
-    void (async () => {
-      if (!pendingAttachmentDelete || !lead) return;
-      const { storage_key } = pendingAttachmentDelete;
-      setDeletingAttachment(true);
-      try {
-        await deleteLeadAttachment(lead.id, { storage_key });
-        setAttachments((prev) => prev.filter((a) => a.storage_key !== storage_key));
-        setPendingAttachmentDelete(null);
-        toast.success(tx("Attachment removed.", "Adjunto eliminado."));
-      } catch (e) {
-        if (e instanceof ApiError) {
-          if (e.status === 503) {
-            toast.error(
-              tx(
-                "File storage is not available.",
-                "El almacenamiento de archivos no está disponible.",
-              ),
-            );
-          } else if (e.status === 403) {
-            toast.error(
-              tx("You cannot remove this attachment.", "No puedes eliminar este adjunto."),
-            );
-          } else if (e.status === 404) {
-            toast.error(tx("Attachment not found.", "Adjunto no encontrado."));
-          } else {
-            toast.error(
-              e.message || tx("Could not remove attachment.", "No se pudo eliminar el adjunto."),
-            );
-          }
-        } else {
-          toast.error(tx("Could not remove attachment.", "No se pudo eliminar el adjunto."));
-        }
-      } finally {
-        setDeletingAttachment(false);
-      }
-    })();
-  };
-
   const renameAttachment = (index: number, filename: string) => {
     const current = attachmentList;
     const row = current[index];
@@ -368,56 +298,6 @@ export function LeadEditDialog({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
               <div className="grid gap-4">
-                {linkedRows.length > 0 ? (
-                  <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">
-                      {tx("Linked cars", "Autos vinculados")}
-                    </p>
-                    <ul className="space-y-2">
-                      {linkedRows.map((row) => (
-                        <li
-                          key={row.type === "car" ? row.car.id : `orphan-${row.id}`}
-                          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
-                        >
-                          <div className="min-w-0">
-                            {row.type === "car" ? (
-                              <>
-                                <p className="truncate text-sm font-medium text-foreground">
-                                  {row.car.year} {row.car.brand} {row.car.model}
-                                </p>
-                                <span className="text-[11px] text-muted-foreground capitalize">
-                                  {row.car.status === "sold"
-                                    ? tx("sold", "vendido")
-                                    : tx("available", "disponible")}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <p className="truncate text-sm font-medium text-foreground">
-                                  {tx("Unknown car (not in inventory)", "Auto desconocido (no en inventario)")}
-                                </p>
-                                <span
-                                  className="block truncate font-mono text-[11px] text-muted-foreground"
-                                  title={row.id}
-                                >
-                                  {row.id}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
-                            aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
-                            onClick={() => removeLinkedCar(row.type === "car" ? row.car.id : row.id)}
-                          >
-                            <X className="h-4 w-4" aria-hidden />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Name", "Nombre")}</label>
@@ -586,15 +466,16 @@ export function LeadEditDialog({
                 type="single"
                 value={rightPanel}
                 onValueChange={(v) => {
-                  if (v === "files" || v === "notes") setRightPanel(v);
+                  if (v === "files" || v === "notes" || v === "connections") setRightPanel(v);
                 }}
                 variant="outline"
                 size="sm"
                 className="justify-start"
-                aria-label={tx("Files or notes", "Archivos o notas")}
+                aria-label={tx("Files, notes, or connections", "Archivos, notas o conexiones")}
               >
                 <ToggleGroupItem value="files">{tx("Files", "Archivos")}</ToggleGroupItem>
                 <ToggleGroupItem value="notes">{tx("Notes", "Notas")}</ToggleGroupItem>
+                <ToggleGroupItem value="connections">{tx("Connections", "Conexiones")}</ToggleGroupItem>
               </ToggleGroup>
             </div>
 
@@ -671,7 +552,7 @@ export function LeadEditDialog({
                               size="sm"
                               type="button"
                               title={tx("Remove", "Quitar")}
-                              onClick={() => requestRemoveAttachment(idx)}
+                              onClick={() => removeAttachmentLocal(idx)}
                               className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -733,7 +614,7 @@ export function LeadEditDialog({
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : rightPanel === "notes" ? (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 sm:px-4 sm:pb-4">
                 <LeadNotesEditor
                   ref={notesEditorRef}
@@ -750,11 +631,89 @@ export function LeadEditDialog({
                   exportDownloadBasename={`lead-${lead.id}-notes`}
                   onPersist={async (json) => {
                     notesDocRef.current = json;
-                    if (!isDraftRecordId(lead.id)) {
-                      await onNotesDocumentAutosave?.(lead.id, json);
-                    }
                   }}
                 />
+              </div>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">{tx("Add linked car", "Agregar auto vinculado")}</label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      value=""
+                      disabled={carsAvailableToLink.length === 0}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (id) addLinkedCar(id);
+                        e.currentTarget.value = "";
+                      }}
+                    >
+                      <option value="">
+                        {carsAvailableToLink.length === 0
+                          ? tx("All cars already linked", "Todos los autos ya están vinculados")
+                          : tx("Choose a car to link…", "Elige un auto para vincular…")}
+                      </option>
+                      {carsAvailableToLink.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.year} {c.brand} {c.model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      {tx("Linked cars", "Autos vinculados")}
+                    </p>
+                    {linkedRows.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">{tx("No linked cars.", "Sin autos vinculados.")}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {linkedRows.map((row) => (
+                          <li
+                            key={row.type === "car" ? row.car.id : `orphan-${row.id}`}
+                            className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 px-2 py-1.5"
+                          >
+                            <div className="min-w-0">
+                              {row.type === "car" ? (
+                                <>
+                                  <p className="truncate text-sm font-medium text-foreground">
+                                    {row.car.year} {row.car.brand} {row.car.model}
+                                  </p>
+                                  <span className="text-[11px] text-muted-foreground capitalize">
+                                    {row.car.status === "sold"
+                                      ? tx("sold", "vendido")
+                                      : tx("available", "disponible")}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="truncate text-sm font-medium text-foreground">
+                                    {tx("Unknown car (not in inventory)", "Auto desconocido (no en inventario)")}
+                                  </p>
+                                  <span
+                                    className="block truncate font-mono text-[11px] text-muted-foreground"
+                                    title={row.id}
+                                  >
+                                    {row.id}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-transparent text-destructive transition-colors hover:border-destructive hover:bg-destructive/10"
+                              aria-label={tx("Unlink car from lead", "Desvincular auto del lead")}
+                              onClick={() => removeLinkedCar(row.type === "car" ? row.car.id : row.id)}
+                            >
+                              <X className="h-4 w-4" aria-hidden />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -769,51 +728,6 @@ export function LeadEditDialog({
       </DialogContent>
     </Dialog>
 
-    <AlertDialog
-      open={pendingAttachmentDelete != null}
-      onOpenChange={(next) => {
-        if (!next) setPendingAttachmentDelete(null);
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{tx("Delete attachment?", "¿Eliminar adjunto?")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {pendingAttachmentDelete?.filename
-              ? tx(
-                  `“${pendingAttachmentDelete.filename}” will be removed from storage. This cannot be undone.`,
-                  `“${pendingAttachmentDelete.filename}” se eliminará del almacenamiento. No se puede deshacer.`,
-                )
-              : tx(
-                  "This file will be removed from storage. This cannot be undone.",
-                  "Este archivo se eliminará del almacenamiento. No se puede deshacer.",
-                )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deletingAttachment}>
-            {tx("Cancel", "Cancelar")}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="inline-flex items-center justify-center bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={deletingAttachment}
-            onClick={(e) => {
-              e.preventDefault();
-              confirmDeletePendingAttachment();
-            }}
-          >
-            {deletingAttachment ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                {tx("Deleting…", "Eliminando…")}
-              </>
-            ) : (
-              tx("Delete", "Eliminar")
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }

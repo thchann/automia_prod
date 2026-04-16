@@ -3,6 +3,22 @@ import { Plus, MoreVertical } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { getLead } from "@automia/api";
 import { mapLeadFromApi } from "@/lib/apiMappers";
@@ -46,6 +62,8 @@ export function LeadsFunnel({
   };
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingColor, setEditingColor] = useState("#6B7280");
+  const [pendingDeleteStatusId, setPendingDeleteStatusId] = useState<string | null>(null);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStatusId, setDragOverStatusId] = useState<string | null>(null);
 
@@ -82,14 +100,27 @@ export function LeadsFunnel({
   const startEditColumn = (status: LeadStatus) => {
     setEditingColumnId(status.id);
     setEditingName(status.name);
+    setEditingColor(status.color || "#6B7280");
   };
 
   const saveColumnName = () => {
     if (!editingColumnId) return;
     onUpdateStatuses(
-      statuses.map((s) => (s.id === editingColumnId ? { ...s, name: editingName } : s)),
+      statuses.map((s) =>
+        s.id === editingColumnId ? { ...s, name: editingName, color: editingColor } : s,
+      ),
     );
     setEditingColumnId(null);
+  };
+
+  const requestDeleteColumn = (statusId: string) => {
+    setPendingDeleteStatusId(statusId);
+  };
+
+  const confirmDeleteColumn = () => {
+    if (!pendingDeleteStatusId) return;
+    onUpdateStatuses(statuses.filter((s) => s.id !== pendingDeleteStatusId));
+    setPendingDeleteStatusId(null);
   };
 
   const addColumn = () => {
@@ -129,14 +160,23 @@ export function LeadsFunnel({
               <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {editingColumnId === status.id ? (
-                    <Input
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={saveColumnName}
-                      onKeyDown={(e) => e.key === "Enter" && saveColumnName()}
-                      className="h-7 min-w-0 flex-1 text-sm font-semibold"
-                      autoFocus
-                    />
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        type="color"
+                        aria-label={tx("Status color", "Color del estado")}
+                        value={editingColor}
+                        onChange={(e) => setEditingColor(e.target.value)}
+                        className="h-7 w-7 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
+                      />
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={saveColumnName}
+                        onKeyDown={(e) => e.key === "Enter" && saveColumnName()}
+                        className="h-7 min-w-0 flex-1 text-sm font-semibold"
+                        autoFocus
+                      />
+                    </div>
                   ) : (
                     <>
                       <span className="truncate text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -148,13 +188,28 @@ export function LeadsFunnel({
                     </>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="shrink-0 text-muted-foreground hover:text-foreground p-1"
-                  onClick={() => startEditColumn(status)}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tx("Status actions", "Acciones del estado")}
+                      className="shrink-0 text-muted-foreground hover:text-foreground p-1"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => startEditColumn(status)}>
+                      {tx("Edit", "Editar")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => requestDeleteColumn(status.id)}
+                    >
+                      {tx("Delete", "Eliminar")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Cards */}
@@ -243,6 +298,34 @@ export function LeadsFunnel({
         statuses={statuses}
         cars={cars}
       />
+
+      <AlertDialog
+        open={pendingDeleteStatusId != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteStatusId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tx("Delete status?", "¿Eliminar estado?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {tx(
+                "This will remove the status if it is not currently in use.",
+                "Esto eliminará el estado si no está en uso.",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tx("Cancel", "Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDeleteColumn}
+            >
+              {tx("Delete", "Eliminar")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

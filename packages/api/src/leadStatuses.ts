@@ -8,16 +8,21 @@ export async function listLeadStatuses(): Promise<LeadStatusesListResponse> {
 export async function createLeadStatus(body: {
   name: string;
   display_order?: number;
+  color?: string | null;
 }): Promise<LeadStatusResponse> {
   return apiRequest<LeadStatusResponse>("/leads/statuses", {
     method: "POST",
-    body: JSON.stringify({ name: body.name, display_order: body.display_order ?? 0 }),
+    body: JSON.stringify({
+      name: body.name,
+      display_order: body.display_order ?? 0,
+      ...(body.color !== undefined ? { color: body.color } : {}),
+    }),
   });
 }
 
 export async function updateLeadStatus(
   id: string,
-  body: { name?: string; display_order?: number | null },
+  body: { name?: string; display_order?: number | null; color?: string | null },
 ): Promise<LeadStatusResponse> {
   return apiRequest<LeadStatusResponse>(`/leads/statuses/${id}`, {
     method: "PUT",

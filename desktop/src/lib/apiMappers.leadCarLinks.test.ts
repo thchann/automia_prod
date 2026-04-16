@@ -4,6 +4,7 @@ import {
   leadCarLinkFieldsFromApiCars,
   leadToUpdatePayloadOmitCarLinks,
   mapLeadFromApi,
+  mapStatusFromApi,
   mergeLeadResponseWithClientCarLinks,
 } from "./apiMappers";
 import type { Lead } from "@/types/leads";
@@ -46,6 +47,21 @@ describe("mapLeadFromApi car link normalization", () => {
     const r = baseLeadResponse({ car_id: "car-a", car_ids: ["car-a", "car-b"] });
     const lead = mapLeadFromApi(r);
     expect(lead.car_ids).toEqual(["car-a", "car-b"]);
+  });
+});
+
+describe("mapStatusFromApi", () => {
+  it("maps backend color field", () => {
+    const mapped = mapStatusFromApi({
+      id: "st-1",
+      user_id: "u-1",
+      name: "Qualified",
+      color: "#22c55e",
+      display_order: 1,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: null,
+    });
+    expect(mapped.color).toBe("#22c55e");
   });
 });
 
