@@ -87,6 +87,26 @@ function makeSecondLead(): Lead {
 }
 
 describe("CarEditDialog save-only staged connections", () => {
+  it("closes directly when nothing changed", () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onOpenChange = vi.fn();
+    render(
+      <CarEditDialog
+        car={makeCar()}
+        open
+        onOpenChange={onOpenChange}
+        onSave={onSave}
+        leads={[makeLead()]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("Save your changes before leaving?")).not.toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("does not persist unlink until Save changes", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const onUnlink = vi.fn().mockResolvedValue(undefined);

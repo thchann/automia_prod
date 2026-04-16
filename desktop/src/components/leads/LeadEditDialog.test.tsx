@@ -75,6 +75,27 @@ function makeCars(): Car[] {
 }
 
 describe("LeadEditDialog save-only staged connections", () => {
+  it("closes directly when nothing changed", () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onOpenChange = vi.fn();
+    render(
+      <LeadEditDialog
+        lead={makeLead()}
+        open
+        onOpenChange={onOpenChange}
+        onSave={onSave}
+        statuses={[]}
+        cars={makeCars()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("Save your changes before leaving?")).not.toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("applies unlink only through Save payload", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(

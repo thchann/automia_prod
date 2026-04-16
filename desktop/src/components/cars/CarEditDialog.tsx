@@ -113,6 +113,7 @@ export function CarEditDialog({
   const showDesiredPrice = linkedLeadsVisible.some((l) => l.lead_type === "seller");
 
   if (!car) return null;
+  const isHydrated = hydratedCarIdRef.current === car.id;
 
   const handleFilesSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -214,6 +215,7 @@ export function CarEditDialog({
   };
 
   const hasUnsavedChanges = (() => {
+    if (!isHydrated) return false;
     const formChanged = JSON.stringify(form) !== JSON.stringify({ ...car });
     const attachmentsChanged =
       JSON.stringify(attachmentList) !== JSON.stringify(car.attachments ?? []);

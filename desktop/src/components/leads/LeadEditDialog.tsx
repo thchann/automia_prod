@@ -83,6 +83,7 @@ export function LeadEditDialog({
   }, [open]);
 
   if (!lead) return null;
+  const isHydrated = hydratedLeadIdRef.current === lead.id;
 
   const leadType = form.lead_type || "pending";
   const attachmentList = attachments;
@@ -122,6 +123,7 @@ export function LeadEditDialog({
   };
 
   const hasUnsavedChanges = (() => {
+    if (!isHydrated) return false;
     const formChanged = JSON.stringify(form) !== JSON.stringify({ ...lead });
     const attachmentsChanged =
       JSON.stringify(attachmentList) !== JSON.stringify(lead.attachments ?? []);
