@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, MoreVertical } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
@@ -63,6 +63,10 @@ export function LeadsFunnel({
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingColor, setEditingColor] = useState("#6B7280");
+  const statusEditAreaRef = useRef<HTMLDivElement | null>(null);
+  const saveColumnNameRef = useRef<() => void>(() => {});
+  /** Prevents duplicate commits when `pointerdown` and `blur` fire in the same interaction. */
+  const statusEditCommitLockRef = useRef(false);
   const [pendingDeleteStatusId, setPendingDeleteStatusId] = useState<string | null>(null);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverStatusId, setDragOverStatusId] = useState<string | null>(null);
@@ -98,20 +102,54 @@ export function LeadsFunnel({
   };
 
   const startEditColumn = (status: LeadStatus) => {
+    statusEditCommitLockRef.current = false;
     setEditingColumnId(status.id);
     setEditingName(status.name);
     setEditingColor(status.color || "#6B7280");
   };
 
   const saveColumnName = () => {
-    if (!editingColumnId) return;
-    onUpdateStatuses(
-      statuses.map((s) =>
-        s.id === editingColumnId ? { ...s, name: editingName, color: editingColor } : s,
-      ),
-    );
+    if (!editingColumnId || statusEditCommitLockRef.current) return;
+    statusEditCommitLockRef.current = true;
+    const id = editingColumnId;
+    const nextName = editingName;
+    const nextColor = editingColor;
     setEditingColumnId(null);
+    try {
+      onUpdateStatuses(
+        statuses.map((s) => (s.id === id ? { ...s, name: nextName, color: nextColor } : s)),
+      );
+    } finally {
+      queueMicrotask(() => {
+        statusEditCommitLockRef.current = false;
+      });
+    }
   };
+
+  saveColumnNameRef.current = saveColumnName;
+
+  /** True when focus moved to something outside the name/color edit strip (e.g. Tab to next control). */
+  const shouldCommitStatusEditOnBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget;
+    if (next == null) return true;
+    const el = statusEditAreaRef.current;
+    if (!el) return true;
+    return !el.contains(next as Node);
+  };
+
+  /** Click outside the edit strip (covers color picker + name) commits via `onUpdateStatuses` → `updateLeadStatus`. */
+  useEffect(() => {
+    if (!editingColumnId) return;
+    const onPointerDownCapture = (ev: PointerEvent) => {
+      const el = statusEditAreaRef.current;
+      const target = ev.target as Node | null;
+      if (!el || !target) return;
+      if (el.contains(target)) return;
+      saveColumnNameRef.current();
+    };
+    document.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => document.removeEventListener("pointerdown", onPointerDownCapture, true);
+  }, [editingColumnId]);
 
   const requestDeleteColumn = (statusId: string) => {
     setPendingDeleteStatusId(statusId);
@@ -160,18 +198,26 @@ export function LeadsFunnel({
               <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {editingColumnId === status.id ? (
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div
+                      ref={statusEditAreaRef}
+                      className="flex min-w-0 flex-1 items-center gap-2"
+                    >
                       <input
                         type="color"
                         aria-label={tx("Status color", "Color del estado")}
                         value={editingColor}
                         onChange={(e) => setEditingColor(e.target.value)}
+                        onBlur={(e) => {
+                          if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
+                        }}
                         className="h-7 w-7 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
                       />
                       <Input
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
-                        onBlur={saveColumnName}
+                        onBlur={(e) => {
+                          if (shouldCommitStatusEditOnBlur(e)) saveColumnName();
+                        }}
                         onKeyDown={(e) => e.key === "Enter" && saveColumnName()}
                         className="h-7 min-w-0 flex-1 text-sm font-semibold"
                         autoFocus
