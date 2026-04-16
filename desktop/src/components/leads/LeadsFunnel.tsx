@@ -221,7 +221,7 @@ export function LeadsFunnel({
                             />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-44">
+                        <DropdownMenuContent align="start" className="w-fit min-w-0">
                           {LEAD_STATUS_PALETTE.map((hex) => (
                             <DropdownMenuItem
                               key={hex}
@@ -234,7 +234,7 @@ export function LeadsFunnel({
                                 aria-hidden
                               />
                               {editingColor.toUpperCase() === hex ? (
-                                <span className="ml-auto text-[11px] text-muted-foreground">
+                                <span className="text-[11px] text-muted-foreground">
                                   {tx("Selected", "Seleccionado")}
                                 </span>
                               ) : null}
