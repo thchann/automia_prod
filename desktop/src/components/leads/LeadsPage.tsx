@@ -17,6 +17,8 @@ import { LeadsTable } from "./LeadsTable";
 import { LeadsFunnel } from "./LeadsFunnel";
 import { Lead, LeadStatus } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 import {
   mapCarFromApi,
   mapLeadFromApi,
@@ -78,6 +80,8 @@ export function LeadsPage() {
   );
 
   const [tab, setTab] = useState<Tab>("table");
+  const [showGenerateMenu, setShowGenerateMenu] = useState(false);
+  const [generateLeadSignal, setGenerateLeadSignal] = useState(0);
 
   const moveLeadStatusMutation = useMutation({
     mutationFn: ({ leadId, statusId }: { leadId: string; statusId: string }) =>
@@ -220,21 +224,61 @@ export function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center gap-0 border-b border-border">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-            {tab === t.key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
+      </div>
+
+      <div className="flex items-end justify-between gap-4">
+        <div className="flex items-center gap-0 border-b border-border">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+                tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+              {tab === t.key && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="relative pb-1">
+          <Button size="sm" onClick={() => setShowGenerateMenu((v) => !v)}>
+            + {tx("Generate Lead", "Generar lead")} <ChevronDown className="h-3 w-3 ml-1" />
+          </Button>
+          {showGenerateMenu && (
+            <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
+              <button
+                type="button"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
+                onClick={() => {
+                  setTab("table");
+                  setGenerateLeadSignal((s) => s + 1);
+                  setShowGenerateMenu(false);
+                }}
+              >
+                {tx("Manual entry", "Entrada manual")}
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                disabled
+              >
+                {tx("Import CSV", "Importar CSV")}
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                disabled
+              >
+                {tx("From Instagram", "Desde Instagram")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -247,6 +291,7 @@ export function LeadsPage() {
             onNotesDocumentAutosave={handleNotesDocumentAutosave}
             onDeleteLead={handleDeleteLead}
             onAddLead={handleAddLead}
+            generateLeadSignal={generateLeadSignal}
           />
         )}
         {tab === "funnel" && (

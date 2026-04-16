@@ -6,7 +6,6 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
@@ -54,6 +53,8 @@ interface LeadsTableProps {
   onNotesDocumentAutosave?: (leadId: string, document: Record<string, unknown>) => void | Promise<void>;
   onDeleteLead: (id: string) => void | Promise<void>;
   onAddLead: () => Lead | Promise<Lead>;
+  /** Increment to request opening a newly generated draft lead in this table context. */
+  generateLeadSignal?: number;
 }
 
 const PAGE_SIZE = 9;
@@ -104,6 +105,7 @@ export function LeadsTable({
   onNotesDocumentAutosave,
   onDeleteLead,
   onAddLead,
+  generateLeadSignal = 0,
 }: LeadsTableProps) {
   const { tx, locale } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -129,7 +131,6 @@ export function LeadsTable({
   const [unmatchCarsOpen, setUnmatchCarsOpen] = useState(false);
   const [pendingDeleteLeadIds, setPendingDeleteLeadIds] = useState<string[] | null>(null);
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
-  const [showGenerateMenu, setShowGenerateMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   /** Selected pipeline status id, or `__unassigned__` for leads with no status; `null` = no card filter. */
   const [cardFilter, setCardFilter] = useState<string | null>(null);
@@ -351,49 +352,15 @@ export function LeadsTable({
     setSelected(new Set());
   };
 
+  useEffect(() => {
+    if (generateLeadSignal <= 0) return;
+    void Promise.resolve(onAddLead()).then((created) => {
+      beginEditLead(created);
+    });
+  }, [generateLeadSignal, onAddLead]);
+
   return (
     <div className="flex max-w-full flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Button size="sm" onClick={() => setShowGenerateMenu(!showGenerateMenu)}>
-              + {tx("Generate Lead", "Generar lead")} <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-            {showGenerateMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
-                <button
-                  type="button"
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover transition-colors"
-                  onClick={() => {
-                    void Promise.resolve(onAddLead()).then((created) => {
-                      beginEditLead(created);
-                      setShowGenerateMenu(false);
-                    });
-                  }}
-                >
-                  {tx("Manual entry", "Entrada manual")}
-                </button>
-                <button
-                  type="button"
-                  className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
-                  disabled
-                >
-                  {tx("Import CSV", "Importar CSV")}
-                </button>
-                <button
-                  type="button"
-                  className="w-full text-left px-4 py-2 text-sm text-muted-foreground cursor-not-allowed"
-                  disabled
-                >
-                  {tx("From Instagram", "Desde Instagram")}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
         <div
           className="flex min-w-0 flex-nowrap gap-4 px-1"
