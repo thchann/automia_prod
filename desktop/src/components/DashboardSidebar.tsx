@@ -57,9 +57,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
   const [collapsed, setCollapsed] = useState(false);
   const { tx } = useLanguage();
 
-  // Same left inset expanded/collapsed; fixed row height so icon-only rows match icon+label height.
+  // Fixed row height; when collapsed, center icons instead of relying on left/right padding.
   const navButtonClass =
-    "flex h-9 w-full shrink-0 items-center justify-start gap-3 rounded-md pl-3 pr-2 text-sm leading-none";
+    "flex h-9 w-full shrink-0 items-center rounded-md text-sm leading-none";
 
   const NavButton = ({
     label,
@@ -82,6 +82,10 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         }}
         disabled={disabled}
         className={`${navButtonClass} ${
+          collapsed
+            ? "justify-center px-0"
+            : "justify-start gap-3 pl-3 pr-2"
+        } ${
           disabled
             ? "text-muted-foreground/60 cursor-not-allowed"
             : isActive
@@ -159,7 +163,9 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="flex h-9 w-full shrink-0 items-center justify-start pl-3 pr-2 text-muted-foreground hover:text-foreground"
+          className={`flex h-9 w-full shrink-0 items-center text-muted-foreground hover:text-foreground ${
+            collapsed ? "justify-center px-0" : "justify-start pl-3 pr-2"
+          }`}
           aria-label={collapsed ? tx("Expand sidebar", "Expandir barra lateral") : tx("Collapse sidebar", "Colapsar barra lateral")}
         >
           <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
