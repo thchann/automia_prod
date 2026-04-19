@@ -227,6 +227,7 @@ export function LeadsFunnel({
                           {LEAD_STATUS_PALETTE.map((hex) => (
                             <DropdownMenuItem
                               key={hex}
+                              aria-label={hex}
                               onSelect={() => setEditingColor(hex)}
                               className="flex items-center gap-2"
                             >

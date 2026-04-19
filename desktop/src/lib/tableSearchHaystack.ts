@@ -234,6 +234,19 @@ export function defaultCarSearchColumns(): Set<CarSearchColumnId> {
   return new Set(CAR_SEARCH_COLUMN_IDS);
 }
 
+/** Keep column order in sync with set membership: preserve prior order, append new ids in canonical order. */
+export function reconcileColumnOrder<T extends string>(
+  canonical: readonly T[],
+  membership: Set<T>,
+  previousOrder: T[],
+): T[] {
+  const kept = previousOrder.filter((id) => membership.has(id));
+  for (const id of canonical) {
+    if (membership.has(id) && !kept.includes(id)) kept.push(id);
+  }
+  return kept;
+}
+
 export function buildCarSearchHaystackForColumns(
   car: Car,
   active: Set<CarSearchColumnId>,

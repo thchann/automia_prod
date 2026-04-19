@@ -29,7 +29,19 @@ import {
   serializeNotesDocument,
 } from "@/lib/editDialogDirtyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
+
+const dialogSelectContentClass =
+  "border-border bg-background text-foreground shadow-md [&_[data-radix-select-item-indicator]]:text-foreground";
+const dialogSelectItemClass =
+  "cursor-pointer rounded-sm focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground";
 
 interface LeadEditDialogProps {
   lead: Lead | null;
@@ -60,6 +72,7 @@ export function LeadEditDialog({
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const [savingFromExitPrompt, setSavingFromExitPrompt] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [linkedCarPickerKey, setLinkedCarPickerKey] = useState(0);
   useEffect(() => {
     setRightPanel("notes");
   }, [lead?.id]);
@@ -127,6 +140,7 @@ export function LeadEditDialog({
       car_id: nextIds[0] ?? null,
       car_ids: nextIds.length ? nextIds : null,
     });
+    setLinkedCarPickerKey((k) => k + 1);
   };
 
   const removeLinkedCar = (carId: string) => {
@@ -398,30 +412,50 @@ export function LeadEditDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Lead Type", "Tipo de lead")}</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    <Select
                       value={leadType}
-                      onChange={(e) => setForm({ ...form, lead_type: e.target.value as Lead["lead_type"] })}
+                      onValueChange={(v) =>
+                        setForm({ ...form, lead_type: v as Lead["lead_type"] })
+                      }
                     >
-                      <option value="pending">{tx("Pending", "Pendiente")}</option>
-                      <option value="buyer">{tx("Buyer", "Comprador")}</option>
-                      <option value="seller">{tx("Seller", "Vendedor")}</option>
-                    </select>
+                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dialogSelectContentClass}>
+                        <SelectItem className={dialogSelectItemClass} value="pending">
+                          {tx("Pending", "Pendiente")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="buyer">
+                          {tx("Buyer", "Comprador")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="seller">
+                          {tx("Seller", "Vendedor")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Status", "Estado")}</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={form.status_id || ""}
-                      onChange={(e) => setForm({ ...form, status_id: e.target.value || null })}
+                    <Select
+                      value={form.status_id ?? "__none__"}
+                      onValueChange={(v) =>
+                        setForm({ ...form, status_id: v === "__none__" ? null : v })
+                      }
                     >
-                      <option value="">{tx("None", "Ninguno")}</option>
-                      {statuses.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dialogSelectContentClass}>
+                        <SelectItem className={dialogSelectItemClass} value="__none__">
+                          {tx("None", "Ninguno")}
+                        </SelectItem>
+                        {statuses.map((s) => (
+                          <SelectItem className={dialogSelectItemClass} key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -695,27 +729,36 @@ export function LeadEditDialog({
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Add linked car", "Agregar auto vinculado")}</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      value=""
+                    <Select
+                      key={linkedCarPickerKey}
+                      value="__pick__"
                       disabled={carsAvailableToLink.length === 0}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        if (id) addLinkedCar(id);
-                        e.currentTarget.value = "";
+                      onValueChange={(id) => {
+                        if (id !== "__pick__") addLinkedCar(id);
                       }}
                     >
-                      <option value="">
-                        {carsAvailableToLink.length === 0
-                          ? tx("All cars already linked", "Todos los autos ya están vinculados")
-                          : tx("Choose a car to link…", "Elige un auto para vincular…")}
-                      </option>
-                      {carsAvailableToLink.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.year} {c.brand} {c.model}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-10 w-full border-input bg-background disabled:cursor-not-allowed disabled:opacity-60">
+                        <SelectValue
+                          placeholder={
+                            carsAvailableToLink.length === 0
+                              ? tx("All cars already linked", "Todos los autos ya están vinculados")
+                              : tx("Choose a car to link…", "Elige un auto para vincular…")
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className={dialogSelectContentClass}>
+                        <SelectItem className={dialogSelectItemClass} value="__pick__" disabled>
+                          {carsAvailableToLink.length === 0
+                            ? tx("All cars already linked", "Todos los autos ya están vinculados")
+                            : tx("Choose a car to link…", "Elige un auto para vincular…")}
+                        </SelectItem>
+                        {carsAvailableToLink.map((c) => (
+                          <SelectItem className={dialogSelectItemClass} key={c.id} value={c.id}>
+                            {c.year} {c.brand} {c.model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="rounded-lg border border-border/80 bg-muted/25 p-2 sm:p-3">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">

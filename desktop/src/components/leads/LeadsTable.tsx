@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import {
   Link2,
   Pencil,
@@ -8,6 +8,9 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
+  Search,
+  GripVertical,
+  X,
 } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
@@ -17,12 +20,16 @@ import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { LeadEditDialog } from "./LeadEditDialog";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
 import {
   buildLeadSearchHaystackForColumns,
   defaultLeadSearchColumns,
   LEAD_SEARCH_COLUMN_IDS,
   LEAD_SEARCH_COLUMN_LABELS,
+  reconcileColumnOrder,
   summarizeBuyerCriteria,
   type LeadSearchColumnId,
 } from "@/lib/tableSearchHaystack";
@@ -66,9 +73,9 @@ const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
 const stickyCheckboxHead =
-  "w-10 sticky left-0 z-10 border-r border-border bg-background shadow-sm";
+  "w-10 sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
 const stickyCheckboxCell =
-  "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
+  "sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
 
 function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
@@ -97,6 +104,111 @@ function allLeadColumnsSelected(s: Set<LeadSearchColumnId>) {
   );
 }
 
+type TxFn = (en: string, es: string) => string;
+
+function renderLeadColumnHead(colId: LeadSearchColumnId, tx: TxFn) {
+  switch (colId) {
+    case "name":
+      return <TableHead className="min-w-[120px]">{tx("Name", "Nombre")}</TableHead>;
+    case "instagram":
+      return <TableHead className="min-w-[100px]">Instagram</TableHead>;
+    case "phone":
+      return <TableHead className="min-w-[100px]">{tx("Phone", "Teléfono")}</TableHead>;
+    case "leadType":
+      return <TableHead className="min-w-[88px]">{tx("Lead type", "Tipo de lead")}</TableHead>;
+    case "car":
+      return <TableHead className="min-w-[160px]">{tx("Car", "Auto")}</TableHead>;
+    case "buyerCriteria":
+      return <TableHead className="min-w-[220px]">{tx("Buyer criteria", "Criterios del comprador")}</TableHead>;
+    case "status":
+      return <TableHead className="min-w-[100px]">{tx("Status", "Estado")}</TableHead>;
+    case "source":
+      return <TableHead className="min-w-[88px]">{tx("Source", "Origen")}</TableHead>;
+    case "notes":
+      return <TableHead className="min-w-[140px]">{tx("Notes", "Notas")}</TableHead>;
+    case "created":
+      return <TableHead className="min-w-[100px]">{tx("Created", "Creado")}</TableHead>;
+    case "updated":
+      return <TableHead className="min-w-[100px]">{tx("Updated", "Actualizado")}</TableHead>;
+    default: {
+      const _e: never = colId;
+      return _e;
+    }
+  }
+}
+
+function renderLeadColumnCell(
+  colId: LeadSearchColumnId,
+  ctx: {
+    lead: Lead;
+    status: LeadStatus | undefined;
+    carLine: string;
+    locale: string;
+    tx: TxFn;
+    truncateText: (s: string | null, max: number) => string;
+    formatShortDate: (s: string | null, loc: string) => string;
+    statusStyleFn: (status: LeadStatus | undefined) => { color?: string } | { bg: string; text: string };
+  },
+) {
+  const { lead, status, carLine, locale, tx, truncateText, formatShortDate, statusStyleFn } = ctx;
+  switch (colId) {
+    case "name":
+      return <TableCell className="font-medium">{lead.name || "—"}</TableCell>;
+    case "instagram":
+      return <TableCell>{lead.instagram_handle || "—"}</TableCell>;
+    case "phone":
+      return <TableCell>{lead.phone || "—"}</TableCell>;
+    case "leadType":
+      return (
+        <TableCell className="capitalize">
+          {lead.lead_type === "buyer"
+            ? tx("buyer", "comprador")
+            : lead.lead_type === "seller"
+              ? tx("seller", "vendedor")
+              : tx("pending", "pendiente")}
+        </TableCell>
+      );
+    case "car":
+      return <TableCell>{carLine}</TableCell>;
+    case "buyerCriteria":
+      return (
+        <TableCell className="max-w-[280px] text-sm text-muted-foreground">
+          {summarizeBuyerCriteria(lead)}
+        </TableCell>
+      );
+    case "status": {
+      const s = statusStyleFn(status);
+      const color = (s as { color?: string }).color || "#6B7280";
+      return (
+        <TableCell>
+          <span
+            className="rounded-full px-3 py-1 text-xs font-medium"
+            style={{ backgroundColor: `${color}15`, color }}
+          >
+            {status ? translateStatusName(status.name, tx) : tx("Unassigned", "Sin asignar")}
+          </span>
+        </TableCell>
+      );
+    }
+    case "source":
+      return <TableCell className="capitalize">{lead.source}</TableCell>;
+    case "notes":
+      return (
+        <TableCell className="max-w-[160px] text-sm" title={lead.notes ?? undefined}>
+          {truncateText(lead.notes, 48)}
+        </TableCell>
+      );
+    case "created":
+      return <TableCell>{formatShortDate(lead.created_at, locale)}</TableCell>;
+    case "updated":
+      return <TableCell>{formatShortDate(lead.updated_at, locale)}</TableCell>;
+    default: {
+      const _e: never = colId;
+      return _e;
+    }
+  }
+}
+
 export function LeadsTable({
   leads,
   statuses,
@@ -122,7 +234,9 @@ export function LeadsTable({
         const r = await getLead(l.id);
         const merged = await hydrateLeadResponseCarLinks(l.id, r);
         setEditLead(mapLeadFromApi(merged, statuses));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     })();
   };
   const [matchLead, setMatchLead] = useState<Lead | null>(null);
@@ -140,6 +254,21 @@ export function LeadsTable({
   const [searchColumns, setSearchColumns] = useState<Set<LeadSearchColumnId>>(
     () => defaultLeadSearchColumns(),
   );
+  const [leadColumnOrder, setLeadColumnOrder] = useState<LeadSearchColumnId[]>(() =>
+    reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, defaultLeadSearchColumns(), []),
+  );
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [draftFilterMode, setDraftFilterMode] = useState<"drop" | "filter">("drop");
+  const [draftSearchColumns, setDraftSearchColumns] = useState<Set<LeadSearchColumnId>>(
+    () => new Set(),
+  );
+  const [draftColumnOrder, setDraftColumnOrder] = useState<LeadSearchColumnId[]>([]);
+  const [draftStatusFilterIds, setDraftStatusFilterIds] = useState<Set<string>>(() => new Set());
+  const [draftLeadTypeFilters, setDraftLeadTypeFilters] = useState<Set<Lead["lead_type"]>>(
+    () => new Set(),
+  );
+  const [draftColumnSearchLeft, setDraftColumnSearchLeft] = useState("");
+  const [draftColumnSearchRight, setDraftColumnSearchRight] = useState("");
   const lastHandledGenerateSignalRef = useRef(0);
 
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
@@ -199,25 +328,14 @@ export function LeadsTable({
     setSelected(next);
   };
 
-  const toggleLeadColumn = (id: LeadSearchColumnId) => {
-    setSearchColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size <= 1) return prev;
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
   const clearFilters = () => {
+    const def = defaultLeadSearchColumns();
     setStatusFilterIds(new Set());
     setLeadTypeFilters(new Set());
     setCardFilter(null);
     setSearchQuery("");
-    setSearchColumns(defaultLeadSearchColumns());
+    setSearchColumns(def);
+    setLeadColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, def, []));
   };
 
   const toggleStatusFilter = (statusId: string) => {
@@ -235,6 +353,85 @@ export function LeadsTable({
       if (next.has(leadType)) next.delete(leadType);
       else next.add(leadType);
       return next;
+    });
+  };
+
+  const syncFilterDraftFromCommitted = useCallback(() => {
+    setDraftFilterMode(filterMode);
+    setDraftSearchColumns(new Set(searchColumns));
+    setDraftColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, searchColumns, leadColumnOrder));
+    setDraftStatusFilterIds(new Set(statusFilterIds));
+    setDraftLeadTypeFilters(new Set(leadTypeFilters));
+  }, [filterMode, searchColumns, leadColumnOrder, statusFilterIds, leadTypeFilters]);
+
+  useEffect(() => {
+    if (!filterDialogOpen) return;
+    syncFilterDraftFromCommitted();
+    setDraftColumnSearchLeft("");
+    setDraftColumnSearchRight("");
+  }, [filterDialogOpen, syncFilterDraftFromCommitted]);
+
+  const commitFilterDialog = () => {
+    setFilterMode(draftFilterMode);
+    setSearchColumns(new Set(draftSearchColumns));
+    setLeadColumnOrder([...draftColumnOrder]);
+    setStatusFilterIds(new Set(draftStatusFilterIds));
+    setLeadTypeFilters(new Set(draftLeadTypeFilters));
+  };
+
+  const resetFilterDraft = () => {
+    const def = defaultLeadSearchColumns();
+    setDraftFilterMode("drop");
+    setDraftSearchColumns(new Set(def));
+    setDraftColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, def, []));
+    setDraftStatusFilterIds(new Set());
+    setDraftLeadTypeFilters(new Set());
+  };
+
+  const draftAddColumn = (id: LeadSearchColumnId) => {
+    setDraftSearchColumns((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      setDraftColumnOrder((order) => reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, next, order));
+      return next;
+    });
+  };
+
+  const draftRemoveColumn = (id: LeadSearchColumnId) => {
+    setDraftSearchColumns((prev) => {
+      const next = new Set(prev);
+      if (next.size <= 1) return prev;
+      next.delete(id);
+      setDraftColumnOrder((order) => order.filter((x) => x !== id));
+      return next;
+    });
+  };
+
+  const draftMoveColumn = (index: number, dir: -1 | 1) => {
+    setDraftColumnOrder((prev) => {
+      const next = [...prev];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
+  };
+
+  const draftToggleStatusFilterId = (statusId: string) => {
+    setDraftStatusFilterIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(statusId)) n.delete(statusId);
+      else n.add(statusId);
+      return n;
+    });
+  };
+
+  const draftToggleLeadTypeFilter = (leadType: Lead["lead_type"]) => {
+    setDraftLeadTypeFilters((prev) => {
+      const n = new Set(prev);
+      if (n.has(leadType)) n.delete(leadType);
+      else n.add(leadType);
+      return n;
     });
   };
 
@@ -261,10 +458,7 @@ export function LeadsTable({
     cardFilter !== null ||
     searchQuery.trim().length > 0;
 
-  const visibleColumns = useMemo(
-    () => LEAD_SEARCH_COLUMN_IDS.filter((id) => searchColumns.has(id)),
-    [searchColumns],
-  );
+  const visibleColumnIds = leadColumnOrder;
 
   const matchResults = useMemo(
     () => (matchLead ? matchLeadToCars(matchLead, cars) : []),
@@ -364,7 +558,7 @@ export function LeadsTable({
 
   return (
     <div className="flex max-w-full flex-col gap-4">
-      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-none pb-1">
         <div
           className="flex min-w-0 flex-nowrap gap-4 px-1"
           style={{ minWidth: leadStatusRowMinWidth }}
@@ -426,121 +620,203 @@ export function LeadsTable({
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder={tx("Search leads (name, car, notes, status…)", "Buscar leads (nombre, auto, notas, estado...)")}
-        filterContent={(
-          <div className="space-y-1 p-3">
-            <div className="grid grid-cols-2 rounded-md border border-border p-1">
-              <button
-                type="button"
-                className={cn(
-                  "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                  filterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                )}
-                onClick={() => setFilterMode("drop")}
-              >
-                {tx("Drop", "Ocultar")}
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                  filterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                )}
-                onClick={() => setFilterMode("filter")}
-              >
-                {tx("Filter", "Filtrar")}
-              </button>
-            </div>
-            {filterMode === "drop" ? (
-              <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
-                {LEAD_SEARCH_COLUMN_IDS.map((colId) => {
-                  const active = searchColumns.has(colId);
-                  return (
-                    <div
-                      key={colId}
-                      className={cn(
-                        "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
-                        active
-                          ? "border-primary/40 bg-primary/10 text-foreground"
-                          : "border-transparent bg-muted/70 text-muted-foreground",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left font-medium"
-                        onClick={() => toggleLeadColumn(colId)}
-                      >
-                        {tx(LEAD_SEARCH_COLUMN_LABELS[colId], translateLeadColumn(LEAD_SEARCH_COLUMN_LABELS[colId]))}
-                        {!active ? (
-                          <span className="ml-1 text-[10px] uppercase text-muted-foreground">
-                            {tx("off", "off")}
-                          </span>
-                        ) : null}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-3 pt-2">
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">{tx("Status", "Estado")}</p>
-                  <div className="space-y-1">
-                    {statuses.map((s) => (
-                      <button
-                        type="button"
-                        key={s.id}
-                        onClick={() => toggleStatusFilter(s.id)}
-                        className={cn(
-                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm transition-colors",
-                          statusFilterIds.has(s.id)
-                            ? "border-primary/40 bg-primary/10 text-foreground"
-                            : "border-transparent bg-muted/70 text-muted-foreground",
-                        )}
-                      >
-                        <span>{translateStatusName(s.name, tx)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">{tx("Lead type", "Tipo de lead")}</p>
-                  <div className="space-y-1">
-                    {(["buyer", "seller", "pending"] as const).map((type) => (
-                      <button
-                        type="button"
-                        key={type}
-                        onClick={() => toggleLeadTypeFilter(type)}
-                        className={cn(
-                          "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
-                          leadTypeFilters.has(type)
-                            ? "border-primary/40 bg-primary/10 text-foreground"
-                            : "border-transparent bg-muted/70 text-muted-foreground",
-                        )}
-                      >
-                        <span>{type === "buyer" ? tx("buyer", "comprador") : type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {hasActiveFilters ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full"
-                onClick={clearFilters}
-              >
-                {tx("Clear search & filters", "Limpiar busqueda y filtros")}
-              </Button>
-            ) : null}
-          </div>
-        )}
+        onOpenFilters={() => setFilterDialogOpen(true)}
+        filterActive={hasActiveFilters}
       />
 
-      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-contain">
-        <Table>
+      <ManageTableFiltersDialog
+        open={filterDialogOpen}
+        onOpenChange={setFilterDialogOpen}
+        title={tx("Manage filters", "Gestionar filtros")}
+        description={tx(
+          "Select columns to show and optional filters. Save to apply.",
+          "Selecciona columnas y filtros opcionales. Guarda para aplicar.",
+        )}
+        onSave={commitFilterDialog}
+        onReset={resetFilterDraft}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 rounded-md border border-border p-1">
+            <button
+              type="button"
+              className={cn(
+                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                draftFilterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+              )}
+              onClick={() => setDraftFilterMode("drop")}
+            >
+              {tx("Columns", "Columnas")}
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                draftFilterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+              )}
+              onClick={() => setDraftFilterMode("filter")}
+            >
+              {tx("Filter", "Filtrar")}
+            </button>
+          </div>
+
+          {draftFilterMode === "drop" ? (
+            <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-start">
+              <div className="flex min-h-[280px] flex-col rounded-lg border border-border bg-muted/20">
+                <div className="border-b border-border px-3 py-2 text-sm font-medium">
+                  {tx("Column options", "Opciones de columnas")}
+                </div>
+                <div className="relative border-b border-border px-2 py-2">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={draftColumnSearchLeft}
+                    onChange={(e) => setDraftColumnSearchLeft(e.target.value)}
+                    placeholder={tx("Search properties", "Buscar propiedades")}
+                    className="h-9 pl-9"
+                  />
+                </div>
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+                  {LEAD_SEARCH_COLUMN_IDS.filter((colId) => {
+                    if (draftSearchColumns.has(colId)) return false;
+                    const label = tx(LEAD_SEARCH_COLUMN_LABELS[colId], translateLeadColumn(LEAD_SEARCH_COLUMN_LABELS[colId]));
+                    const q = draftColumnSearchLeft.trim();
+                    if (!q) return true;
+                    return matchesFuzzy(q, label);
+                  }).map((colId) => (
+                    <button
+                      key={colId}
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-md border border-transparent bg-background px-2 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+                      onClick={() => draftAddColumn(colId)}
+                    >
+                      <span className="font-medium">{tx(LEAD_SEARCH_COLUMN_LABELS[colId], translateLeadColumn(LEAD_SEARCH_COLUMN_LABELS[colId]))}</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden items-center justify-center pt-10 md:flex" aria-hidden>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+
+              <div className="flex min-h-[280px] flex-col rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                  <span className="text-sm font-medium">{tx("Selected columns", "Columnas seleccionadas")}</span>
+                  <Badge variant="secondary" className="tabular-nums">
+                    {draftColumnOrder.length}
+                  </Badge>
+                </div>
+                <div className="relative border-b border-border px-2 py-2">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={draftColumnSearchRight}
+                    onChange={(e) => setDraftColumnSearchRight(e.target.value)}
+                    placeholder={tx("Search column", "Buscar columna")}
+                    className="h-9 pl-9"
+                  />
+                </div>
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+                  {draftColumnOrder.map((colId, index) => {
+                    const label = tx(LEAD_SEARCH_COLUMN_LABELS[colId], translateLeadColumn(LEAD_SEARCH_COLUMN_LABELS[colId]));
+                    const q = draftColumnSearchRight.trim();
+                    if (q && !matchesFuzzy(q, label)) return null;
+                    return (
+                      <div
+                        key={colId}
+                        className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-2 text-sm"
+                      >
+                        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="min-w-0 flex-1 font-medium">{label}</span>
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={index === 0}
+                            onClick={() => draftMoveColumn(index, -1)}
+                            aria-label={tx("Move up", "Subir")}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={index >= draftColumnOrder.length - 1}
+                            onClick={() => draftMoveColumn(index, 1)}
+                            aria-label={tx("Move down", "Bajar")}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => draftRemoveColumn(colId)}
+                            disabled={draftColumnOrder.length <= 1}
+                            aria-label={tx("Remove column", "Quitar columna")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-lg border border-border p-3">
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">{tx("Status", "Estado")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {sortedStatuses.map((s) => (
+                    <button
+                      type="button"
+                      key={s.id}
+                      onClick={() => draftToggleStatusFilterId(s.id)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        draftStatusFilterIds.has(s.id)
+                          ? "border-primary/50 bg-primary/15 text-foreground"
+                          : "border-border bg-muted/50 text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {translateStatusName(s.name, tx)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">{tx("Lead type", "Tipo de lead")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {(["buyer", "seller", "pending"] as const).map((type) => (
+                    <button
+                      type="button"
+                      key={type}
+                      onClick={() => draftToggleLeadTypeFilter(type)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm capitalize transition-colors",
+                        draftLeadTypeFilters.has(type)
+                          ? "border-primary/50 bg-primary/15 text-foreground"
+                          : "border-border bg-muted/50 text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {type === "buyer" ? tx("buyer", "comprador") : type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ManageTableFiltersDialog>
+
+      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-none">
+        <Table scrollWrapper={false}>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
               <TableHead className={stickyCheckboxHead}>
@@ -550,17 +826,9 @@ export function LeadsTable({
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              {visibleColumns.includes("name") && <TableHead className="min-w-[120px]">{tx("Name", "Nombre")}</TableHead>}
-              {visibleColumns.includes("instagram") && <TableHead className="min-w-[100px]">Instagram</TableHead>}
-              {visibleColumns.includes("phone") && <TableHead className="min-w-[100px]">{tx("Phone", "Teléfono")}</TableHead>}
-              {visibleColumns.includes("leadType") && <TableHead className="min-w-[88px]">{tx("Lead type", "Tipo de lead")}</TableHead>}
-              {visibleColumns.includes("car") && <TableHead className="min-w-[160px]">{tx("Car", "Auto")}</TableHead>}
-              {visibleColumns.includes("buyerCriteria") && <TableHead className="min-w-[220px]">{tx("Buyer criteria", "Criterios del comprador")}</TableHead>}
-              {visibleColumns.includes("status") && <TableHead className="min-w-[100px]">{tx("Status", "Estado")}</TableHead>}
-              {visibleColumns.includes("source") && <TableHead className="min-w-[88px]">{tx("Source", "Origen")}</TableHead>}
-              {visibleColumns.includes("notes") && <TableHead className="min-w-[140px]">{tx("Notes", "Notas")}</TableHead>}
-              {visibleColumns.includes("created") && <TableHead className="min-w-[100px]">{tx("Created", "Creado")}</TableHead>}
-              {visibleColumns.includes("updated") && <TableHead className="min-w-[100px]">{tx("Updated", "Actualizado")}</TableHead>}
+              {visibleColumnIds.map((colId) => (
+                <Fragment key={colId}>{renderLeadColumnHead(colId, tx)}</Fragment>
+              ))}
               <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -568,8 +836,12 @@ export function LeadsTable({
             {paged.map((lead) => {
               const status = getStatus(lead.status_id);
               const carIds = getAllCarIdsForLead(lead);
-              const car =
-                (carIds.length ? getCar(carIds[0]) : null) ?? getCar(lead.car_id);
+              let carLine = "—";
+              if (carIds.length > 0) {
+                const first = cars.find((c) => c.id === carIds[0]);
+                const label = first ? `${first.year} ${first.brand} ${first.model}` : "—";
+                carLine = carIds.length > 1 ? `${label} (+${carIds.length - 1})` : label;
+              }
               return (
                 <TableRow
                   key={lead.id}
@@ -586,46 +858,23 @@ export function LeadsTable({
                       onCheckedChange={() => toggleOne(lead.id)}
                     />
                   </TableCell>
-                  {visibleColumns.includes("name") && <TableCell className="font-medium">{lead.name || "—"}</TableCell>}
-                  {visibleColumns.includes("instagram") && <TableCell>{lead.instagram_handle || "—"}</TableCell>}
-                  {visibleColumns.includes("phone") && <TableCell>{lead.phone || "—"}</TableCell>}
-                  {visibleColumns.includes("leadType") && <TableCell className="capitalize">{lead.lead_type === "buyer" ? tx("buyer", "comprador") : lead.lead_type === "seller" ? tx("seller", "vendedor") : tx("pending", "pendiente")}</TableCell>}
-                  {visibleColumns.includes("car") && (
-                    <TableCell>
-                      {(() => {
-                        const ids = getAllCarIdsForLead(lead);
-                        if (ids.length === 0) return "—";
-                        const first = cars.find((c) => c.id === ids[0]);
-                        const label = first ? `${first.year} ${first.brand} ${first.model}` : "—";
-                        return ids.length > 1 ? `${label} (+${ids.length - 1})` : label;
-                      })()}
-                    </TableCell>
-                  )}
-                  {visibleColumns.includes("buyerCriteria") && (
-                    <TableCell className="text-sm text-muted-foreground max-w-[280px]">
-                      {summarizeBuyerCriteria(lead)}
-                    </TableCell>
-                  )}
-                  {visibleColumns.includes("status") && <TableCell>
-                    {(() => {
-                      const s = statusStyle(status);
-                      const color = (s as { color?: string }).color || "#6B7280";
-                      return (
-                        <span
-                          className="text-xs px-3 py-1 rounded-full font-medium"
-                          style={{ backgroundColor: `${color}15`, color }}
-                        >
-                          {status ? translateStatusName(status.name, tx) : tx("Unassigned", "Sin asignar")}
-                        </span>
-                      );
-                    })()}
-                  </TableCell>}
-                  {visibleColumns.includes("source") && <TableCell className="capitalize">{lead.source}</TableCell>}
-                  {visibleColumns.includes("notes") && <TableCell className="text-sm max-w-[160px]" title={lead.notes ?? undefined}>
-                    {truncateText(lead.notes, 48)}
-                  </TableCell>}
-                  {visibleColumns.includes("created") && <TableCell>{formatShortDate(lead.created_at, locale)}</TableCell>}
-                  {visibleColumns.includes("updated") && <TableCell>{formatShortDate(lead.updated_at, locale)}</TableCell>}
+                  {visibleColumnIds.map((colId) => (
+                    <Fragment key={colId}>
+                      {renderLeadColumnCell(
+                        colId,
+                        {
+                          lead,
+                          status,
+                          carLine,
+                          locale,
+                          tx,
+                          truncateText,
+                          formatShortDate,
+                          statusStyleFn: statusStyle,
+                        },
+                      )}
+                    </Fragment>
+                  ))}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       {lead.lead_type === "buyer" ? (

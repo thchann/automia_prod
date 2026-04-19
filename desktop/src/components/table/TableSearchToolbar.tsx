@@ -1,28 +1,26 @@
 import { Filter, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
 import { useLanguage } from "@/i18n/LanguageProvider";
 
 type TableSearchToolbarProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  /** Popover body (checkboxes, etc.). Omit to hide the filter control. */
-  filterContent?: ReactNode;
+  /** Opens the manage filters dialog. Omit to hide the filter control. */
+  onOpenFilters?: () => void;
+  /** Highlight the filter button when filters differ from defaults or search is active. */
+  filterActive?: boolean;
   className?: string;
-  /** Extra classes for the filter popover panel (width, padding). */
-  filterContentClassName?: string;
 };
 
 export function TableSearchToolbar({
   value,
   onChange,
   placeholder,
-  filterContent,
+  onOpenFilters,
+  filterActive,
   className,
-  filterContentClassName,
 }: TableSearchToolbarProps) {
   const { tx } = useLanguage();
 
@@ -66,29 +64,20 @@ export function TableSearchToolbar({
         </div>
       </div>
 
-      {filterContent != null && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 shrink-0 border-border"
-              aria-label={tx("Open filters", "Abrir filtros")}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className={cn(
-              "max-h-[min(70vh,24rem)] w-[min(100vw-1.5rem,22rem)] overflow-y-auto p-0",
-              filterContentClassName,
-            )}
-          >
-            {filterContent}
-          </PopoverContent>
-        </Popover>
+      {onOpenFilters != null && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className={cn(
+            "h-10 w-10 shrink-0 border-border",
+            filterActive && "border-primary/40 bg-primary/10",
+          )}
+          aria-label={tx("Open filters", "Abrir filtros")}
+          onClick={onOpenFilters}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       )}
     </div>
   );

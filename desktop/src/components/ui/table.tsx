@@ -2,12 +2,21 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+type TableProps = React.HTMLAttributes<HTMLTableElement> & {
+  /** When false, only the `<table>` is rendered so a parent can own horizontal scroll (e.g. data tables with sticky columns). */
+  scrollWrapper?: boolean;
+};
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, scrollWrapper = true, ...props }, ref) => {
+    const table = (
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
-    </div>
-  ),
+    );
+    if (!scrollWrapper) {
+      return table;
+    }
+    return <div className="relative w-full overflow-auto">{table}</div>;
+  },
 );
 Table.displayName = "Table";
 

@@ -1,5 +1,18 @@
-import { useState, useMemo, useEffect } from "react";
-import { Pencil, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, X } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
+import {
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Image as ImageIcon,
+  X,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
+} from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
@@ -9,12 +22,16 @@ import { Input } from "@/components/ui/input";
 import { Car, Lead } from "@/types/leads";
 import { CarEditDialog } from "./CarEditDialog";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
+import { Badge } from "@/components/ui/badge";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
 import {
   buildCarSearchHaystackForColumns,
   CAR_SEARCH_COLUMN_IDS,
   CAR_SEARCH_COLUMN_LABELS,
   defaultCarSearchColumns,
+  extractPlainTextFromNotesDocument,
+  reconcileColumnOrder,
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
@@ -60,9 +77,9 @@ const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
 const stickyCheckboxHead =
-  "w-10 sticky left-0 z-10 border-r border-border bg-background shadow-sm";
+  "w-10 sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
 const stickyCheckboxCell =
-  "sticky left-0 z-10 border-r border-border bg-background shadow-sm group-hover:bg-surface-hover";
+  "sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
 
 function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
@@ -92,6 +109,142 @@ function allCarColumnsSelected(s: Set<CarSearchColumnId>) {
   );
 }
 
+type TxFn = (en: string, es: string) => string;
+
+function renderCarColumnHead(colId: CarSearchColumnId, tx: TxFn) {
+  switch (colId) {
+    case "brand":
+      return <TableHead className="min-w-[100px]">{tx("Brand", "Marca")}</TableHead>;
+    case "model":
+      return <TableHead className="min-w-[100px]">{tx("Model", "Modelo")}</TableHead>;
+    case "year":
+      return <TableHead className="min-w-[72px]">{tx("Year", "Año")}</TableHead>;
+    case "mileage":
+      return <TableHead className="min-w-[88px]">{tx("Mileage", "Kilometraje")}</TableHead>;
+    case "price":
+      return <TableHead className="min-w-[96px]">{tx("Price", "Precio")}</TableHead>;
+    case "desired":
+      return <TableHead className="min-w-[100px]">{tx("Desired", "Deseado")}</TableHead>;
+    case "carType":
+      return <TableHead className="min-w-[88px]">{tx("Car type", "Tipo de auto")}</TableHead>;
+    case "transmission":
+      return <TableHead className="min-w-[100px]">{tx("Transmission", "Transmisión")}</TableHead>;
+    case "color":
+      return <TableHead className="min-w-[96px]">{tx("Color", "Color")}</TableHead>;
+    case "fuel":
+      return <TableHead className="min-w-[88px]">{tx("Fuel", "Combustible")}</TableHead>;
+    case "manufactureYear":
+      return <TableHead className="min-w-[96px]">{tx("Manufacture year", "Año de fabricación")}</TableHead>;
+    case "vehicleCondition":
+      return <TableHead className="min-w-[120px]">{tx("Vehicle condition", "Condición")}</TableHead>;
+    case "listed":
+      return <TableHead className="min-w-[100px]">{tx("Listed", "Publicado")}</TableHead>;
+    case "owner":
+      return <TableHead className="min-w-[100px]">{tx("Owner", "Propietario")}</TableHead>;
+    case "status":
+      return <TableHead className="min-w-[96px]">{tx("Status", "Estado")}</TableHead>;
+    case "added":
+      return <TableHead className="min-w-[100px]">{tx("Added", "Agregado")}</TableHead>;
+    case "notes":
+      return <TableHead className="min-w-[160px]">{tx("Notes", "Notas")}</TableHead>;
+    default: {
+      const _exhaustive: never = colId;
+      return _exhaustive;
+    }
+  }
+}
+
+function carNotesPreview(car: Car): string {
+  const fromDoc = extractPlainTextFromNotesDocument(car.notes_document);
+  const bits = [fromDoc, car.notes?.trim()].filter(Boolean).join(" ");
+  return bits.replace(/\s+/g, " ").trim();
+}
+
+function renderCarColumnCell(
+  colId: CarSearchColumnId,
+  car: Car,
+  locale: string,
+  tx: TxFn,
+  statusStyleFn: (status: Car["status"]) => string,
+  ownerStyleFn: (type: Car["owner_type"]) => string,
+  formatShortDateFn: (s: string | null, loc: string) => string,
+) {
+  switch (colId) {
+    case "brand":
+      return <TableCell className="font-medium">{car.brand}</TableCell>;
+    case "model":
+      return <TableCell>{car.model}</TableCell>;
+    case "year":
+      return <TableCell>{car.year}</TableCell>;
+    case "mileage":
+      return <TableCell>{car.mileage != null ? car.mileage.toLocaleString(locale) : "—"}</TableCell>;
+    case "price":
+      return <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString(locale)}` : "—"}</TableCell>;
+    case "desired":
+      return <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString(locale)}` : "—"}</TableCell>;
+    case "carType":
+      return <TableCell className="capitalize">{car.car_type || tx("N/A", "N/D")}</TableCell>;
+    case "transmission":
+      return <TableCell className="max-w-[140px] capitalize">{car.transmission?.trim() || "—"}</TableCell>;
+    case "color":
+      return <TableCell className="max-w-[140px]">{car.color?.trim() || "—"}</TableCell>;
+    case "fuel":
+      return <TableCell className="capitalize">{car.fuel?.trim() || "—"}</TableCell>;
+    case "manufactureYear":
+      return <TableCell>{car.manufacture_year != null ? String(car.manufacture_year) : "—"}</TableCell>;
+    case "vehicleCondition":
+      return <TableCell className="capitalize">{car.vehicle_condition?.trim() || "—"}</TableCell>;
+    case "listed":
+      return <TableCell>{formatShortDateFn(car.listed_at, locale)}</TableCell>;
+    case "owner":
+      return (
+        <TableCell>
+          <span
+            className={cn(
+              "inline-flex max-w-full items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
+              ownerStyleFn(car.owner_type),
+            )}
+          >
+            {car.owner_type === "owned"
+              ? tx("owned", "propio")
+              : car.owner_type === "client"
+                ? tx("client", "cliente")
+                : car.owner_type === "advisor"
+                  ? tx("advisor", "asesor")
+                  : tx("Web listing", "Listado web")}
+          </span>
+        </TableCell>
+      );
+    case "status":
+      return (
+        <TableCell>
+          <span
+            className={cn(
+              "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
+              statusStyleFn(car.status),
+            )}
+          >
+            {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
+          </span>
+        </TableCell>
+      );
+    case "added":
+      return <TableCell>{formatShortDateFn(car.created_at, locale)}</TableCell>;
+    case "notes": {
+      const preview = carNotesPreview(car);
+      return (
+        <TableCell className="max-w-[220px] text-muted-foreground">
+          {preview ? (preview.length > 80 ? `${preview.slice(0, 80)}…` : preview) : "—"}
+        </TableCell>
+      );
+    }
+    default: {
+      const _exhaustive: never = colId;
+      return _exhaustive;
+    }
+  }
+}
+
 export function CarsTable({
   cars,
   leads,
@@ -116,7 +269,9 @@ export function CarsTable({
       try {
         const r = await getCar(c.id);
         setEditCar(mapCarFromApi(r));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     })();
   };
 
@@ -136,6 +291,32 @@ export function CarsTable({
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
+  const [carColumnOrder, setCarColumnOrder] = useState<CarSearchColumnId[]>(() =>
+    reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, defaultCarSearchColumns(), []),
+  );
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [draftFilterMode, setDraftFilterMode] = useState<"drop" | "filter">("drop");
+  const [draftSearchColumns, setDraftSearchColumns] = useState<Set<CarSearchColumnId>>(
+    () => new Set(),
+  );
+  const [draftColumnOrder, setDraftColumnOrder] = useState<CarSearchColumnId[]>([]);
+  const [draftStatusFilters, setDraftStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
+  const [draftColumnSearchLeft, setDraftColumnSearchLeft] = useState("");
+  const [draftColumnSearchRight, setDraftColumnSearchRight] = useState("");
+
+  const syncFilterDraftFromCommitted = useCallback(() => {
+    setDraftFilterMode(filterMode);
+    setDraftSearchColumns(new Set(searchColumns));
+    setDraftColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, searchColumns, carColumnOrder));
+    setDraftStatusFilters(new Set(statusFilters));
+  }, [filterMode, searchColumns, carColumnOrder, statusFilters]);
+
+  useEffect(() => {
+    if (!filterDialogOpen) return;
+    syncFilterDraftFromCommitted();
+    setDraftColumnSearchLeft("");
+    setDraftColumnSearchRight("");
+  }, [filterDialogOpen, syncFilterDraftFromCommitted]);
 
   const filteredCars = useMemo(() => {
     const q = searchQuery.trim();
@@ -171,23 +352,12 @@ export function CarsTable({
     setSelected(next);
   };
 
-  const toggleCarColumn = (id: CarSearchColumnId) => {
-    setSearchColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size <= 1) return prev;
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
   const clearFilters = () => {
+    const def = defaultCarSearchColumns();
     setStatusFilters(new Set());
     setSearchQuery("");
-    setSearchColumns(defaultCarSearchColumns());
+    setSearchColumns(def);
+    setCarColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, def, []));
     setCardFilter(null);
   };
 
@@ -197,6 +367,59 @@ export function CarsTable({
       if (next.has(status)) next.delete(status);
       else next.add(status);
       return next;
+    });
+  };
+
+  const commitFilterDialog = () => {
+    setFilterMode(draftFilterMode);
+    setSearchColumns(new Set(draftSearchColumns));
+    setCarColumnOrder([...draftColumnOrder]);
+    setStatusFilters(new Set(draftStatusFilters));
+  };
+
+  const resetFilterDraft = () => {
+    const def = defaultCarSearchColumns();
+    setDraftFilterMode("drop");
+    setDraftSearchColumns(new Set(def));
+    setDraftColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, def, []));
+    setDraftStatusFilters(new Set());
+  };
+
+  const draftAddColumn = (id: CarSearchColumnId) => {
+    setDraftSearchColumns((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      setDraftColumnOrder((order) => reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, next, order));
+      return next;
+    });
+  };
+
+  const draftRemoveColumn = (id: CarSearchColumnId) => {
+    setDraftSearchColumns((prev) => {
+      const next = new Set(prev);
+      if (next.size <= 1) return prev;
+      next.delete(id);
+      setDraftColumnOrder((order) => order.filter((x) => x !== id));
+      return next;
+    });
+  };
+
+  const draftMoveColumn = (index: number, dir: -1 | 1) => {
+    setDraftColumnOrder((prev) => {
+      const next = [...prev];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
+  };
+
+  const draftToggleStatusFilter = (status: Car["status"]) => {
+    setDraftStatusFilters((prev) => {
+      const n = new Set(prev);
+      if (n.has(status)) n.delete(status);
+      else n.add(status);
+      return n;
     });
   };
 
@@ -248,10 +471,7 @@ export function CarsTable({
     searchQuery.trim().length > 0 ||
     cardFilter != null;
 
-  const visibleColumns = useMemo(
-    () => CAR_SEARCH_COLUMN_IDS.filter((id) => searchColumns.has(id)),
-    [searchColumns],
-  );
+  const visibleColumnIds = carColumnOrder;
 
   const selectedCar =
     selected.size === 1 ? cars.find((car) => car.id === Array.from(selected)[0]) ?? null : null;
@@ -384,7 +604,7 @@ export function CarsTable({
         </div>
       </div>
 
-      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-none pb-1">
         <div
           className="flex min-w-0 flex-nowrap gap-4 px-1"
           style={{ minWidth: carStatusRowMinWidth }}
@@ -417,99 +637,189 @@ export function CarsTable({
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, año, precio...)")}
-        filterContent={(
-          <div className="space-y-1 p-3">
-            <div className="grid grid-cols-2 rounded-md border border-border p-1">
-              <button
-                type="button"
-                className={cn(
-                  "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                  filterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                )}
-                onClick={() => setFilterMode("drop")}
-              >
-                {tx("Drop", "Ocultar")}
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
-                  filterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
-                )}
-                onClick={() => setFilterMode("filter")}
-              >
-                {tx("Filter", "Filtrar")}
-              </button>
-            </div>
-            {filterMode === "drop" ? (
-              <div className="max-h-[min(50vh,18rem)] space-y-1 overflow-y-auto pr-1">
-                {CAR_SEARCH_COLUMN_IDS.map((colId) => {
-                  const active = searchColumns.has(colId);
-                  return (
-                    <div
-                      key={colId}
-                      className={cn(
-                        "flex items-center gap-1 rounded-md border px-2 py-2 text-sm transition-colors",
-                        active
-                          ? "border-primary/40 bg-primary/10 text-foreground"
-                          : "border-transparent bg-muted/70 text-muted-foreground",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left font-medium capitalize"
-                        onClick={() => toggleCarColumn(colId)}
-                      >
-                        {tx(CAR_SEARCH_COLUMN_LABELS[colId], translateCarColumn(CAR_SEARCH_COLUMN_LABELS[colId]))}
-                        {!active ? (
-                          <span className="ml-1 text-[10px] uppercase text-muted-foreground">
-                            {tx("off", "off")}
-                          </span>
-                        ) : null}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="pt-2">
-                  <p className="mb-1 text-xs text-muted-foreground">{tx("Status", "Estado")}</p>
-                <div className="space-y-1">
-                  {(["available", "sold"] as const).map((status) => (
+        onOpenFilters={() => setFilterDialogOpen(true)}
+        filterActive={hasActiveFilters}
+      />
+
+      <ManageTableFiltersDialog
+        open={filterDialogOpen}
+        onOpenChange={setFilterDialogOpen}
+        title={tx("Manage filters", "Gestionar filtros")}
+        description={tx(
+          "Select columns to show and optional filters. Save to apply.",
+          "Selecciona columnas y filtros opcionales. Guarda para aplicar.",
+        )}
+        onSave={commitFilterDialog}
+        onReset={resetFilterDraft}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 rounded-md border border-border p-1">
+            <button
+              type="button"
+              className={cn(
+                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                draftFilterMode === "drop" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+              )}
+              onClick={() => setDraftFilterMode("drop")}
+            >
+              {tx("Columns", "Columnas")}
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "rounded-sm px-2 py-1.5 text-sm font-medium capitalize transition-colors",
+                draftFilterMode === "filter" ? "bg-primary/15 text-foreground" : "text-muted-foreground",
+              )}
+              onClick={() => setDraftFilterMode("filter")}
+            >
+              {tx("Filter", "Filtrar")}
+            </button>
+          </div>
+
+          {draftFilterMode === "drop" ? (
+            <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-start">
+              <div className="flex min-h-[280px] flex-col rounded-lg border border-border bg-muted/20">
+                <div className="border-b border-border px-3 py-2 text-sm font-medium">
+                  {tx("Column options", "Opciones de columnas")}
+                </div>
+                <div className="relative border-b border-border px-2 py-2">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={draftColumnSearchLeft}
+                    onChange={(e) => setDraftColumnSearchLeft(e.target.value)}
+                    placeholder={tx("Search properties", "Buscar propiedades")}
+                    className="h-9 pl-9"
+                  />
+                </div>
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+                  {CAR_SEARCH_COLUMN_IDS.filter((colId) => {
+                    if (draftSearchColumns.has(colId)) return false;
+                    const label = tx(
+                      CAR_SEARCH_COLUMN_LABELS[colId],
+                      translateCarColumn(CAR_SEARCH_COLUMN_LABELS[colId]),
+                    );
+                    const q = draftColumnSearchLeft.trim();
+                    if (!q) return true;
+                    return matchesFuzzy(q, label);
+                  }).map((colId) => (
                     <button
+                      key={colId}
                       type="button"
-                      key={status}
-                      onClick={() => toggleStatusFilter(status)}
-                      className={cn(
-                        "flex w-full items-center rounded-md border px-2 py-2 text-left text-sm capitalize transition-colors",
-                        statusFilters.has(status)
-                          ? "border-primary/40 bg-primary/10 text-foreground"
-                          : "border-transparent bg-muted/70 text-muted-foreground",
-                      )}
+                      className="flex w-full items-center justify-between rounded-md border border-transparent bg-background px-2 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+                      onClick={() => draftAddColumn(colId)}
                     >
-                      <span>{status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}</span>
+                      <span className="font-medium capitalize">
+                        {tx(CAR_SEARCH_COLUMN_LABELS[colId], translateCarColumn(CAR_SEARCH_COLUMN_LABELS[colId]))}
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-            {hasActiveFilters ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full"
-                onClick={clearFilters}
-              >
-                {tx("Clear search & filters", "Limpiar busqueda y filtros")}
-              </Button>
-            ) : null}
-          </div>
-        )}
-      />
 
-      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-contain">
-        <Table>
+              <div className="hidden items-center justify-center pt-10 md:flex" aria-hidden>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+
+              <div className="flex min-h-[280px] flex-col rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                  <span className="text-sm font-medium">{tx("Selected columns", "Columnas seleccionadas")}</span>
+                  <Badge variant="secondary" className="tabular-nums">
+                    {draftColumnOrder.length}
+                  </Badge>
+                </div>
+                <div className="relative border-b border-border px-2 py-2">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={draftColumnSearchRight}
+                    onChange={(e) => setDraftColumnSearchRight(e.target.value)}
+                    placeholder={tx("Search column", "Buscar columna")}
+                    className="h-9 pl-9"
+                  />
+                </div>
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+                  {draftColumnOrder.map((colId, index) => {
+                    const label = tx(
+                      CAR_SEARCH_COLUMN_LABELS[colId],
+                      translateCarColumn(CAR_SEARCH_COLUMN_LABELS[colId]),
+                    );
+                    const q = draftColumnSearchRight.trim();
+                    if (q && !matchesFuzzy(q, label)) return null;
+                    return (
+                      <div
+                        key={colId}
+                        className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-2 text-sm"
+                      >
+                        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="min-w-0 flex-1 font-medium capitalize">{label}</span>
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={index === 0}
+                            onClick={() => draftMoveColumn(index, -1)}
+                            aria-label={tx("Move up", "Subir")}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={index >= draftColumnOrder.length - 1}
+                            onClick={() => draftMoveColumn(index, 1)}
+                            aria-label={tx("Move down", "Bajar")}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => draftRemoveColumn(colId)}
+                            disabled={draftColumnOrder.length <= 1}
+                            aria-label={tx("Remove column", "Quitar columna")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <p className="text-xs font-medium text-muted-foreground">{tx("Status", "Estado")}</p>
+              <div className="flex flex-wrap gap-2">
+                {(["available", "sold"] as const).map((status) => (
+                  <button
+                    type="button"
+                    key={status}
+                    onClick={() => draftToggleStatusFilter(status)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-sm capitalize transition-colors",
+                      draftStatusFilters.has(status)
+                        ? "border-primary/50 bg-primary/15 text-foreground"
+                        : "border-border bg-muted/50 text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </ManageTableFiltersDialog>
+
+      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-none">
+        <Table scrollWrapper={false}>
           <TableHeader>
             <TableRow className="border-b-2 border-primary">
               <TableHead className={stickyCheckboxHead}>
@@ -519,22 +829,9 @@ export function CarsTable({
                   onCheckedChange={toggleAll}
                 />
               </TableHead>
-              {visibleColumns.includes("brand") && <TableHead className="min-w-[100px]">{tx("Brand", "Marca")}</TableHead>}
-              {visibleColumns.includes("model") && <TableHead className="min-w-[100px]">{tx("Model", "Modelo")}</TableHead>}
-              {visibleColumns.includes("year") && <TableHead className="min-w-[72px]">{tx("Year", "Año")}</TableHead>}
-              {visibleColumns.includes("mileage") && <TableHead className="min-w-[88px]">{tx("Mileage", "Kilometraje")}</TableHead>}
-              {visibleColumns.includes("price") && <TableHead className="min-w-[96px]">{tx("Price", "Precio")}</TableHead>}
-              {visibleColumns.includes("desired") && <TableHead className="min-w-[100px]">{tx("Desired", "Deseado")}</TableHead>}
-              {visibleColumns.includes("carType") && <TableHead className="min-w-[88px]">{tx("Car type", "Tipo de auto")}</TableHead>}
-              {visibleColumns.includes("transmission") && <TableHead className="min-w-[100px]">{tx("Transmission", "Transmisión")}</TableHead>}
-              {visibleColumns.includes("color") && <TableHead className="min-w-[96px]">{tx("Color", "Color")}</TableHead>}
-              {visibleColumns.includes("fuel") && <TableHead className="min-w-[88px]">{tx("Fuel", "Combustible")}</TableHead>}
-              {visibleColumns.includes("manufactureYear") && <TableHead className="min-w-[96px]">{tx("Manufacture year", "Año de fabricación")}</TableHead>}
-              {visibleColumns.includes("vehicleCondition") && <TableHead className="min-w-[120px]">{tx("Vehicle condition", "Condición")}</TableHead>}
-              {visibleColumns.includes("listed") && <TableHead className="min-w-[100px]">{tx("Listed", "Publicado")}</TableHead>}
-              {visibleColumns.includes("owner") && <TableHead className="min-w-[100px]">{tx("Owner", "Propietario")}</TableHead>}
-              {visibleColumns.includes("status") && <TableHead className="min-w-[96px]">{tx("Status", "Estado")}</TableHead>}
-              {visibleColumns.includes("added") && <TableHead className="min-w-[100px]">{tx("Added", "Agregado")}</TableHead>}
+              {visibleColumnIds.map((colId) => (
+                <Fragment key={colId}>{renderCarColumnHead(colId, tx)}</Fragment>
+              ))}
               <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -556,56 +853,19 @@ export function CarsTable({
                       onCheckedChange={() => toggleOne(car.id)}
                     />
                   </TableCell>
-                  {visibleColumns.includes("brand") && <TableCell className="font-medium">{car.brand}</TableCell>}
-                  {visibleColumns.includes("model") && <TableCell>{car.model}</TableCell>}
-                  {visibleColumns.includes("year") && <TableCell>{car.year}</TableCell>}
-                  {visibleColumns.includes("mileage") && <TableCell>{car.mileage != null ? car.mileage.toLocaleString(locale) : "—"}</TableCell>}
-                  {visibleColumns.includes("price") && <TableCell>{car.price != null ? `$${Number(car.price).toLocaleString(locale)}` : "—"}</TableCell>}
-                  {visibleColumns.includes("desired") && <TableCell>{car.desired_price != null ? `$${Number(car.desired_price).toLocaleString(locale)}` : "—"}</TableCell>}
-                  {visibleColumns.includes("carType") && <TableCell className="capitalize">{car.car_type || tx("N/A", "N/D")}</TableCell>}
-                  {visibleColumns.includes("transmission") && (
-                    <TableCell className="max-w-[140px] capitalize">{car.transmission?.trim() || "—"}</TableCell>
-                  )}
-                  {visibleColumns.includes("color") && (
-                    <TableCell className="max-w-[140px]">{car.color?.trim() || "—"}</TableCell>
-                  )}
-                  {visibleColumns.includes("fuel") && (
-                    <TableCell className="capitalize">{car.fuel?.trim() || "—"}</TableCell>
-                  )}
-                  {visibleColumns.includes("manufactureYear") && (
-                    <TableCell>{car.manufacture_year != null ? String(car.manufacture_year) : "—"}</TableCell>
-                  )}
-                  {visibleColumns.includes("vehicleCondition") && (
-                    <TableCell className="capitalize">{car.vehicle_condition?.trim() || "—"}</TableCell>
-                  )}
-                  {visibleColumns.includes("listed") && <TableCell>{formatShortDate(car.listed_at, locale)}</TableCell>}
-                  {visibleColumns.includes("owner") && <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex max-w-full items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
-                        ownerStyle(car.owner_type),
+                  {visibleColumnIds.map((colId) => (
+                    <Fragment key={colId}>
+                      {renderCarColumnCell(
+                        colId,
+                        car,
+                        locale,
+                        tx,
+                        statusStyle,
+                        ownerStyle,
+                        formatShortDate,
                       )}
-                    >
-                      {car.owner_type === "owned"
-                        ? tx("owned", "propio")
-                        : car.owner_type === "client"
-                          ? tx("client", "cliente")
-                          : car.owner_type === "advisor"
-                            ? tx("advisor", "asesor")
-                            : tx("Web listing", "Listado web")}
-                    </span>
-                  </TableCell>}
-                  {visibleColumns.includes("status") && <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
-                        statusStyle(car.status),
-                      )}
-                    >
-                      {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
-                    </span>
-                  </TableCell>}
-                  {visibleColumns.includes("added") && <TableCell>{formatShortDate(car.created_at, locale)}</TableCell>}
+                    </Fragment>
+                  ))}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <button type="button" className="p-1 hover:text-foreground text-muted-foreground" onClick={() => beginEditCar(car)}>

@@ -30,7 +30,19 @@ import {
   serializeNotesDocument,
 } from "@/lib/editDialogDirtyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
+
+const dialogSelectContentClass =
+  "border-border bg-background text-foreground shadow-md [&_[data-radix-select-item-indicator]]:text-foreground";
+const dialogSelectItemClass =
+  "cursor-pointer rounded-sm focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground";
 
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
@@ -447,27 +459,51 @@ export function CarEditDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Owner Type", "Tipo de dueño")}</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    <Select
                       value={form.owner_type || "owned"}
-                      onChange={(e) => setForm({ ...form, owner_type: e.target.value as Car["owner_type"] })}
+                      onValueChange={(v) =>
+                        setForm({ ...form, owner_type: v as Car["owner_type"] })
+                      }
                     >
-                      <option value="owned">{tx("Owned", "Propio")}</option>
-                      <option value="client">{tx("Client", "Cliente")}</option>
-                      <option value="advisor">{tx("Advisor", "Asesor")}</option>
-                      <option value="web_listing">{tx("Web listing", "Listado web")}</option>
-                    </select>
+                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dialogSelectContentClass}>
+                        <SelectItem className={dialogSelectItemClass} value="owned">
+                          {tx("Owned", "Propio")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="client">
+                          {tx("Client", "Cliente")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="advisor">
+                          {tx("Advisor", "Asesor")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="web_listing">
+                          {tx("Web listing", "Listado web")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">{tx("Status", "Estado")}</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    <Select
                       value={form.status || "available"}
-                      onChange={(e) => setForm({ ...form, status: e.target.value as Car["status"] })}
+                      onValueChange={(v) =>
+                        setForm({ ...form, status: v as Car["status"] })
+                      }
                     >
-                      <option value="available">{tx("Available", "Disponible")}</option>
-                      <option value="sold">{tx("Sold", "Vendido")}</option>
-                    </select>
+                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dialogSelectContentClass}>
+                        <SelectItem className={dialogSelectItemClass} value="available">
+                          {tx("Available", "Disponible")}
+                        </SelectItem>
+                        <SelectItem className={dialogSelectItemClass} value="sold">
+                          {tx("Sold", "Vendido")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
