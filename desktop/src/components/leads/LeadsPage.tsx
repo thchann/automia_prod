@@ -243,7 +243,7 @@ export function LeadsPage() {
   ];
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
         <div className="relative shrink-0">
@@ -297,7 +297,7 @@ export function LeadsPage() {
         ))}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none">
         {tab === "table" && (
           <LeadsTable
             leads={leads}

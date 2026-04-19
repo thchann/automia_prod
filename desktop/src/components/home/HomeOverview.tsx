@@ -274,7 +274,7 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
     onNavigate != null ? "cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : "";
 
   return (
-    <section className="space-y-6 pb-8">
+    <section className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-8 overscroll-y-none">
       <div>
         <h1 className="text-3xl font-extrabold leading-[1.1] tracking-tight text-foreground">
           {greeting},

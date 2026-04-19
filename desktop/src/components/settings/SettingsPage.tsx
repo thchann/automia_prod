@@ -34,7 +34,7 @@ export function SettingsPage() {
   const { t, tx } = useLanguage();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-none">
       <div className="mx-auto w-full max-w-4xl flex-1 px-0 pb-12 pt-20">
         <header className="space-y-1 pb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">

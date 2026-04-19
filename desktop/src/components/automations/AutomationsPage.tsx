@@ -243,7 +243,7 @@ export function AutomationsPage() {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pr-1">
         {loadingTypes || loadingAuto ? (
           <p className="text-sm text-muted-foreground">{tx("Loading…", "Cargando…")}</p>
         ) : tab === "all" ? (
