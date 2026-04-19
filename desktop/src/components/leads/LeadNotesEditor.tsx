@@ -308,7 +308,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
     return (
       <div
         className={cn(
-          "flex min-h-[min(70vh,28rem)] items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground",
+          "flex min-h-[12rem] flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground",
           className,
         )}
       >
@@ -322,7 +322,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
   return (
     <div
       className={cn(
-        "lead-notes-editor flex max-h-[min(75vh,calc(90vh-12rem))] min-h-[min(70vh,28rem)] flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-900/50",
+        "lead-notes-editor flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-xl border border-border/90 bg-[hsl(42_12%_92%)] shadow-inner dark:bg-zinc-900/50",
         className,
       )}
     >

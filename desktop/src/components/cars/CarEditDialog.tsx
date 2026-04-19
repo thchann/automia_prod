@@ -584,7 +584,7 @@ export function CarEditDialog({
             </div>
           </div>
 
-          <div className="flex h-[min(75vh,calc(90vh-12rem))] flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/20 md:col-span-2 md:h-full md:min-h-0">
             <div className="shrink-0 border-b border-border px-4 pt-2 pb-1">
               <div className="flex items-center gap-4">
                 {([
@@ -745,11 +745,11 @@ export function CarEditDialog({
                 </div>
               </div>
             ) : rightPanel === "notes" ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-2 sm:px-4 sm:pt-3 sm:pb-4">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-0 sm:px-4 sm:pt-3 sm:pb-0">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={car.id}
-                  className="min-h-0 max-h-full flex-1"
+                  className="min-h-0 h-full flex-1"
                   recordId={car.id}
                   notesDocument={car.notes_document}
                   legacyNotes={car.notes}

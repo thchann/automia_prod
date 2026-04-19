@@ -77,9 +77,9 @@ const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
 const stickyCheckboxHead =
-  "w-10 sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
+  "w-10 sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
 const stickyCheckboxCell =
-  "sticky left-0 z-10 bg-card group-hover:bg-surface-hover";
+  "sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
 
 function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
@@ -840,7 +840,7 @@ export function CarsTable({
               return (
                 <TableRow
                   key={car.id}
-                  className="group cursor-pointer hover:bg-surface-hover"
+                  className="group cursor-pointer transition-colors duration-150 ease-linear hover:bg-surface-hover"
                   onClick={() => beginEditCar(car)}
                 >
                   <TableCell
