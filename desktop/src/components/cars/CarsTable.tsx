@@ -613,7 +613,12 @@ export function CarsTable({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-0">
-        <div className="shrink-0">
+        <div
+          className={cn(
+            "shrink-0 overflow-hidden transition-[max-height] duration-300 ease-out",
+            tableDetailOpen && "max-h-[min(300px,36vh)] overflow-y-auto overscroll-y-contain",
+          )}
+        >
           <StatusActivityChart
             entity="car"
             items={statusActivityItems}
@@ -628,9 +633,9 @@ export function CarsTable({
           />
         </div>
 
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1 flex-col rounded-t-xl border border-b-0 border-border bg-card shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.08)]">
           {tableDetailOpen && (
-            <div className="z-30 flex shrink-0 justify-center border-b border-border bg-card py-2 shadow-sm">
+            <div className="flex shrink-0 justify-center border-b border-border bg-card py-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -647,11 +652,13 @@ export function CarsTable({
           <div
             className={cn(
               "relative flex min-h-0 flex-1 flex-col",
-              tableDetailOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden",
+              tableDetailOpen
+                ? "overflow-y-auto overflow-x-hidden overscroll-y-contain"
+                : "overflow-hidden",
             )}
           >
             {!tableDetailOpen && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/30 backdrop-blur-[2px]">
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/40 backdrop-blur-[2px]">
                 <Button
                   type="button"
                   size="icon"
@@ -667,8 +674,8 @@ export function CarsTable({
 
             <div
               className={cn(
-                "flex flex-col gap-4",
-                !tableDetailOpen && "max-h-[min(280px,40vh)] overflow-hidden blur-sm",
+                "flex w-full min-w-0 flex-col gap-4 px-1",
+                tableDetailOpen ? "pb-8 pt-2" : "max-h-[min(260px,40vh)] overflow-hidden blur-sm",
               )}
             >
       <TableSearchToolbar
