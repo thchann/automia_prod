@@ -39,11 +39,6 @@ import {
 } from "@/components/ui/select";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 
-const dialogSelectContentClass =
-  "border-border bg-background text-foreground shadow-md [&_[data-radix-select-item-indicator]]:text-foreground";
-const dialogSelectItemClass =
-  "cursor-pointer rounded-sm focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground";
-
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
@@ -465,20 +460,20 @@ export function CarEditDialog({
                         setForm({ ...form, owner_type: v as Car["owner_type"] })
                       }
                     >
-                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={dialogSelectContentClass}>
-                        <SelectItem className={dialogSelectItemClass} value="owned">
+                      <SelectContent>
+                        <SelectItem value="owned">
                           {tx("Owned", "Propio")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="client">
+                        <SelectItem value="client">
                           {tx("Client", "Cliente")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="advisor">
+                        <SelectItem value="advisor">
                           {tx("Advisor", "Asesor")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="web_listing">
+                        <SelectItem value="web_listing">
                           {tx("Web listing", "Listado web")}
                         </SelectItem>
                       </SelectContent>
@@ -492,14 +487,14 @@ export function CarEditDialog({
                         setForm({ ...form, status: v as Car["status"] })
                       }
                     >
-                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={dialogSelectContentClass}>
-                        <SelectItem className={dialogSelectItemClass} value="available">
+                      <SelectContent>
+                        <SelectItem value="available">
                           {tx("Available", "Disponible")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="sold">
+                        <SelectItem value="sold">
                           {tx("Sold", "Vendido")}
                         </SelectItem>
                       </SelectContent>
@@ -745,7 +740,7 @@ export function CarEditDialog({
                 </div>
               </div>
             ) : rightPanel === "notes" ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-0 sm:px-4 sm:pt-3 sm:pb-0">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-3 sm:px-4 sm:pt-3 sm:pb-3">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={car.id}

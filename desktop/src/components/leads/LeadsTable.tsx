@@ -818,7 +818,7 @@ export function LeadsTable({
       <div className="rounded-lg border border-border overflow-x-auto overscroll-x-none">
         <Table scrollWrapper={false}>
           <TableHeader>
-            <TableRow className="border-b-2 border-primary">
+            <TableRow className="group border-b-2 border-primary transition-colors duration-150 ease-linear hover:bg-surface-hover">
               <TableHead className={stickyCheckboxHead}>
                 <Checkbox
                   className={tableCheckboxClassName}

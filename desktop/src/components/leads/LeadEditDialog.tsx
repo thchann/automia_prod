@@ -38,11 +38,6 @@ import {
 } from "@/components/ui/select";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 
-const dialogSelectContentClass =
-  "border-border bg-background text-foreground shadow-md [&_[data-radix-select-item-indicator]]:text-foreground";
-const dialogSelectItemClass =
-  "cursor-pointer rounded-sm focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground";
-
 interface LeadEditDialogProps {
   lead: Lead | null;
   open: boolean;
@@ -418,17 +413,17 @@ export function LeadEditDialog({
                         setForm({ ...form, lead_type: v as Lead["lead_type"] })
                       }
                     >
-                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={dialogSelectContentClass}>
-                        <SelectItem className={dialogSelectItemClass} value="pending">
+                      <SelectContent>
+                        <SelectItem value="pending">
                           {tx("Pending", "Pendiente")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="buyer">
+                        <SelectItem value="buyer">
                           {tx("Buyer", "Comprador")}
                         </SelectItem>
-                        <SelectItem className={dialogSelectItemClass} value="seller">
+                        <SelectItem value="seller">
                           {tx("Seller", "Vendedor")}
                         </SelectItem>
                       </SelectContent>
@@ -442,15 +437,15 @@ export function LeadEditDialog({
                         setForm({ ...form, status_id: v === "__none__" ? null : v })
                       }
                     >
-                      <SelectTrigger className="h-10 w-full border-input bg-background">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={dialogSelectContentClass}>
-                        <SelectItem className={dialogSelectItemClass} value="__none__">
+                      <SelectContent>
+                        <SelectItem value="__none__">
                           {tx("None", "Ninguno")}
                         </SelectItem>
                         {statuses.map((s) => (
-                          <SelectItem className={dialogSelectItemClass} key={s.id} value={s.id}>
+                          <SelectItem key={s.id} value={s.id}>
                             {s.name}
                           </SelectItem>
                         ))}
@@ -705,7 +700,7 @@ export function LeadEditDialog({
                 </div>
               </div>
             ) : rightPanel === "notes" ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-0 sm:px-4 sm:pt-3 sm:pb-0">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-3 pb-3 sm:px-4 sm:pt-3 sm:pb-3">
                 <LeadNotesEditor
                   ref={notesEditorRef}
                   key={lead.id}
@@ -737,7 +732,7 @@ export function LeadEditDialog({
                         if (id !== "__pick__") addLinkedCar(id);
                       }}
                     >
-                      <SelectTrigger className="h-10 w-full border-input bg-background disabled:cursor-not-allowed disabled:opacity-60">
+                      <SelectTrigger className="w-full disabled:cursor-not-allowed disabled:opacity-60">
                         <SelectValue
                           placeholder={
                             carsAvailableToLink.length === 0
@@ -746,14 +741,14 @@ export function LeadEditDialog({
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent className={dialogSelectContentClass}>
-                        <SelectItem className={dialogSelectItemClass} value="__pick__" disabled>
+                      <SelectContent>
+                        <SelectItem value="__pick__" disabled>
                           {carsAvailableToLink.length === 0
                             ? tx("All cars already linked", "Todos los autos ya están vinculados")
                             : tx("Choose a car to link…", "Elige un auto para vincular…")}
                         </SelectItem>
                         {carsAvailableToLink.map((c) => (
-                          <SelectItem className={dialogSelectItemClass} key={c.id} value={c.id}>
+                          <SelectItem key={c.id} value={c.id}>
                             {c.year} {c.brand} {c.model}
                           </SelectItem>
                         ))}
