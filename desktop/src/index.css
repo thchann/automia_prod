@@ -114,22 +114,14 @@
 }
 
 @layer base {
+  /* Hide scrollbars everywhere; wheel / trackpad / keyboard scrolling still works */
   * {
     @apply border-border;
-    scrollbar-width: auto;
-    -ms-overflow-style: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   *::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-  }
-  *::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-  }
-  *::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 9999px;
-    border: 2px solid hsl(var(--muted));
+    display: none;
   }
   body {
     @apply bg-background text-foreground font-sans;
@@ -218,19 +210,3 @@
   }
 }
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(0 0% 25%) transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: hsl(0 0% 25%);
-    border-radius: 3px;
-  }
-}
