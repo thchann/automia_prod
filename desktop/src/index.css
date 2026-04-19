@@ -114,19 +114,18 @@
 }
 
 @layer base {
-  /* Blink/WebKit: hide vertical scrollbar; keep horizontal visible for wide tables/regions.
-     Wheel/trackpad vertical scrolling unchanged. Firefox: thin scrollbars (no per-axis hide). */
+  /* Chromium/Electron/WebKit: never show a vertical scrollbar; horizontal track stays visible
+     where overflow-x is scroll (see table wrappers). Do not set scrollbar-width on * — it can
+     suppress horizontal thumbs in Blink. Firefox: no per-axis control; use Chromium for parity. */
   * {
     @apply border-border;
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) hsl(var(--muted));
   }
   *::-webkit-scrollbar:vertical {
-    width: 0;
-    display: none;
+    width: 0 !important;
+    display: none !important;
   }
   *::-webkit-scrollbar:horizontal {
-    height: 10px;
+    height: 11px;
   }
   *::-webkit-scrollbar-track {
     background: hsl(var(--muted));

@@ -327,7 +327,7 @@ export const LeadNotesEditor = forwardRef<LeadNotesEditorHandle, Props>(function
       )}
     >
       <div className="lead-notes-toolbar sticky top-0 z-20 flex shrink-0 flex-col gap-0 border-b border-border/80 bg-[hsl(42_10%_94%)]/95 px-2 py-2 backdrop-blur-md dark:bg-zinc-900/95">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-scroll">
           <ToolbarGroup>
             <Select
               value={fontSizeKeyFromEditor(editor)}

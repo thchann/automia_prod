@@ -178,7 +178,7 @@ export function LeadsFunnel({
   const getStatusColor = (status: LeadStatus) => normalizeLeadStatusColor(status.color);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 h-full">
+    <div className="flex h-full gap-4 overflow-x-scroll pb-4">
       {statuses
         .sort((a, b) => a.display_order - b.display_order)
         .map((status) => {

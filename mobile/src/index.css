@@ -101,15 +101,13 @@
 @layer base {
   * {
     @apply border-border;
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) hsl(var(--muted));
   }
   *::-webkit-scrollbar:vertical {
-    width: 0;
-    display: none;
+    width: 0 !important;
+    display: none !important;
   }
   *::-webkit-scrollbar:horizontal {
-    height: 10px;
+    height: 11px;
   }
   *::-webkit-scrollbar-track {
     background: hsl(var(--muted));

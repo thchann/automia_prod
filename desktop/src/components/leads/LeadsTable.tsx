@@ -558,7 +558,7 @@ export function LeadsTable({
 
   return (
     <div className="flex max-w-full flex-col gap-4">
-      <div className="-mx-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-none pb-1">
+      <div className="-mx-1 snap-x snap-proximity overflow-x-scroll overflow-y-hidden overscroll-x-none pb-1">
         <div
           className="flex min-w-0 flex-nowrap gap-4 px-1"
           style={{ minWidth: leadStatusRowMinWidth }}
@@ -815,7 +815,7 @@ export function LeadsTable({
         </div>
       </ManageTableFiltersDialog>
 
-      <div className="rounded-lg border border-border overflow-x-auto overscroll-x-none">
+      <div className="rounded-lg border border-border overflow-x-scroll overscroll-x-none">
         <Table scrollWrapper={false}>
           <TableHeader>
             <TableRow className="group border-b-2 border-primary transition-colors duration-150 ease-linear hover:bg-surface-hover">
