@@ -92,11 +92,26 @@
 @layer base {
   * {
     @apply border-border;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) hsl(var(--muted));
   }
-  *::-webkit-scrollbar {
+  *::-webkit-scrollbar:vertical {
+    width: 0;
     display: none;
+  }
+  *::-webkit-scrollbar:horizontal {
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--muted));
+  }
+  *::-webkit-scrollbar-corner {
+    background: hsl(var(--muted));
   }
 
   body {
