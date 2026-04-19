@@ -35,6 +35,8 @@ import {
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
+import { StatusActivityChart } from "@/components/StatusActivityChart";
+import { LEAD_STATUS_PALETTE } from "@/lib/leadStatusColors";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { ApiError, getCar, listLeadsForCar } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
@@ -286,8 +288,10 @@ export function CarsTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
-  /** Inventory status filter from summary cards (`null` = show all). */
-  const [cardFilter, setCardFilter] = useState<"available" | "sold" | null>(null);
+  /** Empty = no filter; otherwise car rows must match selected inventory keys (`available` / `sold`). */
+  const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
@@ -323,8 +327,9 @@ export function CarsTable({
     const cols =
       searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
     return cars.filter((car) => {
-      if (cardFilter === "available" && car.status !== "available") return false;
-      if (cardFilter === "sold" && car.status !== "sold") return false;
+      if (statusActivitySelectedKeys.size > 0 && !statusActivitySelectedKeys.has(car.status)) {
+        return false;
+      }
       if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
@@ -332,11 +337,11 @@ export function CarsTable({
       }
       return true;
     });
-  }, [cars, cardFilter, statusFilters, searchQuery, searchColumns]);
+  }, [cars, statusActivitySelectedKeys, statusFilters, searchQuery, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilters, searchColumns, cardFilter]);
+  }, [searchQuery, statusFilters, searchColumns, statusActivitySelectedKeys]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
   const paged = filteredCars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -358,7 +363,7 @@ export function CarsTable({
     setSearchQuery("");
     setSearchColumns(def);
     setCarColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, def, []));
-    setCardFilter(null);
+    setStatusActivitySelectedKeys(new Set());
   };
 
   const toggleStatusFilter = (status: Car["status"]) => {
@@ -441,26 +446,18 @@ export function CarsTable({
     }
   };
 
-  const statusCards = useMemo(
-    () => [
-      {
-        id: "available" as const,
-        label: tx("Available", "Disponible"),
-        color: "bg-emerald-500",
-        value: cars.filter((c) => c.status === "available").length,
-      },
-      {
-        id: "sold" as const,
-        label: tx("Sold", "Vendido"),
-        color: "bg-amber-500",
-        value: cars.filter((c) => c.status === "sold").length,
-      },
-    ],
-    [cars, tx],
-  );
-
-  const carStatusCardCount = statusCards.length;
-  const carStatusRowMinWidth = `max(100%, ${Math.max(carStatusCardCount, 1) * 280}px)`;
+  const statusActivityItems = useMemo(() => {
+    const availableHex = LEAD_STATUS_PALETTE[4];
+    const soldHex = LEAD_STATUS_PALETTE[2];
+    return cars.map((car) => ({
+      id: car.id,
+      label:
+        `${car.brand} ${car.model}`.replace(/\s+/g, " ").trim() ||
+        tx("Unnamed", "Sin nombre"),
+      statusName: car.status === "available" ? "Available" : "Sold",
+      color: car.status === "available" ? availableHex : soldHex,
+    }));
+  }, [cars, tx]);
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
@@ -469,7 +466,7 @@ export function CarsTable({
     !allCarColumnsSelected(searchColumns) ||
     statusFilters.size > 0 ||
     searchQuery.trim().length > 0 ||
-    cardFilter != null;
+    statusActivitySelectedKeys.size > 0;
 
   const visibleColumnIds = carColumnOrder;
 
@@ -604,34 +601,12 @@ export function CarsTable({
         </div>
       </div>
 
-      <div className="-mx-1 snap-x snap-proximity overflow-x-scroll overflow-y-hidden overscroll-x-none pb-1">
-        <div
-          className="flex min-w-0 flex-nowrap gap-4 px-1"
-          style={{ minWidth: carStatusRowMinWidth }}
-        >
-          {statusCards.map((stat) => (
-            <button
-              key={stat.id}
-              type="button"
-              onClick={() =>
-                setCardFilter((prev) => (prev === stat.id ? null : stat.id))
-              }
-              className={cn(
-                "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
-                cardFilter === stat.id
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:bg-surface-hover",
-              )}
-            >
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${stat.color}`} />
-                <span className="line-clamp-2">{stat.label}</span>
-              </div>
-              <div className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <StatusActivityChart
+        entity="car"
+        items={statusActivityItems}
+        selectedKeys={statusActivitySelectedKeys}
+        onSelectedKeysChange={setStatusActivitySelectedKeys}
+      />
 
       <TableSearchToolbar
         value={searchQuery}
