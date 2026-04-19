@@ -5,8 +5,8 @@ import { EMPTY_STATUS_ACTIVITY_KEYS, statusActivityKey } from "@/lib/statusActiv
 import { cn } from "@/lib/utils";
 
 /**
- * Time-range pills only update UI state unless the parent filters `items` by date
- * (or refetches) in response to `onRangeChange`.
+ * Time-range pills should drive which items the parent passes in (filter by `created_at`)
+ * via `range` / `onRangeChange`. The chart does not filter data by itself.
  */
 
 /**
@@ -52,6 +52,8 @@ export interface StatusActivityChartProps {
    */
   selectedKeys?: Set<string>;
   onSelectedKeysChange?: (keys: Set<string>) => void;
+  /** Click a bar segment to open the lead/car detail (parent handles dialog). */
+  onItemClick?: (id: string | number) => void;
   className?: string;
 }
 
@@ -81,6 +83,7 @@ export function StatusActivityChart({
   onRangeChange,
   selectedKeys: selectedKeysProp,
   onSelectedKeysChange,
+  onItemClick,
   className,
 }: StatusActivityChartProps) {
   const [internalRange, setInternalRange] = useState<StatusActivityRange>("1d");
@@ -231,7 +234,7 @@ export function StatusActivityChart({
           )}
         </div>
 
-        <BarStrip items={normalized} activeKeys={activeKeys} />
+        <BarStrip items={normalized} activeKeys={activeKeys} onItemClick={onItemClick} />
       </div>
 
       {statusGroups.length > 0 && (
@@ -334,9 +337,11 @@ export function StatusActivityChart({
 function BarStrip({
   items,
   activeKeys,
+  onItemClick,
 }: {
   items: NormalizedItem[];
   activeKeys: Set<string> | null;
+  onItemClick?: (id: string | number) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -362,31 +367,39 @@ function BarStrip({
         const matches = activeKeys === null || activeKeys.has(it._statusKey);
         const dimmed = activeKeys !== null && !matches;
         const highlighted = activeKeys !== null && matches;
+        const title =
+          it.label
+            ? `${it.label}${it.statusName ? ` — ${it.statusName}` : ""}`
+            : it.statusName;
         return (
           <div
             key={it.id}
             className="group relative h-full px-[2px]"
             style={{ width: `${widthPct}%` }}
           >
-            <div
+            <button
+              type="button"
+              title={title}
+              aria-label={
+                it.label
+                  ? `${it.label}${it.statusName ? `, ${it.statusName}` : ""}`
+                  : it.statusName ?? "Item"
+              }
+              onClick={() => onItemClick?.(it.id)}
               className={cn(
                 "h-full w-full rounded-full transition-all duration-200 hover:scale-y-[1.03]",
+                onItemClick && "cursor-pointer",
                 dimmed && "opacity-20",
                 highlighted && "scale-y-[1.05] shadow-sm",
               )}
               style={{ backgroundColor: it._color }}
-              title={
-                it.label
-                  ? `${it.label}${it.statusName ? ` — ${it.statusName}` : ""}`
-                  : it.statusName
-              }
             />
             {(it.label || it.statusName) && (
               <div
                 className={cn(
                   "pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2",
                   "whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background",
-                  "opacity-0 shadow-md transition-opacity group-hover:opacity-100",
+                  "opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
                 )}
               >
                 {it.label}

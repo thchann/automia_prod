@@ -8,6 +8,8 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
+  ChevronUp,
   Search,
   GripVertical,
   X,
@@ -34,8 +36,9 @@ import {
   type LeadSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
-import { StatusActivityChart } from "@/components/StatusActivityChart";
+import { StatusActivityChart, type StatusActivityRange } from "@/components/StatusActivityChart";
 import { statusActivityKey } from "@/lib/statusActivityKeys";
+import { isCreatedWithinActivityRange } from "@/lib/statusActivityDateRange";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -245,6 +248,9 @@ export function LeadsTable({
   const [pendingDeleteLeadIds, setPendingDeleteLeadIds] = useState<string[] | null>(null);
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activityRange, setActivityRange] = useState<StatusActivityRange>("All time");
+  /** Table/search section expanded below the chart (hero view vs full list). */
+  const [tableDetailOpen, setTableDetailOpen] = useState(false);
   /** Empty = no filter; otherwise lead rows must match a selected status-activity key (see StatusActivityChart). */
   const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
     () => new Set(),
@@ -275,11 +281,17 @@ export function LeadsTable({
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
   const getCar = (id: string | null) => cars.find((c) => c.id === id);
 
+  const dateFilteredLeads = useMemo(
+    () =>
+      leads.filter((lead) => isCreatedWithinActivityRange(lead.created_at, activityRange)),
+    [leads, activityRange],
+  );
+
   const filteredLeads = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
-    return leads.filter((lead) => {
+    return dateFilteredLeads.filter((lead) => {
       if (statusFilterIds.size > 0) {
         const sid = lead.status_id;
         if (!sid || !statusFilterIds.has(sid)) return false;
@@ -310,11 +322,11 @@ export function LeadsTable({
       }
       return true;
     });
-  }, [leads, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchQuery, statuses, cars, searchColumns, tx]);
+  }, [dateFilteredLeads, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchQuery, statuses, cars, searchColumns, tx]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchColumns]);
+  }, [searchQuery, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchColumns, activityRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const paged = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -335,6 +347,7 @@ export function LeadsTable({
     setStatusFilterIds(new Set());
     setLeadTypeFilters(new Set());
     setStatusActivitySelectedKeys(new Set());
+    setActivityRange("All time");
     setSearchQuery("");
     setSearchColumns(def);
     setLeadColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, def, []));
@@ -450,7 +463,7 @@ export function LeadsTable({
 
   const statusActivityItems = useMemo(
     () =>
-      leads.map((lead) => {
+      dateFilteredLeads.map((lead) => {
         const st = lead.status_id ? statuses.find((s) => s.id === lead.status_id) : null;
         const statusName = st
           ? translateStatusName(st.name, tx)
@@ -462,7 +475,7 @@ export function LeadsTable({
           color: st?.color ?? undefined,
         };
       }),
-    [leads, statuses, tx],
+    [dateFilteredLeads, statuses, tx],
   );
 
   const hasActiveFilters =
@@ -470,7 +483,8 @@ export function LeadsTable({
     statusFilterIds.size > 0 ||
     leadTypeFilters.size > 0 ||
     statusActivitySelectedKeys.size > 0 ||
-    searchQuery.trim().length > 0;
+    searchQuery.trim().length > 0 ||
+    activityRange !== "All time";
 
   const visibleColumnIds = leadColumnOrder;
 
@@ -571,14 +585,65 @@ export function LeadsTable({
   }, [generateLeadSignal, onAddLead]);
 
   return (
-    <div className="flex max-w-full flex-col gap-4">
-      <StatusActivityChart
-        entity="lead"
-        items={statusActivityItems}
-        selectedKeys={statusActivitySelectedKeys}
-        onSelectedKeysChange={setStatusActivitySelectedKeys}
-      />
+    <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-0">
+      <div className="shrink-0">
+        <StatusActivityChart
+          entity="lead"
+          items={statusActivityItems}
+          range={activityRange}
+          onRangeChange={setActivityRange}
+          selectedKeys={statusActivitySelectedKeys}
+          onSelectedKeysChange={setStatusActivitySelectedKeys}
+          onItemClick={(itemId) => {
+            const lead = leads.find((l) => String(l.id) === String(itemId));
+            if (lead) beginEditLead(lead);
+          }}
+        />
+      </div>
 
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {tableDetailOpen && (
+          <div className="z-30 flex shrink-0 justify-center border-b border-border bg-card py-2 shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => setTableDetailOpen(false)}
+            >
+              <ChevronUp className="h-4 w-4" />
+              {tx("Back to chart", "Volver al gráfico")}
+            </Button>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col",
+            tableDetailOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden",
+          )}
+        >
+          {!tableDetailOpen && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/30 backdrop-blur-[2px]">
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="h-14 w-14 rounded-full shadow-lg"
+                onClick={() => setTableDetailOpen(true)}
+                aria-label={tx("Expand table", "Expandir tabla")}
+              >
+                <ChevronDown className="h-8 w-8" />
+              </Button>
+            </div>
+          )}
+
+          <div
+            className={cn(
+              "flex flex-col gap-4",
+              !tableDetailOpen && "max-h-[min(280px,40vh)] overflow-hidden blur-sm",
+            )}
+          >
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -1211,6 +1276,9 @@ export function LeadsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
