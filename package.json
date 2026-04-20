@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": ["desktop", "mobile", "packages/api"],
   "scripts": {
+    "start": "serve mobile/dist -l tcp://0.0.0.0:${PORT:-3000}",
     "dev": "npm run dev -w @automia/desktop",
     "dev:desktop": "npm run dev -w @automia/desktop",
     "dev:mobile": "npm run dev -w @automia/mobile",
@@ -17,5 +18,8 @@
     "test:desktop:unit": "npm run test -w @automia/desktop",
     "test:desktop:e2e": "npx playwright test --config desktop/playwright.config.ts",
     "test:critical": "npm run test:desktop:unit"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
   }
 }
