@@ -1,22 +1,16 @@
 import { getAccessToken } from "./tokens";
 import { getApiBaseUrl } from "./env";
 
-export type StartInstagramOAuthOptions = {
-  /** When the API supports it, ties the new OAuth flow to an automation type (DM vs comment, etc.). */
-  automationTypeId?: string;
-  /** Fallback hint when `automationTypeId` is not known (e.g. catalog slug before types load). */
-  automationTypeCode?: string;
-};
+export type InstagramOAuthResult =
+  | { status: "success"; oauth_connection_id?: string }
+  | { status: "cancelled" }
+  | { status: "error"; message?: string };
 
-export async function startInstagramOAuth(options?: StartInstagramOAuthOptions) {
+export async function startInstagramOAuth(): Promise<InstagramOAuthResult> {
   const token = getAccessToken();
   if (!token) throw new Error("No access token");
 
-  const params = new URLSearchParams();
-  if (options?.automationTypeId) params.set("automation_type_id", options.automationTypeId);
-  if (options?.automationTypeCode) params.set("automation_type_code", options.automationTypeCode);
-  const qs = params.toString();
-  const path = `${getApiBaseUrl().replace(/\/$/, "")}/oauth/instagram/authorize${qs ? `?${qs}` : ""}`;
+  const path = `${getApiBaseUrl().replace(/\/$/, "")}/oauth/instagram/authorize`;
 
   const res = await fetch(path, {
     headers: {
@@ -50,12 +44,34 @@ export async function startInstagramOAuth(options?: StartInstagramOAuthOptions) 
     throw new Error("Popup blocked");
   }
 
-  // 👀 Detect when popup closes
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<InstagramOAuthResult>((resolve) => {
+    let settled = false;
+    const settle = (result: InstagramOAuthResult) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", onMessage);
+      window.clearInterval(interval);
+      resolve(result);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (!event.origin || event.origin !== window.location.origin) return;
+      const data = event.data as
+        | { type?: string; status?: "success" | "error"; oauth_connection_id?: string; message?: string }
+        | undefined;
+      if (!data || data.type !== "automia:instagram-oauth") return;
+      if (data.status === "success") {
+        settle({ status: "success", oauth_connection_id: data.oauth_connection_id });
+        return;
+      }
+      settle({ status: "error", message: data.message });
+    };
+
+    window.addEventListener("message", onMessage);
+
     const interval = setInterval(() => {
       if (popup.closed) {
-        clearInterval(interval);
-        resolve();
+        settle({ status: "cancelled" });
       }
     }, 500);
   });

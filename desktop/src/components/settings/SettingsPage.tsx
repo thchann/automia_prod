@@ -1,7 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Trash2 } from "lucide-react";
-import { getSettings, patchSettings } from "@automia/api";
+import { Instagram, LogOut, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ApiError,
+  createAutomation,
+  getSettings,
+  listAutomations,
+  listAutomationTypes,
+  patchSettings,
+  startInstagramOAuth,
+} from "@automia/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -35,8 +44,8 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-none">
-      <div className="mx-auto w-full max-w-4xl flex-1 px-0 pb-12 pt-20">
-        <header className="space-y-1 pb-6">
+      <div className="mx-auto w-full max-w-5xl flex-1 px-2 pb-12 pt-10">
+        <header className="space-y-1 pb-4">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {tx("Settings", "Configuracion")}
           </h1>
@@ -49,7 +58,7 @@ export function SettingsPage() {
         </header>
 
         <Tabs defaultValue="account" className="w-full">
-          <TabsList className="mb-8 flex h-auto w-full flex-wrap gap-2 rounded-none bg-transparent p-0">
+          <TabsList className="mb-5 flex h-auto w-full flex-wrap gap-2 rounded-none bg-transparent p-0">
             {SETTINGS_TABS.map((tab) => (
               <TabsTrigger
                 key={tab.key}
@@ -78,10 +87,20 @@ function AccountSettingsForm() {
   const navigate = useNavigate();
   const { tx } = useLanguage();
   const { user, logout, refreshUser } = useAuth();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [clientDescription, setClientDescription] = useState("");
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hasConnectedInstagramInSession, setHasConnectedInstagramInSession] = useState(false);
+  const { data: typesData } = useQuery({
+    queryKey: ["automation-types"],
+    queryFn: () => listAutomationTypes(),
+  });
+  const { data: automationsData } = useQuery({
+    queryKey: ["automations"],
+    queryFn: () => listAutomations(),
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -121,8 +140,56 @@ function AccountSettingsForm() {
     }
   };
 
+  const types = typesData?.types ?? [];
+  const automations = automationsData?.automations ?? [];
+  const igDmType = types.find((t) => t.platform === "instagram" && /\bdm\b/i.test(`${t.code} ${t.name}`));
+  const hasConnectedInstagram =
+    hasConnectedInstagramInSession ||
+    automations.some((a) => {
+      const t = types.find((row) => row.id === a.automation_type_id);
+      return t?.platform === "instagram";
+    });
+  const connectedInstagram = automations.filter((a) => {
+    const t = types.find((row) => row.id === a.automation_type_id);
+    return t?.platform === "instagram";
+  });
+
+  const connectInstagram = async () => {
+    try {
+      const result = await startInstagramOAuth();
+      if (result.status === "success") {
+        setHasConnectedInstagramInSession(true);
+        toast.success(tx("Instagram connected", "Instagram conectado"));
+      } else if (result.status === "error") {
+        toast.error(result.message || tx("Could not connect Instagram", "No se pudo conectar Instagram"));
+      }
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+    } catch {
+      toast.error(tx("Could not connect Instagram", "No se pudo conectar Instagram"));
+    }
+  };
+
+  const createDmAutomation = async () => {
+    if (!igDmType) return;
+    try {
+      await createAutomation({ automation_type_id: igDmType.id });
+      toast.success(tx("Automation created", "Automatizacion creada"));
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400) {
+        toast.error(tx("Connect Instagram first.", "Conecta Instagram primero."));
+        return;
+      }
+      if (e instanceof ApiError && e.status === 409) {
+        toast.error(tx("This automation already exists.", "Esta automatizacion ya existe."));
+        return;
+      }
+      toast.error(tx("Could not create automation", "No se pudo crear la automatizacion"));
+    }
+  };
+
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-10">
       <SettingsSection
         title={tx("Profile", "Perfil")}
         description={tx("Set your account details", "Configura los datos de tu cuenta")}
@@ -188,6 +255,50 @@ function AccountSettingsForm() {
               </Button>
             </div>
           </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title={tx("Integrations", "Integraciones")}
+        description={tx(
+          "Connect Instagram to create and manage automations.",
+          "Conecta Instagram para crear y gestionar automatizaciones.",
+        )}
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl bg-muted/20 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card">
+                  <Instagram className="h-5 w-5 text-[#E1306C]" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-foreground">Instagram</p>
+                  <p className="text-sm text-muted-foreground">
+                    {hasConnectedInstagram
+                      ? tx("Connected and ready for automations.", "Conectado y listo para automatizaciones.")
+                      : tx("Connect your account to start automations.", "Conecta tu cuenta para iniciar automatizaciones.")}
+                  </p>
+                </div>
+              </div>
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => void connectInstagram()}>
+                {tx("Connect Instagram", "Conectar Instagram")}
+              </Button>
+            </div>
+          </div>
+
+          {hasConnectedInstagram ? (
+            <div className="rounded-xl bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">
+                  {tx("Instagram DM automation", "Automatizacion DM de Instagram")}
+                </p>
+                <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={() => void createDmAutomation()}>
+                  {connectedInstagram.length > 0 ? tx("Connected", "Conectada") : tx("Create automation", "Crear automatizacion")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </SettingsSection>
 
@@ -259,8 +370,8 @@ function SettingsSection({
   return (
     <section
       className={cn(
-        "grid gap-8 border-b border-border py-10 lg:grid-cols-[minmax(180px,260px)_1fr] lg:gap-12 xl:grid-cols-[minmax(200px,280px)_1fr]",
-        isLast && "border-b-0 pb-0",
+        "grid gap-6 px-5 py-2 lg:grid-cols-[minmax(180px,260px)_1fr] lg:gap-10 xl:grid-cols-[minmax(200px,280px)_1fr]",
+        isLast && "pb-0",
       )}
     >
       <div className="space-y-2 lg:pt-0.5">

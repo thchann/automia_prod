@@ -2,9 +2,12 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ExternalLink, Instagram, Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ApiError,
+  createAutomation,
   listAutomations,
   listAutomationTypes,
   startInstagramOAuth,
+  updateAutomation,
 } from "@automia/api";
 import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
@@ -130,6 +133,7 @@ export function AutomationsPage() {
 
   const types = typesData?.types ?? [];
   const automations = automationsData?.automations ?? [];
+  const [hasConnectedInstagramInSession, setHasConnectedInstagramInSession] = useState(false);
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t] as const)), [types]);
 
@@ -146,15 +150,46 @@ export function AutomationsPage() {
     { key: "connected", label: tx("Connected", "Conectadas") },
   ];
 
-  const runInstagramOAuth = async (opts?: { automationTypeId?: string; automationTypeCode?: BotCatalogKey }) => {
+  const hasConnectedInstagram = hasConnectedInstagramInSession || automations.some((a) => {
+    const t = typeById.get(a.automation_type_id);
+    return t?.platform === "instagram";
+  });
+
+  const runInstagramOAuth = async () => {
     try {
-      await startInstagramOAuth({
-        automationTypeId: opts?.automationTypeId,
-        automationTypeCode: opts?.automationTypeCode,
-      });
+      const result = await startInstagramOAuth();
+      if (result.status === "success") {
+        setHasConnectedInstagramInSession(true);
+      } else if (result.status === "error") {
+        toast.error(result.message || tx("Could not connect Instagram.", "No se pudo conectar Instagram."));
+      }
       await queryClient.invalidateQueries({ queryKey: ["automations"] });
     } catch {
       toast.error(tx("Could not start Instagram connection", "No se pudo conectar Instagram"));
+    }
+  };
+
+  const createAutomationForType = async (typeItem: AutomationTypeItem) => {
+    try {
+      await createAutomation({ automation_type_id: typeItem.id });
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+      setTab("connected");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400) {
+        toast.error(tx("Connect Instagram first.", "Conecta Instagram primero."));
+        return;
+      }
+      if (e instanceof ApiError && e.status === 409) {
+        toast.error(
+          tx(
+            "This automation is already connected.",
+            "Esta automatizacion ya esta conectada.",
+          ),
+        );
+        setTab("connected");
+        return;
+      }
+      toast.error(tx("Could not create automation.", "No se pudo crear la automatizacion."));
     }
   };
 
@@ -169,14 +204,26 @@ export function AutomationsPage() {
       );
       return;
     }
-    void runInstagramOAuth({
-      automationTypeId: resolved?.id,
-      automationTypeCode: resolved?.id ? undefined : key,
-    });
+    if (!resolved) return;
+    if (!hasConnectedInstagram) {
+      void runInstagramOAuth();
+      return;
+    }
+    void createAutomationForType(resolved);
   };
 
-  const refreshInstagramForType = (typeItem: AutomationTypeItem) => {
-    void runInstagramOAuth({ automationTypeId: typeItem.id });
+  const refreshInstagramForType = (_typeItem: AutomationTypeItem) => {
+    void runInstagramOAuth();
+  };
+
+  const toggleAutomationStatus = async (automation: AutomationItem) => {
+    const next = automation.status === "active" ? "paused" : "active";
+    try {
+      await updateAutomation(automation.id, { status: next });
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+    } catch {
+      toast.error(tx("Update failed", "Error al actualizar"));
+    }
   };
 
   /** Do not surface `platform_page_id` in the UI. */
@@ -283,7 +330,19 @@ export function AutomationsPage() {
                         >
                           {tx("View connected", "Ver conectadas")}
                         </Button>
-                      ) : null}
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-full px-3 text-xs"
+                          onClick={() => connectBotFromCatalog(botKey)}
+                        >
+                          {hasConnectedInstagram
+                            ? tx("Create automation", "Crear automatizacion")
+                            : tx("Connect Instagram", "Conectar Instagram")}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -319,28 +378,44 @@ export function AutomationsPage() {
                   className="h-[186px] rounded-xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="flex h-full flex-col">
-                    <div className="mb-3 flex items-center justify-between pr-1">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
-                        {isIg ? (
-                          <Instagram className="h-4 w-4 text-[#E1306C]" />
-                        ) : (
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        )}
+                    <div className="mb-3 flex items-start justify-between pr-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
+                          {isIg ? (
+                            <Instagram className="h-4 w-4 text-[#E1306C]" />
+                          ) : (
+                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="font-semibold">{typeItem.name}</div>
                       </div>
+                      <button
+                        type="button"
+                        aria-label={conn.status === "active" ? tx("Active", "Activo") : tx("Paused", "Pausado")}
+                        onClick={() => void toggleAutomationStatus(conn)}
+                        className={`relative h-6 w-10 overflow-hidden rounded-full transition-colors ${
+                          conn.status === "active" ? "bg-primary" : "bg-muted"
+                        }`}
+                      >
+                        <span
+                          className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                            conn.status === "active" ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
                     </div>
                     <div>
-                      <div className="font-semibold">{typeItem.name}</div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{accountSubtitle(conn)}</p>
                     </div>
-                    <div className="mt-auto flex h-8 items-center pr-1">
+                    <div className="mt-auto flex h-8 items-center justify-end pr-1">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-8 rounded-full px-4"
+                        className="h-8 px-2 text-primary hover:text-primary"
                         onClick={() => setManageTarget({ type: typeItem, automation: conn })}
                       >
-                        {tx("Manage", "Gestionar")}
+                        {tx("View integration", "Ver integracion")}
                       </Button>
                     </div>
                   </div>

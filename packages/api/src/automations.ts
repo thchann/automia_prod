@@ -1,6 +1,7 @@
 import { ApiError, apiRequest } from "./client";
 import type {
   AutomationConfigUpdateRequest,
+  AutomationCreateRequest,
   AutomationItem,
   AutomationListResponse,
   AutomationMessagesListResponse,
@@ -14,6 +15,13 @@ export async function listAutomationTypes(): Promise<AutomationTypesListResponse
 
 export async function listAutomations(): Promise<AutomationListResponse> {
   return apiRequest<AutomationListResponse>("/automations");
+}
+
+export async function createAutomation(body: AutomationCreateRequest): Promise<AutomationItem> {
+  return apiRequest<AutomationItem>("/automations", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function getAutomation(id: string): Promise<AutomationItem> {

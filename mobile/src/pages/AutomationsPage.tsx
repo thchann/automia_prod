@@ -1,6 +1,9 @@
 import { ExternalLink, Instagram } from "lucide-react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ApiError,
+  createAutomation,
   listAutomations,
   listAutomationTypes,
   startInstagramOAuth,
@@ -33,6 +36,7 @@ function accountIdentitySubtitle(
 const AutomationsPage = () => {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
+  const [hasConnectedInstagramInSession, setHasConnectedInstagramInSession] = useState(false);
 
   const { data: typesData, isLoading: loadingTypes } = useQuery({
     queryKey: ["automation-types"],
@@ -46,11 +50,44 @@ const AutomationsPage = () => {
   const types = typesData?.types ?? [];
   const automations = automationsData?.automations ?? [];
 
+  const hasConnectedInstagram = hasConnectedInstagramInSession || automations.some((a) => {
+    const type = types.find((t) => t.id === a.automation_type_id);
+    return type?.platform === "instagram";
+  });
+
   const connectInstagram = async () => {
     try {
-      await startInstagramOAuth();
+      const result = await startInstagramOAuth();
+      if (result.status === "success") {
+        setHasConnectedInstagramInSession(true);
+      } else if (result.status === "error") {
+        toast.error(result.message || tx("Could not connect Instagram.", "No se pudo conectar Instagram."));
+      }
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
     } catch {
       toast.error(tx("Could not start Instagram connection", "No se pudo conectar Instagram"));
+    }
+  };
+
+  const createAutomationForType = async (automationTypeId: string) => {
+    try {
+      await createAutomation({ automation_type_id: automationTypeId });
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400) {
+        toast.error(tx("Connect Instagram first.", "Conecta Instagram primero."));
+        return;
+      }
+      if (e instanceof ApiError && e.status === 409) {
+        toast.error(
+          tx(
+            "This automation is already connected.",
+            "Esta automatizacion ya esta conectada.",
+          ),
+        );
+        return;
+      }
+      toast.error(tx("Could not create automation.", "No se pudo crear la automatizacion."));
     }
   };
 
@@ -107,7 +144,17 @@ const AutomationsPage = () => {
                         variant="outline"
                         size="sm"
                         className="h-8 rounded-full px-4"
-                        onClick={() => void connectInstagram()}
+                        onClick={() => {
+                          if (conn) {
+                            void connectInstagram();
+                            return;
+                          }
+                          if (!hasConnectedInstagram) {
+                            void connectInstagram();
+                            return;
+                          }
+                          void createAutomationForType(t.id);
+                        }}
                         disabled={!t.is_active}
                         title={
                           !t.is_active
@@ -118,7 +165,11 @@ const AutomationsPage = () => {
                             : undefined
                         }
                       >
-                        {conn ? tx("Reconnect", "Reconectar") : tx("Connect", "Conectar")}
+                        {conn
+                          ? tx("Manage connection", "Gestionar conexion")
+                          : hasConnectedInstagram
+                            ? tx("Create", "Crear")
+                            : tx("Connect Instagram", "Conectar Instagram")}
                       </Button>
                     ) : (
                       <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-4" disabled>

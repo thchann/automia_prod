@@ -302,6 +302,10 @@ export interface AutomationUpdateRequest {
   status: string;
 }
 
+export interface AutomationCreateRequest {
+  automation_type_id: string;
+}
+
 export interface AutomationConfigUpdateRequest {
   config: Record<string, unknown>;
 }

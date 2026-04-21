@@ -22,7 +22,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   typeItem: AutomationTypeItem;
   automation: AutomationItem;
-  /** Re-run Instagram OAuth for this automation type (new account or token refresh). */
+  /** Re-run Instagram OAuth to manage the shared Instagram connection. */
   onRefreshInstagramAccess: () => void;
 };
 
@@ -278,7 +278,7 @@ export function AutomationManageDialog({
                   className="rounded-full"
                   onClick={onRefreshInstagramAccess}
                 >
-                  {tx("Refresh Instagram connection", "Actualizar conexión de Instagram")}
+                  {tx("Manage Instagram connection", "Gestionar conexion de Instagram")}
                 </Button>
               ) : null}
             </div>

@@ -236,6 +236,7 @@ describe("@automia/api exports", () => {
       .mockResolvedValueOnce(makeJsonResponse({ types: [] }))
       .mockResolvedValueOnce(makeJsonResponse({ automations: [] }))
       .mockResolvedValueOnce(makeJsonResponse({ id: "a1", user_id: "u1", automation_type_id: "t1", platform_page_id: "p1", platform_username: null, platform_display_name: null, token_type: "Bearer", token_expires_at: null, status: "active", last_activity: null, last_error: null, config: null, created_at: "2024-01-01", updated_at: null }))
+      .mockResolvedValueOnce(makeJsonResponse({ id: "a1", user_id: "u1", automation_type_id: "t1", platform_page_id: "p1", platform_username: null, platform_display_name: null, token_type: "Bearer", token_expires_at: null, status: "active", last_activity: null, last_error: null, config: null, created_at: "2024-01-01", updated_at: null }))
       .mockResolvedValueOnce(makeJsonResponse({ messages: [] }))
       .mockResolvedValueOnce(makeJsonResponse({ id: "a1", user_id: "u1", automation_type_id: "t1", platform_page_id: "p1", platform_username: null, platform_display_name: null, token_type: "Bearer", token_expires_at: null, status: "paused", last_activity: null, last_error: null, config: null, created_at: "2024-01-01", updated_at: null }))
       .mockResolvedValueOnce(makeJsonResponse({ id: "a1", user_id: "u1", automation_type_id: "t1", platform_page_id: "p1", platform_username: null, platform_display_name: null, token_type: "Bearer", token_expires_at: null, status: "active", last_activity: null, last_error: null, config: { x: 1 }, created_at: "2024-01-01", updated_at: null }))
@@ -246,12 +247,13 @@ describe("@automia/api exports", () => {
 
     await api.listAutomationTypes();
     await api.listAutomations();
+    await api.createAutomation({ automation_type_id: "t1" });
     await api.getAutomation("a1");
     await api.listAutomationMessages("a1");
     await api.updateAutomation("a1", { status: "paused" });
     await api.updateAutomationConfig("a1", { config: { x: 1 } });
     await api.deleteAutomation("a1");
-    await api.startInstagramOAuth({ automationTypeCode: "instagram_dm" });
+    await api.startInstagramOAuth();
     expect(openSpy).toHaveBeenCalled();
     await api.getHealth();
     await api.pingSiteHealth();
