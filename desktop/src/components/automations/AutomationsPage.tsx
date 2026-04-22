@@ -11,12 +11,6 @@ import {
 } from "@automia/api";
 import type { AutomationItem, AutomationTypeItem } from "@automia/api";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
 import { AutomationManageDialog } from "./AutomationManageDialog";
@@ -28,8 +22,7 @@ type BotCatalogKey = "instagram_dm" | "instagram_comment";
 
 const BOT_ORDER: BotCatalogKey[] = ["instagram_dm", "instagram_comment"];
 
-/** Product flag: hide connect for comment bot until the backend is ready. */
-const COMMENT_BOT_CONNECT_ENABLED = false;
+const COMMENT_BOT_TYPE_CODES = new Set(["comments_bot", "instagram_comment", "instagram_comments"]);
 
 /**
  * Map API automation types to catalog buckets.
@@ -39,7 +32,7 @@ const COMMENT_BOT_CONNECT_ENABLED = false;
 function classifyInstagramType(t: AutomationTypeItem): "dm" | "comment" {
   const code = t.code.toLowerCase();
   const name = t.name.toLowerCase();
-  if (code === "instagram_comment" || code === "instagram_comments") {
+  if (COMMENT_BOT_TYPE_CODES.has(code)) {
     return "comment";
   }
   if (code === "instagram_dm" || /\bdm\b/.test(code) || /\bdm\b/.test(name)) {
@@ -65,9 +58,6 @@ function countAutomationsForCatalog(
   types: AutomationTypeItem[],
   key: BotCatalogKey,
 ): number {
-  if (key === "instagram_comment" && !COMMENT_BOT_CONNECT_ENABLED) {
-    return 0;
-  }
   const ids = typeIdsForCatalogKey(types, key);
   if (ids.size === 0) return 0;
   return automations.filter((a) => ids.has(a.automation_type_id)).length;
@@ -107,7 +97,7 @@ function resolveTypeForBot(types: AutomationTypeItem[], key: BotCatalogKey): Aut
     );
   }
   return (
-    ig.find((t) => classifyInstagramType(t) === "comment" && (t.code === "instagram_comment" || t.code === "instagram_comments")) ??
+    ig.find((t) => classifyInstagramType(t) === "comment" && COMMENT_BOT_TYPE_CODES.has(t.code.toLowerCase())) ??
     ig.find((t) => classifyInstagramType(t) === "comment") ??
     undefined
   );
@@ -194,9 +184,6 @@ export function AutomationsPage() {
   };
 
   const connectBotFromCatalog = (key: BotCatalogKey) => {
-    if (key === "instagram_comment" && !COMMENT_BOT_CONNECT_ENABLED) {
-      return;
-    }
     const resolved = resolveTypeForBot(types, key);
     if (resolved && !resolved.is_active) {
       toast.error(

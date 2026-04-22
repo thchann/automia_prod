@@ -9,6 +9,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, getAutomation, updateAutomation, updateAutomationConfig } from "@automia/api";
@@ -36,12 +38,21 @@ function formatWhen(iso: string | null | undefined): string {
 type DmMode = "ai" | "static";
 const AI_MAX_CHARS = 8000;
 const STATIC_MAX_CHARS = 2000;
+const COMMENTS_TRIGGER_MAX_CHARS = 128;
+const COMMENTS_RESPONSE_MAX_CHARS = 2000;
+
+const COMMENT_BOT_CODES = new Set(["comments_bot", "instagram_comment", "instagram_comments"]);
+
+function isInstagramCommentsType(typeItem: AutomationTypeItem): boolean {
+  if (typeItem.platform !== "instagram") return false;
+  return COMMENT_BOT_CODES.has(typeItem.code.toLowerCase());
+}
 
 function isInstagramDmType(typeItem: AutomationTypeItem): boolean {
   if (typeItem.platform !== "instagram") return false;
   const code = typeItem.code.toLowerCase();
   const name = typeItem.name.toLowerCase();
-  if (code === "instagram_comment" || code === "instagram_comments") return false;
+  if (COMMENT_BOT_CODES.has(code)) return false;
   return code === "instagram_dm" || /\bdm\b/.test(code) || /\bdm\b/.test(name);
 }
 
@@ -58,6 +69,9 @@ export function AutomationManageDialog({
   const [dmInstructions, setDmInstructions] = useState("");
   const [dmStaticMessage, setDmStaticMessage] = useState("");
   const [savingDm, setSavingDm] = useState(false);
+  const [commentsTrigger, setCommentsTrigger] = useState("");
+  const [commentsResponse, setCommentsResponse] = useState("");
+  const [savingComments, setSavingComments] = useState(false);
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
 
   const { data: detail = automation } = useQuery({
@@ -70,6 +84,8 @@ export function AutomationManageDialog({
   const isActive = detail.status === "active";
   const isIg = typeItem.platform === "instagram";
   const isIgDm = isInstagramDmType(typeItem);
+  const isIgComments = isInstagramCommentsType(typeItem);
+  const savingSettings = savingDm || savingComments;
 
   useEffect(() => {
     if (!open || !isIgDm) return;
@@ -79,6 +95,13 @@ export function AutomationManageDialog({
     setDmInstructions(typeof cfg.dm_system_instructions === "string" ? cfg.dm_system_instructions : "");
     setDmStaticMessage(typeof cfg.dm_static_message === "string" ? cfg.dm_static_message : "");
   }, [open, isIgDm, detail.id, detail.updated_at, detail.config]);
+
+  useEffect(() => {
+    if (!open || !isIgComments) return;
+    const cfg = (detail.config ?? {}) as Record<string, unknown>;
+    setCommentsTrigger(typeof cfg.trigger === "string" ? cfg.trigger : "");
+    setCommentsResponse(typeof cfg.response === "string" ? cfg.response : "");
+  }, [open, isIgComments, detail.id, detail.updated_at, detail.config]);
 
   const toggleStatus = async () => {
     const next = detail.status === "active" ? "paused" : "active";
@@ -152,6 +175,60 @@ export function AutomationManageDialog({
     }
   };
 
+  const saveCommentsSettings = async (): Promise<boolean> => {
+    if (!isIgComments) return true;
+    const trigger = commentsTrigger.trim();
+    const response = commentsResponse.trim();
+    if (!trigger) {
+      toast.error(tx("Match text is required.", "El texto de coincidencia es obligatorio."));
+      return false;
+    }
+    if (trigger.length > COMMENTS_TRIGGER_MAX_CHARS) {
+      toast.error(
+        tx(
+          `Match text must be ${COMMENTS_TRIGGER_MAX_CHARS} characters or less.`,
+          `El texto de coincidencia debe tener ${COMMENTS_TRIGGER_MAX_CHARS} caracteres o menos.`,
+        ),
+      );
+      return false;
+    }
+    if (!response) {
+      toast.error(tx("Reply message is required.", "El mensaje de respuesta es obligatorio."));
+      return false;
+    }
+    if (response.length > COMMENTS_RESPONSE_MAX_CHARS) {
+      toast.error(
+        tx(
+          `Response must be ${COMMENTS_RESPONSE_MAX_CHARS} characters or less.`,
+          `La respuesta debe tener ${COMMENTS_RESPONSE_MAX_CHARS} caracteres o menos.`,
+        ),
+      );
+      return false;
+    }
+    setSavingComments(true);
+    try {
+      const fresh = await getAutomation(detail.id);
+      const prev = (fresh.config ?? {}) as Record<string, unknown>;
+      const next: Record<string, unknown> = { ...prev, trigger, response };
+      await updateAutomationConfig(detail.id, { config: next });
+      await queryClient.invalidateQueries({ queryKey: ["automations"] });
+      await queryClient.invalidateQueries({ queryKey: ["automation", detail.id] });
+      toast.success(tx("Saved", "Guardado"));
+      return true;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) {
+        toast.error(typeof e.detail === "string" ? e.detail : e.message);
+      } else {
+        toast.error(
+          tx("Could not save comment bot settings.", "No se pudo guardar la configuracion del bot de comentarios."),
+        );
+      }
+      return false;
+    } finally {
+      setSavingComments(false);
+    }
+  };
+
   const initialDmMode = (() => {
     const cfg = (detail.config ?? {}) as Record<string, unknown>;
     return typeof cfg.dm_response_mode === "string" && cfg.dm_response_mode === "static"
@@ -166,18 +243,34 @@ export function AutomationManageDialog({
     const cfg = (detail.config ?? {}) as Record<string, unknown>;
     return typeof cfg.dm_static_message === "string" ? cfg.dm_static_message : "";
   })();
+  const initialCommentsTrigger = (() => {
+    const cfg = (detail.config ?? {}) as Record<string, unknown>;
+    return typeof cfg.trigger === "string" ? cfg.trigger : "";
+  })();
+  const initialCommentsResponse = (() => {
+    const cfg = (detail.config ?? {}) as Record<string, unknown>;
+    return typeof cfg.response === "string" ? cfg.response : "";
+  })();
   const hasUnsavedChanges =
-    isIgDm &&
-    (dmMode !== initialDmMode ||
-      dmInstructions !== initialDmInstructions ||
-      dmStaticMessage !== initialDmStaticMessage);
+    (isIgDm &&
+      (dmMode !== initialDmMode ||
+        dmInstructions !== initialDmInstructions ||
+        dmStaticMessage !== initialDmStaticMessage)) ||
+    (isIgComments &&
+      (commentsTrigger !== initialCommentsTrigger || commentsResponse !== initialCommentsResponse));
 
   const requestClose = () => {
-    if (!hasUnsavedChanges || savingDm) {
+    if (!hasUnsavedChanges || savingSettings) {
       onOpenChange(false);
       return;
     }
     setExitPromptOpen(true);
+  };
+
+  const saveAndExitActivePanel = async (): Promise<boolean> => {
+    if (isIgComments) return saveCommentsSettings();
+    if (isIgDm) return saveDmSettings();
+    return true;
   };
 
   return (
@@ -344,6 +437,65 @@ export function AutomationManageDialog({
                   )}
                 </div>
               </div>
+            ) : isIgComments ? (
+              <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-4 pb-4 pt-3">
+                <p className="text-sm font-medium text-foreground">
+                  {tx("Comment bot settings", "Configuracion del bot de comentarios")}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {tx(
+                    "Replies are driven by Instagram comments on your posts. When a comment matches the text below, the bot sends your reply.",
+                    "Las respuestas dependen de los comentarios en tus publicaciones. Si un comentario coincide con el texto de abajo, el bot envia tu respuesta.",
+                  )}
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="comments-trigger">
+                    {tx("Match in comment", "Coincidencia en el comentario")}
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    {tx(
+                      "Keyword or phrase the comment should contain (not a manual button).",
+                      "Palabra o frase que debe contener el comentario (no es un boton manual).",
+                    )}
+                  </p>
+                  <Input
+                    id="comments-trigger"
+                    value={commentsTrigger}
+                    onChange={(e) => setCommentsTrigger(e.target.value)}
+                    maxLength={COMMENTS_TRIGGER_MAX_CHARS}
+                    className="h-10 rounded-lg"
+                    placeholder={tx("e.g. PRICE", "ej. PRICE")}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {commentsTrigger.length}/{COMMENTS_TRIGGER_MAX_CHARS}
+                  </p>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col gap-1">
+                  <Label htmlFor="comments-response">
+                    {tx("Reply to send", "Respuesta a enviar")}
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    {tx(
+                      "This is the message the bot sends when a comment matches.",
+                      "Este es el mensaje que envia el bot cuando un comentario coincide.",
+                    )}
+                  </p>
+                  <Textarea
+                    id="comments-response"
+                    value={commentsResponse}
+                    onChange={(e) => setCommentsResponse(e.target.value)}
+                    maxLength={COMMENTS_RESPONSE_MAX_CHARS}
+                    className="min-h-[12rem] flex-1 resize-none rounded-lg"
+                    placeholder={tx(
+                      "Write the reply the bot should post.",
+                      "Escribe la respuesta que debe publicar el bot.",
+                    )}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {commentsResponse.length}/{COMMENTS_RESPONSE_MAX_CHARS}
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="h-full overflow-y-auto px-4 pb-4 pt-3">
                 <p className="text-sm text-muted-foreground">
@@ -358,7 +510,7 @@ export function AutomationManageDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
-          <Button type="button" variant="outline" onClick={requestClose} disabled={savingDm}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={savingSettings}>
             {tx("Close", "Cerrar")}
           </Button>
           {isIgDm ? (
@@ -370,6 +522,17 @@ export function AutomationManageDialog({
               {savingDm ? tx("Saving…", "Guardando…") : tx("Save DM settings", "Guardar configuracion de DM")}
             </Button>
           ) : null}
+          {isIgComments ? (
+            <Button
+              type="button"
+              disabled={savingComments}
+              onClick={() => void saveCommentsSettings()}
+            >
+              {savingComments
+                ? tx("Saving…", "Guardando…")
+                : tx("Save comment bot settings", "Guardar configuracion del bot de comentarios")}
+            </Button>
+          ) : null}
         </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -377,7 +540,7 @@ export function AutomationManageDialog({
         open={exitPromptOpen}
         onOpenChange={setExitPromptOpen}
         onSaveAndExit={async () => {
-          const ok = await saveDmSettings();
+          const ok = await saveAndExitActivePanel();
           if (!ok) return;
           setExitPromptOpen(false);
           onOpenChange(false);
@@ -386,7 +549,7 @@ export function AutomationManageDialog({
           setExitPromptOpen(false);
           onOpenChange(false);
         }}
-        saving={savingDm}
+        saving={savingSettings}
         title={tx("Save your changes before leaving?", "¿Guardar cambios antes de salir?")}
         description={tx(
           "You have unsaved edits in this modal.",
