@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ExternalLink, Instagram, Plus } from "lucide-react";
+import { ExternalLink, Instagram } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -241,35 +241,6 @@ export function AutomationsPage() {
         <h1 className="text-xl font-semibold text-foreground">
           {tx("All Automations", "Todas las automatizaciones")}
         </h1>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" size="sm" className="shrink-0 gap-1.5">
-              <Plus className="h-4 w-4" aria-hidden />
-              {tx("Connect bot", "Conectar bot")}
-              <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[14rem]">
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => connectBotFromCatalog("instagram_dm")}
-            >
-              {tx("Instagram DM Bot", "Bot de DM de Instagram")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className={COMMENT_BOT_CONNECT_ENABLED ? "cursor-pointer" : "cursor-not-allowed opacity-50"}
-              disabled={!COMMENT_BOT_CONNECT_ENABLED}
-              onClick={() => connectBotFromCatalog("instagram_comment")}
-            >
-              {tx("Instagram Comment Bot", "Bot de comentarios de Instagram")}
-              {!COMMENT_BOT_CONNECT_ENABLED ? (
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {tx("(coming soon)", "(pronto)")}
-                </span>
-              ) : null}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="flex shrink-0 items-center gap-0 border-b border-border">
