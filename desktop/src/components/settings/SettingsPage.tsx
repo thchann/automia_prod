@@ -4,7 +4,6 @@ import { Instagram, LogOut, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
-  createAutomation,
   getSettings,
   listAutomations,
   listAutomationTypes,
@@ -142,18 +141,12 @@ function AccountSettingsForm() {
 
   const types = typesData?.types ?? [];
   const automations = automationsData?.automations ?? [];
-  const igDmType = types.find((t) => t.platform === "instagram" && /\bdm\b/i.test(`${t.code} ${t.name}`));
   const hasConnectedInstagram =
     hasConnectedInstagramInSession ||
     automations.some((a) => {
       const t = types.find((row) => row.id === a.automation_type_id);
       return t?.platform === "instagram";
     });
-  const connectedInstagram = automations.filter((a) => {
-    const t = types.find((row) => row.id === a.automation_type_id);
-    return t?.platform === "instagram";
-  });
-
   const connectInstagram = async () => {
     try {
       const result = await startInstagramOAuth();
@@ -166,25 +159,6 @@ function AccountSettingsForm() {
       await queryClient.invalidateQueries({ queryKey: ["automations"] });
     } catch {
       toast.error(tx("Could not connect Instagram", "No se pudo conectar Instagram"));
-    }
-  };
-
-  const createDmAutomation = async () => {
-    if (!igDmType) return;
-    try {
-      await createAutomation({ automation_type_id: igDmType.id });
-      toast.success(tx("Automation created", "Automatizacion creada"));
-      await queryClient.invalidateQueries({ queryKey: ["automations"] });
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 400) {
-        toast.error(tx("Connect Instagram first.", "Conecta Instagram primero."));
-        return;
-      }
-      if (e instanceof ApiError && e.status === 409) {
-        toast.error(tx("This automation already exists.", "Esta automatizacion ya existe."));
-        return;
-      }
-      toast.error(tx("Could not create automation", "No se pudo crear la automatizacion"));
     }
   };
 
@@ -276,29 +250,23 @@ function AccountSettingsForm() {
                   <p className="text-base font-semibold text-foreground">Instagram</p>
                   <p className="text-sm text-muted-foreground">
                     {hasConnectedInstagram
-                      ? tx("Connected and ready for automations.", "Conectado y listo para automatizaciones.")
+                      ? tx("Connected", "Conectada")
                       : tx("Connect your account to start automations.", "Conecta tu cuenta para iniciar automatizaciones.")}
                   </p>
                 </div>
               </div>
-              <Button type="button" variant="outline" className="rounded-full" onClick={() => void connectInstagram()}>
-                {tx("Connect Instagram", "Conectar Instagram")}
-              </Button>
+              {hasConnectedInstagram ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-success/35 bg-success-surface px-3 py-1 text-sm font-medium text-success">
+                  <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                  {tx("Connected", "Conectada")}
+                </div>
+              ) : (
+                <Button type="button" variant="outline" className="rounded-full" onClick={() => void connectInstagram()}>
+                  {tx("Connect Instagram", "Conectar Instagram")}
+                </Button>
+              )}
             </div>
           </div>
-
-          {hasConnectedInstagram ? (
-            <div className="rounded-xl bg-muted/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-foreground">
-                  {tx("Instagram DM automation", "Automatizacion DM de Instagram")}
-                </p>
-                <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={() => void createDmAutomation()}>
-                  {connectedInstagram.length > 0 ? tx("Connected", "Conectada") : tx("Create automation", "Crear automatizacion")}
-                </Button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </SettingsSection>
 
