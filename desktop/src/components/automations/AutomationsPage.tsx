@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { toast } from "@/components/ui/sonner";
 import { AutomationManageDialog } from "./AutomationManageDialog";
+import { cn } from "@/lib/utils";
 
 type AutomationsTab = "all" | "connected";
 
@@ -230,29 +231,27 @@ export function AutomationsPage() {
         </h1>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0 border-b border-border">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-            {tab === t.key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        ))}
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none pr-1">
+        <div className="mx-auto w-full max-w-[1120px]">
+          <div className="mb-4 flex items-center gap-2">
+              {tabs.map((t) => (
+                <Button
+                  key={t.key}
+                  type="button"
+                  size="sm"
+                  variant={tab === t.key ? "default" : "outline"}
+                  className={cn("rounded-full px-4", tab !== t.key && "text-muted-foreground")}
+                  onClick={() => setTab(t.key)}
+                >
+                  {t.label}
+                </Button>
+              ))}
+          </div>
+
         {loadingTypes || loadingAuto ? (
           <p className="text-sm text-muted-foreground">{tx("Loading…", "Cargando…")}</p>
         ) : tab === "all" ? (
-          <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-wrap justify-center gap-4 pb-4">
             {BOT_ORDER.map((botKey) => {
               const { title, description } = botCatalogMeta(botKey, tx);
               const hasConnected = countAutomationsForCatalog(automations, types, botKey) > 0;
@@ -261,7 +260,7 @@ export function AutomationsPage() {
               return (
                 <div
                   key={botKey}
-                  className="h-[186px] rounded-xl border border-border bg-card p-4 shadow-sm"
+                  className="h-[186px] w-full max-w-[320px] rounded-xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="flex h-full flex-col">
                     <div className="mb-3 flex items-center justify-between pr-1">
@@ -312,7 +311,7 @@ export function AutomationsPage() {
             {tx("No connected automations yet.", "Aún no hay automatizaciones conectadas.")}
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-wrap justify-center gap-4 pb-4">
             {sortedAutomations.map((conn) => {
               const t = typeById.get(conn.automation_type_id);
               const typeItem =
@@ -333,7 +332,7 @@ export function AutomationsPage() {
               return (
                 <div
                   key={conn.id}
-                  className="h-[186px] rounded-xl border border-border bg-card p-4 shadow-sm"
+                  className="h-[186px] w-full max-w-[320px] rounded-xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="flex h-full flex-col">
                     <div className="mb-3 flex items-start justify-between pr-1">
@@ -382,6 +381,7 @@ export function AutomationsPage() {
             })}
           </div>
         )}
+          </div>
       </div>
 
       {manageTarget ? (

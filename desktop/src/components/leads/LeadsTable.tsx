@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
   Search,
   GripVertical,
   X,
@@ -34,6 +35,13 @@ import {
   type LeadSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
+import {
+  StatusActivityChart,
+  type StatusActivityRange,
+  type StatusActivityTileGroup,
+} from "@/components/StatusActivityChart";
+import { statusActivityKey } from "@/lib/statusActivityKeys";
+import { isCreatedWithinActivityRange } from "@/lib/statusActivityDateRange";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -65,9 +73,6 @@ interface LeadsTableProps {
 }
 
 const PAGE_SIZE = 9;
-
-/** Card filter key for leads with `status_id == null`. */
-const UNASSIGNED_STATUS_KEY = "__unassigned__";
 
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
@@ -246,8 +251,11 @@ export function LeadsTable({
   const [pendingDeleteLeadIds, setPendingDeleteLeadIds] = useState<string[] | null>(null);
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  /** Selected pipeline status id, or `__unassigned__` for leads with no status; `null` = no card filter. */
-  const [cardFilter, setCardFilter] = useState<string | null>(null);
+  const [activityRange, setActivityRange] = useState<StatusActivityRange>("All time");
+  /** Empty = no filter; otherwise lead rows must match a selected status-activity key (see StatusActivityChart). */
+  const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
   const [leadTypeFilters, setLeadTypeFilters] = useState<Set<Lead["lead_type"]>>(() => new Set());
@@ -274,22 +282,28 @@ export function LeadsTable({
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
   const getCar = (id: string | null) => cars.find((c) => c.id === id);
 
+  const dateFilteredLeads = useMemo(
+    () =>
+      leads.filter((lead) => isCreatedWithinActivityRange(lead.created_at, activityRange)),
+    [leads, activityRange],
+  );
   const filteredLeads = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
-    return leads.filter((lead) => {
+    return dateFilteredLeads.filter((lead) => {
       if (statusFilterIds.size > 0) {
         const sid = lead.status_id;
         if (!sid || !statusFilterIds.has(sid)) return false;
       }
       if (leadTypeFilters.size > 0 && !leadTypeFilters.has(lead.lead_type)) return false;
-      if (cardFilter != null) {
-        if (cardFilter === UNASSIGNED_STATUS_KEY) {
-          if (lead.status_id != null) return false;
-        } else if (lead.status_id !== cardFilter) {
-          return false;
-        }
+      if (statusActivitySelectedKeys.size > 0) {
+        const st = lead.status_id ? statuses.find((s) => s.id === lead.status_id) : null;
+        const statusName = st
+          ? translateStatusName(st.name, tx)
+          : tx("Unassigned", "Sin asignar");
+        const key = statusActivityKey(statusName, st?.color ?? null);
+        if (!statusActivitySelectedKeys.has(key)) return false;
       }
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
@@ -308,11 +322,11 @@ export function LeadsTable({
       }
       return true;
     });
-  }, [leads, statusFilterIds, leadTypeFilters, cardFilter, searchQuery, statuses, cars, searchColumns]);
+  }, [dateFilteredLeads, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchQuery, statuses, cars, searchColumns, tx]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilterIds, leadTypeFilters, cardFilter, searchColumns]);
+  }, [searchQuery, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchColumns, activityRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const paged = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -332,7 +346,8 @@ export function LeadsTable({
     const def = defaultLeadSearchColumns();
     setStatusFilterIds(new Set());
     setLeadTypeFilters(new Set());
-    setCardFilter(null);
+    setStatusActivitySelectedKeys(new Set());
+    setActivityRange("All time");
     setSearchQuery("");
     setSearchColumns(def);
     setLeadColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, def, []));
@@ -445,18 +460,62 @@ export function LeadsTable({
     () => [...statuses].sort((a, b) => a.display_order - b.display_order),
     [statuses],
   );
-  const unassignedCount = leads.filter((l) => l.status_id == null).length;
-
-  const leadStatusCardCount = sortedStatuses.length + (unassignedCount > 0 ? 1 : 0);
-  /** One row: cards share width when the row fits the viewport; scroll horizontally when there are many. */
-  const leadStatusRowMinWidth = `max(100%, ${Math.max(leadStatusCardCount, 1) * 280}px)`;
+  const statusActivityItems = useMemo(
+    () =>
+      dateFilteredLeads.map((lead) => {
+        const st = lead.status_id ? statuses.find((s) => s.id === lead.status_id) : null;
+        const statusName = st
+          ? translateStatusName(st.name, tx)
+          : tx("Unassigned", "Sin asignar");
+        return {
+          id: lead.id,
+          label: lead.name?.trim() || tx("Unnamed", "Sin nombre"),
+          statusName,
+          color: st?.color ?? undefined,
+        };
+      }),
+    [dateFilteredLeads, statuses, tx],
+  );
+  const statusTileGroups = useMemo<StatusActivityTileGroup[]>(() => {
+    const leadCountsByStatusId = new Map<string, number>();
+    let unassignedCount = 0;
+    for (const lead of dateFilteredLeads) {
+      if (lead.status_id) {
+        leadCountsByStatusId.set(
+          lead.status_id,
+          (leadCountsByStatusId.get(lead.status_id) ?? 0) + 1,
+        );
+      } else {
+        unassignedCount += 1;
+      }
+    }
+    const groups = sortedStatuses.map((status) => {
+      const name = translateStatusName(status.name, tx);
+      return {
+        key: statusActivityKey(name, status.color),
+        color: status.color ?? "#6B7280",
+        name,
+        count: leadCountsByStatusId.get(status.id) ?? 0,
+      };
+    });
+    if (unassignedCount > 0) {
+      groups.push({
+        key: statusActivityKey(tx("Unassigned", "Sin asignar"), null),
+        color: "#6B7280",
+        name: tx("Unassigned", "Sin asignar"),
+        count: unassignedCount,
+      });
+    }
+    return groups;
+  }, [dateFilteredLeads, sortedStatuses, tx]);
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
     statusFilterIds.size > 0 ||
     leadTypeFilters.size > 0 ||
-    cardFilter !== null ||
-    searchQuery.trim().length > 0;
+    statusActivitySelectedKeys.size > 0 ||
+    searchQuery.trim().length > 0 ||
+    activityRange !== "All time";
 
   const visibleColumnIds = leadColumnOrder;
 
@@ -557,65 +616,24 @@ export function LeadsTable({
   }, [generateLeadSignal, onAddLead]);
 
   return (
-    <div className="flex max-w-full flex-col gap-4">
-      <div className="-mx-1 snap-x snap-proximity overflow-x-scroll overflow-y-hidden overscroll-x-none pb-1">
-        <div
-          className="flex min-w-0 flex-nowrap gap-4 px-1"
-          style={{ minWidth: leadStatusRowMinWidth }}
-        >
-          {sortedStatuses.map((s) => {
-            const count = leads.filter((l) => l.status_id === s.id).length;
-            const label = translateStatusName(s.name, tx);
-            const active = cardFilter === s.id;
-            const dotColor = s.color?.trim() || null;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() =>
-                  setCardFilter((prev) => (prev === s.id ? null : s.id))
-                }
-                className={cn(
-                  "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
-                  active ? "border-primary bg-primary/10" : "border-border hover:bg-surface-hover",
-                )}
-              >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/80"
-                    style={dotColor ? { backgroundColor: dotColor } : undefined}
-                  />
-                  <span className="line-clamp-2">{label}</span>
-                </div>
-                <div className="mt-1 text-2xl font-semibold text-foreground">{count}</div>
-              </button>
-            );
-          })}
-          {unassignedCount > 0 ? (
-            <button
-              type="button"
-              onClick={() =>
-                setCardFilter((prev) =>
-                  prev === UNASSIGNED_STATUS_KEY ? null : UNASSIGNED_STATUS_KEY,
-                )
-              }
-              className={cn(
-                "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
-                cardFilter === UNASSIGNED_STATUS_KEY
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:bg-surface-hover",
-              )}
-            >
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/60" />
-                <span className="line-clamp-2">{tx("Unassigned", "Sin asignar")}</span>
-              </div>
-              <div className="mt-1 text-2xl font-semibold text-foreground">{unassignedCount}</div>
-            </button>
-          ) : null}
-        </div>
+    <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+      <div className="shrink-0">
+        <StatusActivityChart
+          entity="lead"
+          items={statusActivityItems}
+          statusTileGroups={statusTileGroups}
+          range={activityRange}
+          onRangeChange={setActivityRange}
+          selectedKeys={statusActivitySelectedKeys}
+          onSelectedKeysChange={setStatusActivitySelectedKeys}
+          onItemClick={(itemId) => {
+            const lead = leads.find((l) => String(l.id) === String(itemId));
+            if (lead) beginEditLead(lead);
+          }}
+        />
       </div>
-
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+        <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8 pt-2">
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -1248,6 +1266,8 @@ export function LeadsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </div>
+      </div>
     </div>
   );
 }

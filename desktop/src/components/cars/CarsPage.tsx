@@ -102,7 +102,7 @@ export function CarsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-none">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none">
         <CarsTable
           cars={cars}
           leads={leads}

@@ -35,6 +35,9 @@ import {
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
+import { StatusActivityChart, type StatusActivityRange } from "@/components/StatusActivityChart";
+import { LEAD_STATUS_PALETTE } from "@/lib/leadStatusColors";
+import { isCreatedWithinActivityRange } from "@/lib/statusActivityDateRange";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { ApiError, getCar, listLeadsForCar } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
@@ -284,10 +287,13 @@ export function CarsTable({
   const [pendingUnmatchCar, setPendingUnmatchCar] = useState<Car | null>(null);
   const [pendingDeleteCarIds, setPendingDeleteCarIds] = useState<string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activityRange, setActivityRange] = useState<StatusActivityRange>("All time");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
-  /** Inventory status filter from summary cards (`null` = show all). */
-  const [cardFilter, setCardFilter] = useState<"available" | "sold" | null>(null);
+  /** Empty = no filter; otherwise car rows must match selected inventory keys (`available` / `sold`). */
+  const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
@@ -318,13 +324,18 @@ export function CarsTable({
     setDraftColumnSearchRight("");
   }, [filterDialogOpen, syncFilterDraftFromCommitted]);
 
+  const dateFilteredCars = useMemo(
+    () => cars.filter((car) => isCreatedWithinActivityRange(car.created_at, activityRange)),
+    [cars, activityRange],
+  );
   const filteredCars = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
-    return cars.filter((car) => {
-      if (cardFilter === "available" && car.status !== "available") return false;
-      if (cardFilter === "sold" && car.status !== "sold") return false;
+    return dateFilteredCars.filter((car) => {
+      if (statusActivitySelectedKeys.size > 0 && !statusActivitySelectedKeys.has(car.status)) {
+        return false;
+      }
       if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
@@ -332,11 +343,11 @@ export function CarsTable({
       }
       return true;
     });
-  }, [cars, cardFilter, statusFilters, searchQuery, searchColumns]);
+  }, [dateFilteredCars, statusActivitySelectedKeys, statusFilters, searchQuery, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilters, searchColumns, cardFilter]);
+  }, [searchQuery, statusFilters, searchColumns, statusActivitySelectedKeys, activityRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
   const paged = filteredCars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -358,7 +369,8 @@ export function CarsTable({
     setSearchQuery("");
     setSearchColumns(def);
     setCarColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, def, []));
-    setCardFilter(null);
+    setStatusActivitySelectedKeys(new Set());
+    setActivityRange("All time");
   };
 
   const toggleStatusFilter = (status: Car["status"]) => {
@@ -441,26 +453,18 @@ export function CarsTable({
     }
   };
 
-  const statusCards = useMemo(
-    () => [
-      {
-        id: "available" as const,
-        label: tx("Available", "Disponible"),
-        color: "bg-emerald-500",
-        value: cars.filter((c) => c.status === "available").length,
-      },
-      {
-        id: "sold" as const,
-        label: tx("Sold", "Vendido"),
-        color: "bg-amber-500",
-        value: cars.filter((c) => c.status === "sold").length,
-      },
-    ],
-    [cars, tx],
-  );
-
-  const carStatusCardCount = statusCards.length;
-  const carStatusRowMinWidth = `max(100%, ${Math.max(carStatusCardCount, 1) * 280}px)`;
+  const statusActivityItems = useMemo(() => {
+    const availableHex = LEAD_STATUS_PALETTE[4];
+    const soldHex = LEAD_STATUS_PALETTE[2];
+    return dateFilteredCars.map((car) => ({
+      id: car.id,
+      label:
+        `${car.brand} ${car.model}`.replace(/\s+/g, " ").trim() ||
+        tx("Unnamed", "Sin nombre"),
+      statusName: car.status === "available" ? "Available" : "Sold",
+      color: car.status === "available" ? availableHex : soldHex,
+    }));
+  }, [dateFilteredCars, tx]);
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
@@ -469,7 +473,8 @@ export function CarsTable({
     !allCarColumnsSelected(searchColumns) ||
     statusFilters.size > 0 ||
     searchQuery.trim().length > 0 ||
-    cardFilter != null;
+    statusActivitySelectedKeys.size > 0 ||
+    activityRange !== "All time";
 
   const visibleColumnIds = carColumnOrder;
 
@@ -578,8 +583,8 @@ export function CarsTable({
   };
 
   return (
-    <div className="flex max-w-full flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+      <div className="flex shrink-0 items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">{tx("All Cars", "Todos los autos")}</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled aria-disabled>
@@ -604,35 +609,23 @@ export function CarsTable({
         </div>
       </div>
 
-      <div className="-mx-1 snap-x snap-proximity overflow-x-scroll overflow-y-hidden overscroll-x-none pb-1">
-        <div
-          className="flex min-w-0 flex-nowrap gap-4 px-1"
-          style={{ minWidth: carStatusRowMinWidth }}
-        >
-          {statusCards.map((stat) => (
-            <button
-              key={stat.id}
-              type="button"
-              onClick={() =>
-                setCardFilter((prev) => (prev === stat.id ? null : stat.id))
-              }
-              className={cn(
-                "min-w-[200px] flex-1 basis-0 snap-start rounded-lg border p-4 text-left transition-colors",
-                cardFilter === stat.id
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:bg-surface-hover",
-              )}
-            >
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${stat.color}`} />
-                <span className="line-clamp-2">{stat.label}</span>
-              </div>
-              <div className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</div>
-            </button>
-          ))}
+      <div className="flex min-h-0 flex-1 flex-col gap-0">
+        <div className="shrink-0">
+          <StatusActivityChart
+            entity="car"
+            items={statusActivityItems}
+            range={activityRange}
+            onRangeChange={setActivityRange}
+            selectedKeys={statusActivitySelectedKeys}
+            onSelectedKeysChange={setStatusActivitySelectedKeys}
+            onItemClick={(itemId) => {
+              const car = cars.find((c) => String(c.id) === String(itemId));
+              if (car) beginEditCar(car);
+            }}
+          />
         </div>
-      </div>
-
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+          <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8 pt-2">
       <TableSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -1157,6 +1150,9 @@ export function CarsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
