@@ -263,7 +263,7 @@ export function AutomationsPage() {
 
       <section className="flex min-h-0 flex-1 flex-col bg-card">
 
-        <div className="mx-auto mt-10 flex w-full max-w-[760px] flex-col items-center px-4 pb-2 pt-2 text-center sm:mt-14 sm:pb-3">
+        <div className="mx-auto mt-8 mb-8 flex w-full max-w-[760px] flex-col items-center px-4 pb-2 pt-2 text-center sm:mt-12 sm:mb-12 sm:pb-3">
           <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground">
             {tx("Create an automation", "Crear una automatizacion")}
           </h2>
@@ -273,17 +273,17 @@ export function AutomationsPage() {
               "Crea un flujo de automatizacion con logica personalizada",
             )}
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {tx(
               "Use Create to add a DM bot or Comment bot deployment.",
               "Usa Crear para agregar una implementacion de bot de MD o de Comentarios.",
             )}
           </p>
-          <div ref={createMenuRef} className="relative mt-3">
+          <div ref={createMenuRef} className="relative mt-3 mb-3">
             <Button
               variant="builder"
               size="builder"
-              className="h-12 min-w-[120px] rounded-full px-4 text-[0.8rem]"
+              className="h-10 min-w-[108px] rounded-full px-3 text-[0.8rem]"
               onClick={() => setShowCreateMenu((v) => !v)}
             >
               <PlusIcon />
