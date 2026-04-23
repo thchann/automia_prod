@@ -126,50 +126,63 @@ export function LeadsPage() {
   };
 
   const handleUpdateLead = async (updated: Lead) => {
-    if (isDraftRecordId(updated.id)) {
-      const created = await createLead(leadToCreatePayload(updated));
-      const mapped = mapLeadFromApi(created, statuses);
-      const nextAttachments = updated.attachments ?? null;
-      const hasDraftBlobAttachments = !!nextAttachments?.some((a) => a.url?.startsWith("blob:"));
-      let uploadedAttachments = nextAttachments;
+    try {
+      if (isDraftRecordId(updated.id)) {
+        const created = await createLead(leadToCreatePayload(updated));
+        const mapped = mapLeadFromApi(created, statuses);
+        const nextAttachments = updated.attachments ?? null;
+        const hasDraftBlobAttachments = !!nextAttachments?.some((a) => a.url?.startsWith("blob:"));
+        let uploadedAttachments = nextAttachments;
 
-      if (hasDraftBlobAttachments && nextAttachments) {
-        const uploaded = await uploadLeadAttachmentsToBucket(mapped.id, nextAttachments);
-        uploadedAttachments = uploaded.map((u) => ({
-          type: u.type,
-          ...(u.url ? { url: u.url } : {}),
-          ...(u.storage_key ? { storage_key: u.storage_key } : {}),
-          filename: u.filename,
-          content_type: u.content_type,
-          size_bytes: u.size_bytes,
-        }));
-      }
+        if (hasDraftBlobAttachments && nextAttachments) {
+          const uploaded = await uploadLeadAttachmentsToBucket(mapped.id, nextAttachments);
+          uploadedAttachments = uploaded.map((u) => ({
+            type: u.type,
+            ...(u.url ? { url: u.url } : {}),
+            ...(u.storage_key ? { storage_key: u.storage_key } : {}),
+            filename: u.filename,
+            content_type: u.content_type,
+            size_bytes: u.size_bytes,
+          }));
+        }
 
-      const extra = leadToUpdatePayload({
-        ...updated,
-        ...(uploadedAttachments !== undefined ? { attachments: uploadedAttachments } : {}),
-      });
-      if (extra.attachments !== undefined) {
-        await updateLead(mapped.id, { attachments: extra.attachments });
-      }
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
-    } else {
-      const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
-      const prevRow = raw?.leads.find((l) => l.id === updated.id);
-      const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
-      const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
-      const nextIds = getAllCarIdsForLead(updated);
-
-      await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
-
-      const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
-      try {
-        await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
-      } catch {
+        const extra = leadToUpdatePayload({
+          ...updated,
+          ...(uploadedAttachments !== undefined ? { attachments: uploadedAttachments } : {}),
+        });
+        if (extra.attachments !== undefined) {
+          await updateLead(mapped.id, { attachments: extra.attachments });
+        }
         await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      } else {
+        const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+        const prevRow = raw?.leads.find((l) => l.id === updated.id);
+        const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
+        const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+        const nextIds = getAllCarIdsForLead(updated);
+
+        await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+
+        const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+        try {
+          await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+        } catch {
+          await queryClient.invalidateQueries({ queryKey: ["leads"] });
+        }
+        await queryClient.invalidateQueries({ queryKey: ["cars"] });
+        await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
       }
-      await queryClient.invalidateQueries({ queryKey: ["cars"] });
-      await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const detail =
+          typeof e.detail === "string"
+            ? e.detail
+            : e.message;
+        toast.error(detail || tx("Could not save lead.", "No se pudo guardar el lead."));
+      } else {
+        toast.error(tx("Could not save lead.", "No se pudo guardar el lead."));
+      }
+      throw e;
     }
   };
 

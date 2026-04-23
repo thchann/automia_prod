@@ -136,6 +136,7 @@ export function newLeadPayload(
   statusId: string | null,
 ): LeadCreate {
   return {
+    platform: "manual",
     lead_type: "pending",
     source: "manual",
     status_id: statusId ?? undefined,

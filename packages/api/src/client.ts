@@ -30,6 +30,41 @@ async function parseBodyDetail(res: Response): Promise<unknown> {
   }
 }
 
+function formatDetailMessage(detail: unknown): string | undefined {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (!detail || typeof detail !== "object") return undefined;
+
+  const rec = detail as Record<string, unknown>;
+  const nested = rec.detail;
+
+  if (typeof nested === "string" && nested.trim()) return nested;
+
+  if (Array.isArray(nested)) {
+    const parts = nested
+      .map((item) => {
+        if (!item || typeof item !== "object") return String(item);
+        const row = item as Record<string, unknown>;
+        const msg = typeof row.msg === "string" ? row.msg : undefined;
+        const loc = Array.isArray(row.loc)
+          ? row.loc
+              .map((v) => String(v))
+              .filter(Boolean)
+              .join(".")
+          : undefined;
+        if (msg && loc) return `${loc}: ${msg}`;
+        return msg ?? undefined;
+      })
+      .filter((v): v is string => !!v && v.trim().length > 0);
+    if (parts.length > 0) return parts.join("; ");
+  }
+
+  try {
+    return JSON.stringify(detail);
+  } catch {
+    return undefined;
+  }
+}
+
 async function refreshAccessToken(): Promise<void> {
   const rt = getRefreshToken();
   if (!rt) throw new Error("No refresh token");
@@ -94,10 +129,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
   if (!res.ok) {
     const detail = await parseBodyDetail(res);
-    const msg =
-      typeof detail === "object" && detail !== null && "detail" in detail
-        ? String((detail as { detail: unknown }).detail)
-        : res.statusText;
+    const msg = formatDetailMessage(detail) ?? res.statusText;
     throw new ApiError(res.status, msg || "Request failed", detail);
   }
 
@@ -156,10 +188,7 @@ export async function apiRequestBlob(path: string, options: ApiRequestOptions = 
 
   if (!res.ok) {
     const detail = await parseBodyDetail(res);
-    const msg =
-      typeof detail === "object" && detail !== null && "detail" in detail
-        ? String((detail as { detail: unknown }).detail)
-        : res.statusText;
+    const msg = formatDetailMessage(detail) ?? res.statusText;
     throw new ApiError(res.status, msg || "Request failed", detail);
   }
 

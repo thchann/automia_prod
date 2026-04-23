@@ -1,5 +1,6 @@
 import type { Car, Lead, LeadStatus } from "@/types/leads";
 import { newDraftRecordId } from "./draftIds";
+import { makeUuid } from "./uuid";
 
 export function buildDraftLead(statuses: LeadStatus[], newLeadLabel: string): Lead {
   const now = new Date().toISOString();
@@ -7,7 +8,7 @@ export function buildDraftLead(statuses: LeadStatus[], newLeadLabel: string): Le
     id: newDraftRecordId(),
     lead_type: "pending",
     source: "manual",
-    platform_sender_id: `manual-${crypto.randomUUID()}`,
+    platform_sender_id: `manual-${makeUuid()}`,
     status_id: statuses[0]?.id ?? null,
     car_id: null,
     name: newLeadLabel,

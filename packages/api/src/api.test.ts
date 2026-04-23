@@ -16,6 +16,7 @@ function sampleLead() {
   return {
     id: "lead-1",
     user_id: "u1",
+    platform: "manual",
     platform_sender_id: "ps1",
     lead_type: "buyer",
     source: "manual",

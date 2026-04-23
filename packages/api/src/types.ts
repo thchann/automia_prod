@@ -86,6 +86,7 @@ export interface LeadsListResponse {
 }
 
 export interface LeadCreate {
+  platform: string;
   lead_type: string;
   source: string;
   platform_sender_id: string;

@@ -15,6 +15,7 @@ import {
 } from "@automia/api";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Car, CarAttachment, Lead, LeadStatus } from "@/types/leads";
+import { makeUuid } from "@/lib/uuid";
 
 /**
  * Browser `blob:` URLs are not persistable. Sending them to the API can break backends or store junk.
@@ -300,10 +301,22 @@ export async function syncLeadCarJunctionLinks(
 
 export function leadToCreatePayload(lead: Lead): LeadCreate {
   const lt = lead.lead_type;
+  const normalizedSource = (lead.source ?? "").toLowerCase();
+  const platform =
+    normalizedSource.includes("instagram")
+      ? "instagram"
+      : normalizedSource.includes("whatsapp")
+        ? "whatsapp"
+        : "manual";
+  const notesDocument =
+    lead.notes_document !== null && lead.notes_document !== undefined
+      ? (lead.notes_document as LeadCreate["notes_document"])
+      : undefined;
   return {
+    platform,
     lead_type: lt === "buyer" || lt === "seller" ? lt : "pending",
     source: lead.source || "manual",
-    platform_sender_id: lead.platform_sender_id?.trim() || `manual-${crypto.randomUUID()}`,
+    platform_sender_id: lead.platform_sender_id?.trim() || `manual-${makeUuid()}`,
     status_id: lead.status_id,
     car_id: lead.car_id,
     ...(lead.car_ids !== undefined ? { car_ids: lead.car_ids } : {}),
@@ -319,9 +332,7 @@ export function leadToCreatePayload(lead: Lead): LeadCreate {
     desired_make: lead.desired_make,
     desired_model: lead.desired_model,
     desired_car_type: lead.desired_car_type,
-    ...(lead.notes_document !== undefined
-      ? { notes_document: lead.notes_document as LeadCreate["notes_document"] }
-      : {}),
+    ...(notesDocument !== undefined ? { notes_document: notesDocument } : {}),
   };
 }
 

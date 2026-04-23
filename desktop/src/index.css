@@ -58,6 +58,16 @@
     --stat-label: 0 0% 50%;
     --active-text: 24 100% 65%;
     --floating-bg: 0 0% 100%;
+    --panel: 50 25% 93%;
+    --panel-foreground: 0 0% 28%;
+    --hero-surface: 50 25% 93%;
+    --grid-dot: 50 10% 80%;
+    --selection: 24 100% 65%;
+    --signal: 48 96% 89%;
+    --signal-foreground: 40 80% 20%;
+    --success: 160 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-surface: 160 45% 90%;
   }
 
   .dark {
@@ -110,6 +120,16 @@
     --stat-label: 0 0% 60%;
     --active-text: 24 100% 65%;
     --floating-bg: 0 0% 13%;
+    --panel: 0 0% 13%;
+    --panel-foreground: 0 0% 93%;
+    --hero-surface: 0 0% 12%;
+    --grid-dot: 0 0% 36%;
+    --selection: 24 100% 65%;
+    --signal: 48 96% 89%;
+    --signal-foreground: 40 80% 20%;
+    --success: 160 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-surface: 160 20% 22%;
   }
 }
 
@@ -222,6 +242,54 @@
 
   .lead-notes-toolbar select {
     font-feature-settings: "tnum";
+  }
+}
+
+@layer utilities {
+  .bg-builder-grid {
+    background-color: hsl(var(--panel));
+    background-image: radial-gradient(circle at center, hsl(var(--grid-dot) / 0.35) 1px, transparent 1.2px);
+    background-size: 32px 32px;
+  }
+
+  .shadow-builder-card {
+    box-shadow: 0 8px 22px rgb(0 0 0 / 22%);
+  }
+
+  .shadow-builder-panel {
+    box-shadow: 0 18px 48px rgb(0 0 0 / 48%);
+  }
+
+  .border-selection {
+    border-color: hsl(var(--selection));
+  }
+
+  .bg-panel {
+    background-color: hsl(var(--panel));
+  }
+
+  .text-panel-foreground {
+    color: hsl(var(--panel-foreground));
+  }
+
+  .bg-hero-surface {
+    background-color: hsl(var(--hero-surface));
+  }
+
+  .bg-signal {
+    background-color: hsl(var(--signal));
+  }
+
+  .text-signal-foreground {
+    color: hsl(var(--signal-foreground));
+  }
+
+  .bg-success-surface {
+    background-color: hsl(var(--success-surface));
+  }
+
+  .text-success {
+    color: hsl(var(--success));
   }
 }
 

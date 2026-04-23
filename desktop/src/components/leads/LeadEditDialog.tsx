@@ -229,6 +229,10 @@ export function LeadEditDialog({
         if (!ok) return;
         toast.success(tx("Saved", "Guardado"));
         onOpenChange(false);
+      } catch (e) {
+        if (!(e instanceof ApiError)) {
+          toast.error(tx("Could not save lead.", "No se pudo guardar el lead."));
+        }
       } finally {
         setIsSaving(false);
       }
@@ -243,6 +247,10 @@ export function LeadEditDialog({
       toast.success(tx("Saved", "Guardado"));
       setExitPromptOpen(false);
       onOpenChange(false);
+    } catch (e) {
+      if (!(e instanceof ApiError)) {
+        toast.error(tx("Could not save lead.", "No se pudo guardar el lead."));
+      }
     } finally {
       setSavingFromExitPrompt(false);
     }

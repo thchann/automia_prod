@@ -111,7 +111,15 @@ export function leadFormToCreate(lead: Lead): LeadCreate {
     (lead.source !== "manual"
       ? lead.instagram_handle?.replace(/^@/, "") || `ig_${crypto.randomUUID()}`
       : `manual_${crypto.randomUUID()}`);
+  const normalizedSource = (lead.source ?? "").toLowerCase();
+  const platform =
+    normalizedSource.includes("instagram")
+      ? "instagram"
+      : normalizedSource.includes("whatsapp")
+        ? "whatsapp"
+        : "manual";
   return {
+    platform,
     lead_type: lead.lead_type,
     source: lead.source,
     platform_sender_id,
