@@ -1,4 +1,5 @@
 import type { Lead } from "@/types/leads";
+import { stableSerialize } from "@/lib/editDialogDirtyState";
 
 /** All car ids linked to a lead (legacy `car_id` plus optional ordered `car_ids`). */
 export function getAllCarIdsForLead(lead: Lead): string[] {
@@ -24,4 +25,11 @@ export function mergeCarIdsIntoLead(
 /** Leads that reference this car (primary or secondary link). */
 export function getLeadsForCar(carId: string, leads: Lead[]): Lead[] {
   return leads.filter((l) => getAllCarIdsForLead(l).includes(carId));
+}
+
+export function serializeLeadCarLinks(lead: Pick<Lead, "car_id" | "car_ids">): string {
+  return stableSerialize({
+    car_id: lead.car_id ?? null,
+    car_ids: lead.car_ids ?? null,
+  });
 }

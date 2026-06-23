@@ -3,24 +3,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Car as CarIcon, Clock, Layers, Plug, TrendingUp, Users, Zap } from "lucide-react";
 import {
   ApiError,
-  createCar,
   createLead,
+  createCar,
   getCar,
   getLead,
   listCars,
   listLeadStatuses,
   listLeads,
   listAutomations,
-  updateCar,
   updateLead,
-  addLeadCarLink,
-  removeLeadCarLink,
+  updateCar,
   type AutomationItem,
   type LeadsListResponse,
 } from "@automia/api";
 import { Car as CarType, Lead } from "@/types/leads";
-import { CarEditDialog } from "@/components/cars/CarEditDialog";
-import { LeadEditDialog } from "@/components/leads/LeadEditDialog";
+import { EntityDetailPanel } from "@/components/EntityDetailPanel";
+import { LeadDetailPanel } from "@/components/leads/LeadDetailPanel";
+import { CarDetailPanel } from "@/components/cars/CarDetailPanel";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,18 +27,18 @@ import {
   mapCarFromApi,
   mapLeadFromApi,
   mapStatusFromApi,
+  carToCreatePayload,
+  carToUpdatePayload,
   hydrateLeadResponseCarLinks,
   mergeLeadResponseWithClientCarLinks,
   patchLeadRowWithJunctionCars,
   patchLeadsListCache,
-  carToCreatePayload,
-  carToUpdatePayload,
   leadToCreatePayload,
   leadToUpdatePayload,
   leadToUpdatePayloadOmitCarLinks,
   syncLeadCarJunctionLinks,
 } from "@/lib/apiMappers";
-import { getAllCarIdsForLead } from "@/lib/leadCarLinks";
+import { getAllCarIdsForLead, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 import { isDraftRecordId } from "@/lib/draftIds";
 import {
   DASHBOARD_PLACEHOLDER_WIDGETS,
@@ -220,6 +219,46 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         setEditCar(mapCarFromApi(r));
       } catch {}
     })();
+  };
+
+  const persistLeadCarLinkUpdate = async (updated: Lead) => {
+    const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+    const prevRow = raw?.leads.find((l) => l.id === updated.id);
+    const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
+    const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+    const nextIds = getAllCarIdsForLead(updated);
+    await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+    const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+    try {
+      await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+    } catch {
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+    }
+    await queryClient.invalidateQueries({ queryKey: ["cars"] });
+    await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
+  };
+
+  const linkLeadToCar = async (leadId: string, carId: string) => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const merged = mergeCarIdsIntoLead(lead, [carId]);
+    await persistLeadCarLinkUpdate({
+      ...lead,
+      ...merged,
+      updated_at: new Date().toISOString(),
+    });
+  };
+
+  const unlinkLeadFromCar = async (leadId: string, carId: string) => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const nextIds = getAllCarIdsForLead(lead).filter((id) => id !== carId);
+    await persistLeadCarLinkUpdate({
+      ...lead,
+      car_id: nextIds[0] ?? null,
+      car_ids: nextIds.length ? nextIds : null,
+      updated_at: new Date().toISOString(),
+    });
   };
 
   const hour = new Date().getHours();
@@ -483,106 +522,87 @@ export function HomeOverview({ onNavigate }: HomeOverviewProps) {
         </div>
       </div>
 
-      <CarEditDialog
-        car={editCar}
-        open={!!editCar}
-        onOpenChange={(open) => {
-          if (!open) setEditCar(null);
-        }}
-        onSave={async (updated) => {
-          if (isDraftRecordId(updated.id)) {
-            await createCar(carToCreatePayload(updated));
-          } else {
-            await updateCar(updated.id, carToUpdatePayload(updated));
-          }
-          await queryClient.invalidateQueries({ queryKey: ["cars"] });
-          setEditCar(null);
-        }}
-        onNotesDocumentAutosave={async (carId, document) => {
-          if (isDraftRecordId(carId)) return;
-          await updateCar(carId, { notes_document: document });
-          await queryClient.invalidateQueries({ queryKey: ["cars"] });
-        }}
-        leads={leads}
-        onOpenLinkedLead={(lead) => {
-          setEditCar(null);
-          beginEditLead(lead);
-        }}
-        onLinkLeadToCar={async (leadId, carId) => {
-          const lead = leads.find((l) => l.id === leadId);
-          if (!lead || isDraftRecordId(lead.id)) return;
-          await addLeadCarLink(leadId, { car_id: carId });
-          try {
-            const row = await getLead(leadId);
-            await patchLeadRowWithJunctionCars(queryClient, leadId, row);
-          } catch {
-            await queryClient.invalidateQueries({ queryKey: ["leads"] });
-          }
-          await queryClient.invalidateQueries({ queryKey: ["cars"] });
-          await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
-        }}
-        onUnlinkLeadFromCar={async (leadId, carId) => {
-          const lead = leads.find((l) => l.id === leadId);
-          if (!lead || isDraftRecordId(lead.id)) return;
-          await removeLeadCarLink(leadId, carId);
-          try {
-            const row = await getLead(leadId);
-            await patchLeadRowWithJunctionCars(queryClient, leadId, row);
-          } catch {
-            await queryClient.invalidateQueries({ queryKey: ["leads"] });
-          }
-          await queryClient.invalidateQueries({ queryKey: ["cars"] });
-          await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
-        }}
-      />
-      <LeadEditDialog
-        lead={editLead}
-        open={!!editLead}
-        onOpenChange={(open) => {
-          if (!open) setEditLead(null);
-        }}
-        onSave={async (updated) => {
-          if (isDraftRecordId(updated.id)) {
-            const created = await createLead(leadToCreatePayload(updated));
-            const mapped = mapLeadFromApi(created, statuses);
-            const extra = leadToUpdatePayload(updated);
-            if (extra.attachments !== undefined) {
-              await updateLead(mapped.id, { attachments: extra.attachments });
-            }
-            await queryClient.invalidateQueries({ queryKey: ["leads"] });
-          } else {
-            const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
-            const prevRow = raw?.leads.find((l) => l.id === updated.id);
-            const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
-            const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
-            const nextIds = getAllCarIdsForLead(updated);
-
-            await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
-            const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
-            try {
-              await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
-            } catch {
-              await queryClient.invalidateQueries({ queryKey: ["leads"] });
-            }
-            await queryClient.invalidateQueries({ queryKey: ["cars"] });
-            await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
-          }
+      <EntityDetailPanel
+        layout={editLead ? "lead" : "car"}
+        open={!!editLead || !!editCar}
+        onClose={() => {
           setEditLead(null);
+          setEditCar(null);
         }}
-        onNotesDocumentAutosave={async (leadId, document) => {
-          if (isDraftRecordId(leadId)) return;
-          const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
-          const existing = raw?.leads.find((l) => l.id === leadId);
-          const data = await updateLead(leadId, { notes_document: document });
-          if (existing) {
-            patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, existing));
-          } else {
-            await queryClient.invalidateQueries({ queryKey: ["leads"] });
-          }
-        }}
-        statuses={statuses}
-        cars={cars}
-      />
+      >
+        {editLead ? (
+          <LeadDetailPanel
+            lead={editLead}
+            statuses={statuses}
+            cars={cars}
+            onDismiss={() => setEditLead(null)}
+            onSave={async (updated) => {
+              if (isDraftRecordId(updated.id)) {
+                const created = await createLead(leadToCreatePayload(updated));
+                const mapped = mapLeadFromApi(created, statuses);
+                const extra = leadToUpdatePayload(updated);
+                if (extra.attachments !== undefined) {
+                  await updateLead(mapped.id, { attachments: extra.attachments });
+                }
+                await queryClient.invalidateQueries({ queryKey: ["leads"] });
+              } else {
+                const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+                const prevRow = raw?.leads.find((l) => l.id === updated.id);
+                const previousLead = prevRow ? mapLeadFromApi(prevRow, statuses) : null;
+                const prevIds = previousLead ? getAllCarIdsForLead(previousLead) : [];
+                const nextIds = getAllCarIdsForLead(updated);
+                await syncLeadCarJunctionLinks(updated.id, prevIds, nextIds);
+                const data = await updateLead(updated.id, leadToUpdatePayloadOmitCarLinks(updated));
+                try {
+                  await patchLeadRowWithJunctionCars(queryClient, updated.id, data);
+                } catch {
+                  await queryClient.invalidateQueries({ queryKey: ["leads"] });
+                }
+                await queryClient.invalidateQueries({ queryKey: ["cars"] });
+                await queryClient.invalidateQueries({ queryKey: ["leads-for-car"] });
+              }
+              setEditLead(null);
+            }}
+            onNotesDocumentAutosave={async (leadId, document) => {
+              if (isDraftRecordId(leadId)) return;
+              const raw = queryClient.getQueryData<LeadsListResponse>(["leads"]);
+              const existing = raw?.leads.find((l) => l.id === leadId);
+              const data = await updateLead(leadId, { notes_document: document });
+              if (existing) {
+                patchLeadsListCache(queryClient, mergeLeadResponseWithClientCarLinks(data, existing));
+              } else {
+                await queryClient.invalidateQueries({ queryKey: ["leads"] });
+              }
+            }}
+          />
+        ) : editCar ? (
+          <CarDetailPanel
+            car={editCar}
+            leads={leads}
+            onDismiss={() => setEditCar(null)}
+            onSave={async (updated) => {
+              if (isDraftRecordId(updated.id)) {
+                await createCar(carToCreatePayload(updated));
+              } else {
+                await updateCar(updated.id, carToUpdatePayload(updated));
+              }
+              await queryClient.invalidateQueries({ queryKey: ["cars"] });
+              setEditCar(null);
+            }}
+            onNotesDocumentAutosave={async (carId, document) => {
+              if (isDraftRecordId(carId)) return;
+              await updateCar(carId, { notes_document: document });
+              await queryClient.invalidateQueries({ queryKey: ["cars"] });
+            }}
+            onLinkLeadToCar={linkLeadToCar}
+            onUnlinkLeadFromCar={unlinkLeadFromCar}
+            onOpenLinkedLead={(lead) => {
+              setEditCar(null);
+              beginEditLead(lead);
+            }}
+          />
+        ) : null}
+      </EntityDetailPanel>
     </section>
   );
 }

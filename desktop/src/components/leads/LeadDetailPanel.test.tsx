@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { forwardRef, useImperativeHandle } from "react";
-import { LeadEditDialog } from "./LeadEditDialog";
+import { LeadDetailPanel } from "./LeadDetailPanel";
 import type { Car, Lead } from "@/types/leads";
 
 vi.mock("@/i18n/LanguageProvider", () => ({
   useLanguage: () => ({
     tx: (en: string) => en,
+    locale: "en-US",
   }),
 }));
 
@@ -71,30 +72,45 @@ function makeCars(): Car[] {
       created_at: "2024-01-01T00:00:00Z",
       updated_at: null,
     },
+    {
+      id: "car-2",
+      user_id: "u1",
+      brand: "Honda",
+      model: "Civic",
+      year: 2021,
+      mileage: 8000,
+      price: 18000,
+      desired_price: null,
+      car_type: "sedan",
+      listed_at: null,
+      transmission: null,
+      color: null,
+      fuel: null,
+      manufacture_year: null,
+      vehicle_condition: null,
+      owner_type: "owned",
+      status: "available",
+      attachments: null,
+      notes: null,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: null,
+    },
   ];
 }
 
-describe("LeadEditDialog save-only staged connections", () => {
+describe("LeadDetailPanel save-only staged connections", () => {
   it("ignores same-record prop refreshes when nothing was edited", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const onOpenChange = vi.fn();
+    const onDismiss = vi.fn();
     const lead = makeLead();
     const { rerender } = render(
-      <LeadEditDialog
-        lead={lead}
-        open
-        onOpenChange={onOpenChange}
-        onSave={onSave}
-        statuses={[]}
-        cars={makeCars()}
-      />,
+      <LeadDetailPanel lead={lead} onDismiss={onDismiss} onSave={onSave} statuses={[]} cars={makeCars()} />,
     );
 
     rerender(
-      <LeadEditDialog
+      <LeadDetailPanel
         lead={{ ...lead, updated_at: "2024-02-01T00:00:00Z" }}
-        open
-        onOpenChange={onOpenChange}
+        onDismiss={onDismiss}
         onSave={onSave}
         statuses={[]}
         cars={makeCars()}
@@ -105,41 +121,46 @@ describe("LeadEditDialog save-only staged connections", () => {
 
     expect(screen.queryByText("Save your changes before leaving?")).not.toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onDismiss).toHaveBeenCalled();
   });
 
   it("closes directly when nothing changed", () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const onOpenChange = vi.fn();
+    const onDismiss = vi.fn();
     render(
-      <LeadEditDialog
-        lead={makeLead()}
-        open
-        onOpenChange={onOpenChange}
-        onSave={onSave}
-        statuses={[]}
-        cars={makeCars()}
-      />,
+      <LeadDetailPanel lead={makeLead()} onDismiss={onDismiss} onSave={onSave} statuses={[]} cars={makeCars()} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByText("Save your changes before leaving?")).not.toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onDismiss).toHaveBeenCalled();
+  });
+
+  it("applies link only through Save payload", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const lead = { ...makeLead(), car_id: null, car_ids: null };
+    render(
+      <LeadDetailPanel lead={lead} onDismiss={() => {}} onSave={onSave} statuses={[]} cars={makeCars()} />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /Connections/ }));
+    fireEvent.click(screen.getByText("Choose a car to link…"));
+    fireEvent.click(screen.getByRole("option", { name: /2021 Honda Civic/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const payload = onSave.mock.calls[0][0] as Lead;
+    expect(payload.car_ids).toEqual(["car-2"]);
+    expect(payload.car_id).toBe("car-2");
   });
 
   it("applies unlink only through Save payload", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
-      <LeadEditDialog
-        lead={makeLead()}
-        open
-        onOpenChange={() => {}}
-        onSave={onSave}
-        statuses={[]}
-        cars={makeCars()}
-      />,
+      <LeadDetailPanel lead={makeLead()} onDismiss={() => {}} onSave={onSave} statuses={[]} cars={makeCars()} />,
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /Connections/ }));
@@ -153,16 +174,9 @@ describe("LeadEditDialog save-only staged connections", () => {
 
   it("prompts to save or discard when cancelling with unsaved changes", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const onOpenChange = vi.fn();
+    const onDismiss = vi.fn();
     render(
-      <LeadEditDialog
-        lead={makeLead()}
-        open
-        onOpenChange={onOpenChange}
-        onSave={onSave}
-        statuses={[]}
-        cars={makeCars()}
-      />,
+      <LeadDetailPanel lead={makeLead()} onDismiss={onDismiss} onSave={onSave} statuses={[]} cars={makeCars()} />,
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /Connections/ }));
@@ -170,12 +184,11 @@ describe("LeadEditDialog save-only staged connections", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.getByText("Save your changes before leaving?")).toBeInTheDocument();
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(onDismiss).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Discard" }));
 
     expect(onSave).not.toHaveBeenCalled();
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
   });
 });
-

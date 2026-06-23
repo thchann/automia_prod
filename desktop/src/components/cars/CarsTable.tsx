@@ -20,7 +20,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Car, Lead } from "@/types/leads";
-import { CarEditDialog } from "./CarEditDialog";
+import { EntityDetailPanel } from "@/components/EntityDetailPanel";
+import { CarDetailPanel } from "./CarDetailPanel";
+import { CarStatusChip } from "./CarStatusChip";
+import { CarOwnerChip } from "./CarOwnerChip";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
 import { Badge } from "@/components/ui/badge";
@@ -79,10 +82,20 @@ const PAGE_SIZE = 9;
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
-const stickyCheckboxHead =
-  "w-10 sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
-const stickyCheckboxCell =
-  "sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
+const stickyCheckboxHead = "w-10 sticky left-0 z-10";
+const stickyCheckboxCell = "sticky left-0 z-10";
+
+const tableHeaderRowClassName =
+  "group border-b border-border transition-colors duration-150 ease-linear hover:bg-transparent";
+
+const tableBodyRowClassName =
+  "group cursor-pointer transition-colors duration-150 ease-linear hover:bg-transparent";
+
+const tableHeaderClassName = "[&_tr:hover_th]:bg-muted/30 [&_tr_th]:transition-colors";
+const tableBodyClassName = "[&_tr:hover_td]:bg-muted/30 [&_tr_td]:transition-colors";
+
+const carsDataTableClass =
+  "cars-data-table overflow-x-auto overscroll-x-none [&_th]:h-9 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground [&_td]:px-3 [&_td]:py-3 [&_td]:text-[13px]";
 
 function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
@@ -168,8 +181,6 @@ function renderCarColumnCell(
   car: Car,
   locale: string,
   tx: TxFn,
-  statusStyleFn: (status: Car["status"]) => string,
-  ownerStyleFn: (type: Car["owner_type"]) => string,
   formatShortDateFn: (s: string | null, loc: string) => string,
 ) {
   switch (colId) {
@@ -201,34 +212,14 @@ function renderCarColumnCell(
       return <TableCell>{formatShortDateFn(car.listed_at, locale)}</TableCell>;
     case "owner":
       return (
-        <TableCell>
-          <span
-            className={cn(
-              "inline-flex max-w-full items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
-              ownerStyleFn(car.owner_type),
-            )}
-          >
-            {car.owner_type === "owned"
-              ? tx("owned", "propio")
-              : car.owner_type === "client"
-                ? tx("client", "cliente")
-                : car.owner_type === "advisor"
-                  ? tx("advisor", "asesor")
-                  : tx("Web listing", "Listado web")}
-          </span>
+        <TableCell className="max-w-[140px]">
+          <CarOwnerChip ownerType={car.owner_type} tx={tx} />
         </TableCell>
       );
     case "status":
       return (
-        <TableCell>
-          <span
-            className={cn(
-              "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium capitalize",
-              statusStyleFn(car.status),
-            )}
-          >
-            {car.status === "available" ? tx("available", "disponible") : tx("sold", "vendido")}
-          </span>
+        <TableCell className="max-w-[120px]">
+          <CarStatusChip status={car.status} tx={tx} />
         </TableCell>
       );
     case "added":
@@ -433,24 +424,6 @@ export function CarsTable({
       else n.add(status);
       return n;
     });
-  };
-
-  const statusStyle = (status: Car["status"]) => {
-    switch (status) {
-      case "available": return "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400";
-      case "sold": return "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const ownerStyle = (type: Car["owner_type"]) => {
-    switch (type) {
-      case "owned": return "bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400";
-      case "client": return "bg-purple-50 text-purple-500 dark:bg-purple-500/10 dark:text-purple-400";
-      case "advisor": return "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
-      case "web_listing": return "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400";
-      default: return "bg-muted text-muted-foreground";
-    }
   };
 
   const statusActivityItems = useMemo(() => {
@@ -811,10 +784,10 @@ export function CarsTable({
         </div>
       </ManageTableFiltersDialog>
 
-      <div className="rounded-lg border border-border overflow-x-scroll overscroll-x-none">
+      <div className={carsDataTableClass}>
         <Table scrollWrapper={false}>
-          <TableHeader>
-            <TableRow className="group border-b-2 border-primary transition-colors duration-150 ease-linear hover:bg-surface-hover">
+          <TableHeader className={tableHeaderClassName}>
+            <TableRow className={tableHeaderRowClassName}>
               <TableHead className={stickyCheckboxHead}>
                 <Checkbox
                   className={tableCheckboxClassName}
@@ -828,12 +801,12 @@ export function CarsTable({
               <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className={tableBodyClassName}>
             {paged.map((car) => {
               return (
                 <TableRow
                   key={car.id}
-                  className="group cursor-pointer transition-colors duration-150 ease-linear hover:bg-surface-hover"
+                  className={tableBodyRowClassName}
                   onClick={() => beginEditCar(car)}
                 >
                   <TableCell
@@ -853,8 +826,6 @@ export function CarsTable({
                         car,
                         locale,
                         tx,
-                        statusStyle,
-                        ownerStyle,
                         formatShortDate,
                       )}
                     </Fragment>
@@ -958,18 +929,19 @@ export function CarsTable({
         </div>
       )}
 
-      <CarEditDialog
-        car={editCar}
-        open={!!editCar}
-        onOpenChange={(open) => !open && setEditCar(null)}
-        onSave={onUpdateCar}
-        onNotesDocumentAutosave={onNotesDocumentAutosave}
-        leads={leads}
-        onLinkLeadToCar={(leadId, carId) => {
-          assignCarToLead(carId, leadId);
-        }}
-        onUnlinkLeadFromCar={unlinkLeadFromCar}
-      />
+      <EntityDetailPanel layout="car" open={!!editCar} onClose={() => setEditCar(null)}>
+        {editCar ? (
+          <CarDetailPanel
+            car={editCar}
+            leads={leads}
+            onDismiss={() => setEditCar(null)}
+            onSave={onUpdateCar}
+            onNotesDocumentAutosave={onNotesDocumentAutosave}
+            onLinkLeadToCar={(leadId, carId) => assignCarToLead(carId, leadId)}
+            onUnlinkLeadFromCar={unlinkLeadFromCar}
+          />
+        ) : null}
+      </EntityDetailPanel>
 
       <Dialog
         open={addViaUrlOpen}

@@ -19,7 +19,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car } from "@/types/leads";
-import { LeadEditDialog } from "./LeadEditDialog";
+import { EntityDetailPanel } from "@/components/EntityDetailPanel";
+import { LeadDetailPanel } from "./LeadDetailPanel";
 import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
 import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,7 @@ import { getLead } from "@automia/api";
 import { hydrateLeadResponseCarLinks, mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
+import { LeadStatusChip } from "./LeadStatusChip";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -77,10 +79,20 @@ const PAGE_SIZE = 9;
 const tableCheckboxClassName =
   "border-border bg-transparent shadow-none ring-offset-transparent data-[state=unchecked]:bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground";
 
-const stickyCheckboxHead =
-  "w-10 sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
-const stickyCheckboxCell =
-  "sticky left-0 z-10 bg-card transition-colors duration-150 ease-linear group-hover:bg-surface-hover";
+const stickyCheckboxHead = "w-10 sticky left-0 z-10";
+const stickyCheckboxCell = "sticky left-0 z-10";
+
+const tableHeaderRowClassName =
+  "group border-b border-border transition-colors duration-150 ease-linear hover:bg-transparent";
+
+const tableBodyRowClassName =
+  "group cursor-pointer transition-colors duration-150 ease-linear hover:bg-transparent";
+
+const tableHeaderClassName = "[&_tr:hover_th]:bg-muted/30 [&_tr_th]:transition-colors";
+const tableBodyClassName = "[&_tr:hover_td]:bg-muted/30 [&_tr_td]:transition-colors";
+
+const leadsDataTableClass =
+  "leads-data-table overflow-x-auto overscroll-x-none [&_th]:h-9 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground [&_td]:px-3 [&_td]:py-3 [&_td]:text-[13px]";
 
 function formatShortDate(s: string | null, locale: string) {
   if (!s) return "—";
@@ -152,10 +164,9 @@ function renderLeadColumnCell(
     tx: TxFn;
     truncateText: (s: string | null, max: number) => string;
     formatShortDate: (s: string | null, loc: string) => string;
-    statusStyleFn: (status: LeadStatus | undefined) => { color?: string } | { bg: string; text: string };
   },
 ) {
-  const { lead, status, carLine, locale, tx, truncateText, formatShortDate, statusStyleFn } = ctx;
+  const { lead, status, carLine, locale, tx, truncateText, formatShortDate } = ctx;
   switch (colId) {
     case "name":
       return <TableCell className="font-medium">{lead.name || "—"}</TableCell>;
@@ -177,29 +188,21 @@ function renderLeadColumnCell(
       return <TableCell>{carLine}</TableCell>;
     case "buyerCriteria":
       return (
-        <TableCell className="max-w-[280px] text-sm text-muted-foreground">
+        <TableCell className="max-w-[280px] text-muted-foreground">
           {summarizeBuyerCriteria(lead)}
         </TableCell>
       );
-    case "status": {
-      const s = statusStyleFn(status);
-      const color = (s as { color?: string }).color || "#6B7280";
+    case "status":
       return (
-        <TableCell>
-          <span
-            className="rounded-full px-3 py-1 text-xs font-medium"
-            style={{ backgroundColor: `${color}15`, color }}
-          >
-            {status ? translateStatusName(status.name, tx) : tx("Unassigned", "Sin asignar")}
-          </span>
+        <TableCell className="max-w-[120px]">
+          <LeadStatusChip status={status} tx={tx} />
         </TableCell>
       );
-    }
     case "source":
       return <TableCell className="capitalize">{lead.source}</TableCell>;
     case "notes":
       return (
-        <TableCell className="max-w-[160px] text-sm" title={lead.notes ?? undefined}>
+        <TableCell className="max-w-[160px]" title={lead.notes ?? undefined}>
           {truncateText(lead.notes, 48)}
         </TableCell>
       );
@@ -448,12 +451,6 @@ export function LeadsTable({
       else n.add(leadType);
       return n;
     });
-  };
-
-  const statusStyle = (status: LeadStatus | undefined) => {
-    if (!status) return { bg: "bg-muted", text: "text-muted-foreground" };
-    const color = status.color || "#6B7280";
-    return { color };
   };
 
   const sortedStatuses = useMemo(
@@ -833,10 +830,10 @@ export function LeadsTable({
         </div>
       </ManageTableFiltersDialog>
 
-      <div className="rounded-lg border border-border overflow-x-scroll overscroll-x-none">
+      <div className={leadsDataTableClass}>
         <Table scrollWrapper={false}>
-          <TableHeader>
-            <TableRow className="group border-b-2 border-primary transition-colors duration-150 ease-linear hover:bg-surface-hover">
+          <TableHeader className={tableHeaderClassName}>
+            <TableRow className={tableHeaderRowClassName}>
               <TableHead className={stickyCheckboxHead}>
                 <Checkbox
                   className={tableCheckboxClassName}
@@ -850,7 +847,7 @@ export function LeadsTable({
               <TableHead className="min-w-[100px]">{tx("Actions", "Acciones")}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className={tableBodyClassName}>
             {paged.map((lead) => {
               const status = getStatus(lead.status_id);
               const carIds = getAllCarIdsForLead(lead);
@@ -863,7 +860,7 @@ export function LeadsTable({
               return (
                 <TableRow
                   key={lead.id}
-                  className="group cursor-pointer transition-colors duration-150 ease-linear hover:bg-surface-hover"
+                  className={tableBodyRowClassName}
                   onClick={() => beginEditLead(lead)}
                 >
                   <TableCell
@@ -888,7 +885,6 @@ export function LeadsTable({
                           tx,
                           truncateText,
                           formatShortDate,
-                          statusStyleFn: statusStyle,
                         },
                       )}
                     </Fragment>
@@ -982,15 +978,18 @@ export function LeadsTable({
         </div>
       )}
 
-      <LeadEditDialog
-        lead={editLead}
-        open={!!editLead}
-        onOpenChange={(open) => !open && setEditLead(null)}
-        onSave={onUpdateLead}
-        onNotesDocumentAutosave={onNotesDocumentAutosave}
-        statuses={statuses}
-        cars={cars}
-      />
+      <EntityDetailPanel open={!!editLead} onClose={() => setEditLead(null)}>
+        {editLead ? (
+          <LeadDetailPanel
+            lead={editLead}
+            statuses={statuses}
+            cars={cars}
+            onSave={onUpdateLead}
+            onNotesDocumentAutosave={onNotesDocumentAutosave}
+            onDismiss={() => setEditLead(null)}
+          />
+        ) : null}
+      </EntityDetailPanel>
 
       <Dialog open={!!matchLead} onOpenChange={(open) => !open && setMatchLead(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[640px]">

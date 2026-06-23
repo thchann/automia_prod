@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, MoreVertical } from "lucide-react";
 import { Lead, LeadStatus, Car } from "@/types/leads";
-import { LeadEditDialog } from "./LeadEditDialog";
+import { EntityDetailPanel } from "@/components/EntityDetailPanel";
+import { LeadDetailPanel } from "./LeadDetailPanel";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -184,10 +185,11 @@ export function LeadsFunnel({
         .map((status) => {
           const columnLeads = getLeadsForStatus(status.id);
           const color = getStatusColor(status);
+          const accentColor = editingColumnId === status.id ? editingColor : color;
           return (
             <div
               key={status.id}
-              className="min-w-[280px] w-[280px] flex flex-col bg-muted/30 rounded-none border border-border"
+              className="flex min-w-[280px] w-[280px] flex-col overflow-hidden rounded-lg border border-border bg-muted/30"
               onDragOver={(e) => handleDragOver(e, status.id)}
               onDrop={(e) => handleDrop(e, status.id)}
               onDragLeave={(e) => {
@@ -197,7 +199,7 @@ export function LeadsFunnel({
               }}
             >
               {/* Column header */}
-              <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
+              <div className="flex items-center justify-between gap-2 p-3 pb-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {editingColumnId === status.id ? (
                     <div
@@ -291,6 +293,12 @@ export function LeadsFunnel({
                 </DropdownMenu>
               </div>
 
+              <div
+                className="h-0.5 w-full shrink-0"
+                style={{ backgroundColor: accentColor }}
+                aria-hidden
+              />
+
               {/* Cards */}
               <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 {columnLeads.length === 0 && dragOverStatusId === status.id && (
@@ -368,15 +376,18 @@ export function LeadsFunnel({
         </button>
       </div>
 
-      <LeadEditDialog
-        lead={editLead}
-        open={!!editLead}
-        onOpenChange={(open) => !open && setEditLead(null)}
-        onSave={onUpdateLead}
-        onNotesDocumentAutosave={onNotesDocumentAutosave}
-        statuses={statuses}
-        cars={cars}
-      />
+      <EntityDetailPanel open={!!editLead} onClose={() => setEditLead(null)}>
+        {editLead ? (
+          <LeadDetailPanel
+            lead={editLead}
+            statuses={statuses}
+            cars={cars}
+            onSave={onUpdateLead}
+            onNotesDocumentAutosave={onNotesDocumentAutosave}
+            onDismiss={() => setEditLead(null)}
+          />
+        ) : null}
+      </EntityDetailPanel>
 
       <AlertDialog
         open={pendingDeleteStatusId != null}

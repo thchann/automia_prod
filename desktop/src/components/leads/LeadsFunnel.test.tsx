@@ -14,8 +14,8 @@ vi.mock("@automia/api", () => ({
   getLead: vi.fn(),
 }));
 
-vi.mock("./LeadEditDialog", () => ({
-  LeadEditDialog: () => null,
+vi.mock("@/components/EntityDetailPanel", () => ({
+  EntityDetailPanel: () => null,
 }));
 
 vi.mock("@/components/ui/dropdown-menu", () => ({

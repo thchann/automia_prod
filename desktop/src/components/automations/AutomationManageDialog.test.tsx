@@ -82,10 +82,13 @@ describe("AutomationManageDialog", () => {
     const typeItem = {
       id: "t1",
       platform: "instagram",
-      code: "instagram_dm",
+      code: "dm_bot",
       name: "Instagram DM",
       description: "desc",
-      created_at: "2024-01-01T00:00:00Z",
+      icon_url: null,
+      required_scopes: null,
+      is_active: true,
+      display_order: 0,
     } as AutomationTypeItem;
     renderDialog(typeItem, makeAutomation());
 
