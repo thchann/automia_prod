@@ -42,7 +42,15 @@ import { toast } from "@/components/ui/sonner";
 
 type Tab = "table" | "funnel";
 
-export function LeadsPage() {
+type LeadsPageProps = {
+  generateLeadSignal?: number;
+  onRequestGenerateLead?: () => void;
+};
+
+export function LeadsPage({
+  generateLeadSignal: externalGenerateLeadSignal,
+  onRequestGenerateLead,
+}: LeadsPageProps) {
   const { tx } = useLanguage();
   const queryClient = useQueryClient();
 
@@ -85,7 +93,10 @@ export function LeadsPage() {
 
   const [tab, setTab] = useState<Tab>("table");
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
-  const [generateLeadSignal, setGenerateLeadSignal] = useState(0);
+  const [internalGenerateLeadSignal, setInternalGenerateLeadSignal] = useState(0);
+  const generateLeadSignal = externalGenerateLeadSignal ?? internalGenerateLeadSignal;
+  const requestGenerateLead =
+    onRequestGenerateLead ?? (() => setInternalGenerateLeadSignal((s) => s + 1));
 
   const moveLeadStatusMutation = useMutation({
     mutationFn: ({ leadId, statusId }: { leadId: string; statusId: string }) =>
@@ -277,7 +288,7 @@ export function LeadsPage() {
                 className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-surface-hover"
                 onClick={() => {
                   setTab("table");
-                  setGenerateLeadSignal((s) => s + 1);
+                  requestGenerateLead();
                   setShowGenerateMenu(false);
                 }}
               >

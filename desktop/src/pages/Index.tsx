@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { CommandPalette } from "@/components/command/CommandPalette";
 import { LeadsPage } from "@/components/leads/LeadsPage";
 import { CarsPage } from "@/components/cars/CarsPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
@@ -13,7 +14,20 @@ const Index = () => {
   const [activeItem, setActiveItem] = useState("Home");
   const [displayedItem, setDisplayedItem] = useState("Home");
   const [transitionStage, setTransitionStage] = useState<"idle" | "fading-out" | "fading-in">("idle");
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [generateLeadSignal, setGenerateLeadSignal] = useState(0);
   const fadeTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -54,7 +68,12 @@ const Index = () => {
   const renderContent = () => {
     switch (displayedItem) {
       case "Leads":
-        return <LeadsPage />;
+        return (
+          <LeadsPage
+            generateLeadSignal={generateLeadSignal}
+            onRequestGenerateLead={() => setGenerateLeadSignal((s) => s + 1)}
+          />
+        );
       case "Cars":
         return <CarsPage />;
       case "Automations":
@@ -75,7 +94,13 @@ const Index = () => {
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
-      <DashboardHeader />
+      <DashboardHeader onOpenSearch={() => setCommandOpen(true)} />
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        onNavigate={requestSectionChange}
+        onCreateLead={() => setGenerateLeadSignal((s) => s + 1)}
+      />
       <div className="mt-[54px] flex min-h-0 flex-1 overscroll-y-none pb-2 pr-2">
         <DashboardSidebar activeItem={activeItem} onActiveItemChange={requestSectionChange} />
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none rounded-lg border border-border bg-card">

@@ -111,32 +111,38 @@ export function TableSearchWithStatusFilters({
         ) : null}
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-        <StatusFilterChipButton
-          label={tx("All", "Todos")}
-          count={allCount}
-          selected={selectedChipId === null}
-          onClick={() => onSelectChip(null)}
-        />
-        {chips.map((chip) => (
+      <div className="relative min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           <StatusFilterChipButton
-            key={chip.id}
-            label={chip.label}
-            count={chip.count}
-            color={chip.color}
-            selected={selectedChipId === chip.id}
-            onClick={() => onSelectChip(chip.id)}
+            label={tx("All", "Todos")}
+            count={allCount}
+            selected={selectedChipId === null}
+            onClick={() => onSelectChip(null)}
           />
-        ))}
+          {chips.map((chip) => (
+            <StatusFilterChipButton
+              key={chip.id}
+              label={chip.label}
+              count={chip.count}
+              color={chip.color}
+              selected={selectedChipId === chip.id}
+              onClick={() => onSelectChip(chip.id)}
+            />
+          ))}
+        </div>
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card to-transparent"
+          aria-hidden
+        />
       </div>
 
       {onOpenFilters != null ? (
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           className={cn(
             TOOLBAR_CONTROL_HEIGHT,
-            "shrink-0 gap-1.5 border-border px-2.5 py-0 text-xs",
+            "shrink-0 gap-1.5 border border-card bg-card px-2.5 py-0 text-xs shadow-none hover:bg-muted/40",
             filterActive && "border-primary/40 bg-primary/10",
           )}
           onClick={onOpenFilters}

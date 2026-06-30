@@ -1,11 +1,11 @@
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Search } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function DashboardHeader() {
+export function DashboardHeader({ onOpenSearch }: { onOpenSearch?: () => void }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -35,6 +35,16 @@ export function DashboardHeader() {
         </span>
       </div>
       <div className="flex items-center gap-3">
+        {onOpenSearch != null ? (
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={tx("Search", "Buscar")}
+          >
+            <Search className="h-4 w-4" />
+          </button>
+        ) : null}
         <span className="text-sm font-medium text-foreground">
           {tx("Dashboard", "Panel")}
         </span>
