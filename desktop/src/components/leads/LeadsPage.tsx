@@ -20,6 +20,9 @@ import { Lead, LeadStatus } from "@/types/leads";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
+import { ViewModeToggle } from "@/components/ViewModeToggle";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { formatLeadsPageSummary } from "@/lib/pageSummary";
 import {
   mapCarFromApi,
   mapLeadFromApi,
@@ -250,16 +253,20 @@ export function LeadsPage() {
     await queryClient.invalidateQueries({ queryKey: ["lead-statuses"] });
   };
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "table", label: tx("Table", "Tabla") },
-    { key: "funnel", label: tx("Funnel", "Embudo") },
-  ];
+  const leadsPageSummary = useMemo(
+    () => formatLeadsPageSummary(leads, tx),
+    [leads, tx],
+  );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-foreground">{tx("All Leads", "Todos los leads")}</h1>
-        <div className="relative shrink-0">
+    <div className="flex h-full min-h-0 flex-col gap-12">
+      <PageHeader
+        title={tx("All Leads", "Todos los leads")}
+        summary={leadsPageSummary}
+        actions={
+          <>
+          <ViewModeToggle value={tab} onChange={setTab} />
+          <div className="relative">
           <Button size="sm" onClick={() => setShowGenerateMenu((v) => !v)}>
             + {tx("Generate Lead", "Generar lead")} <ChevronDown className="ml-1 h-3 w-3" />
           </Button>
@@ -292,23 +299,10 @@ export function LeadsPage() {
               </button>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-0 border-b border-border">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-            {tab === t.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
-          </button>
-        ))}
-      </div>
+          </div>
+          </>
+        }
+      />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none">
         {tab === "table" && (

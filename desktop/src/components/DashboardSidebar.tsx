@@ -7,7 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLanguage } from "@/i18n/LanguageProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -56,6 +58,9 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { tx } = useLanguage();
+  const { user } = useAuth();
+  const displayName = formatShortDisplayName(user?.name);
+  const userInitial = (user?.name || "?").charAt(0).toUpperCase();
 
   // Same left inset expanded/collapsed; fixed row height so icon-only rows match icon+label height.
   const navButtonClass =
@@ -154,8 +159,8 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
         ))}
       </nav>
 
-      {/* Collapse control: same horizontal inset as nav icons (px-2 + pl-3) */}
-      <div className="border-t border-border px-2 pb-3 pt-2">
+      {/* Collapse control + user summary */}
+      <div className="space-y-2 border-t border-border px-2 pb-3 pt-2">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -167,9 +172,61 @@ export function DashboardSidebar({ activeItem, onActiveItemChange }: DashboardSi
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
+
+        {collapsed ? (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <div className="flex justify-center px-1 py-1">
+                <SidebarUserAvatar
+                  avatarUrl={user?.avatar_url}
+                  initial={userInitial}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              <div className="text-sm font-medium">{displayName}</div>
+              <div className="text-xs text-muted-foreground">{tx("Advisor", "Asesor")}</div>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex items-center gap-2.5 px-3 py-1">
+            <SidebarUserAvatar avatarUrl={user?.avatar_url} initial={userInitial} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">{tx("Advisor", "Asesor")}</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
+}
+
+function SidebarUserAvatar({
+  avatarUrl,
+  initial,
+}: {
+  avatarUrl?: string | null;
+  initial: string;
+}) {
+  return (
+    <Avatar className="h-8 w-8">
+      <AvatarImage src={avatarUrl ?? ""} alt="" />
+      <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+        {initial}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+function formatShortDisplayName(name?: string | null): string {
+  const trimmed = name?.trim();
+  if (!trimmed) return "—";
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${first} ${lastInitial}.`;
 }
 
 function translateSidebar(label: string) {

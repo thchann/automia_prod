@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Lead, LeadStatus, Car } from "@/types/leads";
 import { EntityDetailPanel } from "@/components/EntityDetailPanel";
 import { LeadDetailPanel } from "./LeadDetailPanel";
-import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { TableSearchWithStatusFilters } from "@/components/table/TableSearchWithStatusFilters";
 import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,13 +36,6 @@ import {
   type LeadSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
-import {
-  StatusActivityChart,
-  type StatusActivityRange,
-  type StatusActivityTileGroup,
-} from "@/components/StatusActivityChart";
-import { statusActivityKey } from "@/lib/statusActivityKeys";
-import { isCreatedWithinActivityRange } from "@/lib/statusActivityDateRange";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -61,6 +54,7 @@ import { hydrateLeadResponseCarLinks, mapLeadFromApi } from "@/lib/apiMappers";
 import { isDraftRecordId } from "@/lib/draftIds";
 import { getAllCarIdsForLead, getLeadsForCar, mergeCarIdsIntoLead } from "@/lib/leadCarLinks";
 import { LeadStatusChip } from "./LeadStatusChip";
+import { translateStatusName } from "@/lib/leadStatusChip";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -254,11 +248,6 @@ export function LeadsTable({
   const [pendingDeleteLeadIds, setPendingDeleteLeadIds] = useState<string[] | null>(null);
   const [carToUnmatchId, setCarToUnmatchId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activityRange, setActivityRange] = useState<StatusActivityRange>("All time");
-  /** Empty = no filter; otherwise lead rows must match a selected status-activity key (see StatusActivityChart). */
-  const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilterIds, setStatusFilterIds] = useState<Set<string>>(() => new Set());
   const [leadTypeFilters, setLeadTypeFilters] = useState<Set<Lead["lead_type"]>>(() => new Set());
@@ -285,29 +274,16 @@ export function LeadsTable({
   const getStatus = (id: string | null) => statuses.find((s) => s.id === id);
   const getCar = (id: string | null) => cars.find((c) => c.id === id);
 
-  const dateFilteredLeads = useMemo(
-    () =>
-      leads.filter((lead) => isCreatedWithinActivityRange(lead.created_at, activityRange)),
-    [leads, activityRange],
-  );
   const filteredLeads = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultLeadSearchColumns() : searchColumns;
-    return dateFilteredLeads.filter((lead) => {
+    return leads.filter((lead) => {
       if (statusFilterIds.size > 0) {
         const sid = lead.status_id;
         if (!sid || !statusFilterIds.has(sid)) return false;
       }
       if (leadTypeFilters.size > 0 && !leadTypeFilters.has(lead.lead_type)) return false;
-      if (statusActivitySelectedKeys.size > 0) {
-        const st = lead.status_id ? statuses.find((s) => s.id === lead.status_id) : null;
-        const statusName = st
-          ? translateStatusName(st.name, tx)
-          : tx("Unassigned", "Sin asignar");
-        const key = statusActivityKey(statusName, st?.color ?? null);
-        if (!statusActivitySelectedKeys.has(key)) return false;
-      }
       if (q) {
         const st = statuses.find((s) => s.id === lead.status_id);
         const statusName = st?.name ?? "";
@@ -325,11 +301,11 @@ export function LeadsTable({
       }
       return true;
     });
-  }, [dateFilteredLeads, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchQuery, statuses, cars, searchColumns, tx]);
+  }, [leads, statusFilterIds, leadTypeFilters, searchQuery, statuses, cars, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilterIds, leadTypeFilters, statusActivitySelectedKeys, searchColumns, activityRange]);
+  }, [searchQuery, statusFilterIds, leadTypeFilters, searchColumns]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const paged = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -349,8 +325,6 @@ export function LeadsTable({
     const def = defaultLeadSearchColumns();
     setStatusFilterIds(new Set());
     setLeadTypeFilters(new Set());
-    setStatusActivitySelectedKeys(new Set());
-    setActivityRange("All time");
     setSearchQuery("");
     setSearchColumns(def);
     setLeadColumnOrder(reconcileColumnOrder(LEAD_SEARCH_COLUMN_IDS, def, []));
@@ -457,62 +431,30 @@ export function LeadsTable({
     () => [...statuses].sort((a, b) => a.display_order - b.display_order),
     [statuses],
   );
-  const statusActivityItems = useMemo(
+
+  const statusFilterChips = useMemo(
     () =>
-      dateFilteredLeads.map((lead) => {
-        const st = lead.status_id ? statuses.find((s) => s.id === lead.status_id) : null;
-        const statusName = st
-          ? translateStatusName(st.name, tx)
-          : tx("Unassigned", "Sin asignar");
-        return {
-          id: lead.id,
-          label: lead.name?.trim() || tx("Unnamed", "Sin nombre"),
-          statusName,
-          color: st?.color ?? undefined,
-        };
-      }),
-    [dateFilteredLeads, statuses, tx],
+      sortedStatuses.map((status) => ({
+        id: status.id,
+        label: translateStatusName(status.name, tx),
+        color: status.color,
+        count: leads.filter((lead) => lead.status_id === status.id).length,
+      })),
+    [sortedStatuses, leads, tx],
   );
-  const statusTileGroups = useMemo<StatusActivityTileGroup[]>(() => {
-    const leadCountsByStatusId = new Map<string, number>();
-    let unassignedCount = 0;
-    for (const lead of dateFilteredLeads) {
-      if (lead.status_id) {
-        leadCountsByStatusId.set(
-          lead.status_id,
-          (leadCountsByStatusId.get(lead.status_id) ?? 0) + 1,
-        );
-      } else {
-        unassignedCount += 1;
-      }
-    }
-    const groups = sortedStatuses.map((status) => {
-      const name = translateStatusName(status.name, tx);
-      return {
-        key: statusActivityKey(name, status.color),
-        color: status.color ?? "#6B7280",
-        name,
-        count: leadCountsByStatusId.get(status.id) ?? 0,
-      };
-    });
-    if (unassignedCount > 0) {
-      groups.push({
-        key: statusActivityKey(tx("Unassigned", "Sin asignar"), null),
-        color: "#6B7280",
-        name: tx("Unassigned", "Sin asignar"),
-        count: unassignedCount,
-      });
-    }
-    return groups;
-  }, [dateFilteredLeads, sortedStatuses, tx]);
+
+  const toolbarSelectedStatusId =
+    statusFilterIds.size === 1 ? [...statusFilterIds][0] : null;
+
+  const selectToolbarStatus = (statusId: string | null) => {
+    setStatusFilterIds(statusId ? new Set([statusId]) : new Set());
+  };
 
   const hasActiveFilters =
     !allLeadColumnsSelected(searchColumns) ||
     statusFilterIds.size > 0 ||
     leadTypeFilters.size > 0 ||
-    statusActivitySelectedKeys.size > 0 ||
-    searchQuery.trim().length > 0 ||
-    activityRange !== "All time";
+    searchQuery.trim().length > 0;
 
   const visibleColumnIds = leadColumnOrder;
 
@@ -614,30 +556,24 @@ export function LeadsTable({
 
   return (
     <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-      <div className="shrink-0">
-        <StatusActivityChart
-          entity="lead"
-          items={statusActivityItems}
-          statusTileGroups={statusTileGroups}
-          range={activityRange}
-          onRangeChange={setActivityRange}
-          selectedKeys={statusActivitySelectedKeys}
-          onSelectedKeysChange={setStatusActivitySelectedKeys}
-          onItemClick={(itemId) => {
-            const lead = leads.find((l) => String(l.id) === String(itemId));
-            if (lead) beginEditLead(lead);
-          }}
-        />
-      </div>
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">
-        <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8 pt-2">
-      <TableSearchToolbar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder={tx("Search leads (name, car, notes, status…)", "Buscar leads (nombre, auto, notas, estado...)")}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex w-full min-w-0 flex-col gap-0 px-1 pb-8 pt-0">
+      <div className="border-b border-border pb-4">
+      <TableSearchWithStatusFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder={tx(
+          "Search name, IG, phone…",
+          "Buscar nombre, IG, teléfono...",
+        )}
+        chips={statusFilterChips}
+        allCount={leads.length}
+        selectedChipId={toolbarSelectedStatusId}
+        onSelectChip={selectToolbarStatus}
         onOpenFilters={() => setFilterDialogOpen(true)}
         filterActive={hasActiveFilters}
       />
+      </div>
 
       <ManageTableFiltersDialog
         open={filterDialogOpen}
@@ -830,7 +766,7 @@ export function LeadsTable({
         </div>
       </ManageTableFiltersDialog>
 
-      <div className={leadsDataTableClass}>
+      <div className={cn(leadsDataTableClass, "pt-10")}>
         <Table scrollWrapper={false}>
           <TableHeader className={tableHeaderClassName}>
             <TableRow className={tableHeaderRowClassName}>
@@ -1295,21 +1231,6 @@ function translateLeadColumn(label: string) {
       return "Actualizado";
     default:
       return label;
-  }
-}
-
-function translateStatusName(name: string, tx: (enText: string, esText: string) => string) {
-  switch (name.toLowerCase()) {
-    case "new":
-      return tx("New", "Nuevo");
-    case "contacted":
-      return tx("Contacted", "Contactado");
-    case "qualified":
-      return tx("Qualified", "Calificado");
-    case "closed":
-      return tx("Closed", "Cerrado");
-    default:
-      return name;
   }
 }
 

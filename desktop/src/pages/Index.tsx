@@ -79,7 +79,7 @@ const Index = () => {
       <div className="mt-[54px] flex min-h-0 flex-1 overscroll-y-none pb-2 pr-2">
         <DashboardSidebar activeItem={activeItem} onActiveItemChange={requestSectionChange} />
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none rounded-lg border border-border bg-card">
-          <div className="flex w-full min-h-0 flex-1 flex-col gap-8 px-6 py-4">
+          <div className="flex w-full min-h-0 flex-1 flex-col gap-8 px-10 pt-10 pb-0">
             <div
               className={`flex min-h-0 flex-1 flex-col transition-opacity ease-out ${contentTransitionClass}`}
               style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}

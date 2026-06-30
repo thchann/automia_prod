@@ -18,6 +18,7 @@ import {
   type DeploymentRecord,
 } from "@/components/automations/AgentBuilderPanel";
 import { DeploymentConfigModal } from "@/components/automations/DeploymentConfigModal";
+import { PAGE_TITLE_CLASS } from "@/components/layout/pageTitle";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -258,7 +259,7 @@ export function AutomationsPage() {
   return (
     <div className="relative flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-card text-foreground">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-foreground">{tx("All Automations", "Todas las automatizaciones")}</h1>
+        <h1 className={PAGE_TITLE_CLASS}>{tx("All Automations", "Todas las automatizaciones")}</h1>
       </div>
 
       <section className="flex min-h-0 flex-1 flex-col bg-card">

@@ -24,7 +24,9 @@ import { EntityDetailPanel } from "@/components/EntityDetailPanel";
 import { CarDetailPanel } from "./CarDetailPanel";
 import { CarStatusChip } from "./CarStatusChip";
 import { CarOwnerChip } from "./CarOwnerChip";
-import { TableSearchToolbar } from "@/components/table/TableSearchToolbar";
+import { TableSearchWithStatusFilters } from "@/components/table/TableSearchWithStatusFilters";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { formatCarsPageSummary } from "@/lib/pageSummary";
 import { ManageTableFiltersDialog } from "@/components/table/ManageTableFiltersDialog";
 import { Badge } from "@/components/ui/badge";
 import { matchesFuzzy } from "@/lib/fuzzyMatch";
@@ -38,9 +40,6 @@ import {
   type CarSearchColumnId,
 } from "@/lib/tableSearchHaystack";
 import { cn } from "@/lib/utils";
-import { StatusActivityChart, type StatusActivityRange } from "@/components/StatusActivityChart";
-import { LEAD_STATUS_PALETTE } from "@/lib/leadStatusColors";
-import { isCreatedWithinActivityRange } from "@/lib/statusActivityDateRange";
 import { useLanguage } from "@/i18n/LanguageProvider";
 import { ApiError, getCar, listLeadsForCar } from "@automia/api";
 import { toast } from "@/components/ui/sonner";
@@ -278,13 +277,8 @@ export function CarsTable({
   const [pendingUnmatchCar, setPendingUnmatchCar] = useState<Car | null>(null);
   const [pendingDeleteCarIds, setPendingDeleteCarIds] = useState<string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activityRange, setActivityRange] = useState<StatusActivityRange>("All time");
   const [filterMode, setFilterMode] = useState<"drop" | "filter">("drop");
   const [statusFilters, setStatusFilters] = useState<Set<Car["status"]>>(() => new Set());
-  /** Empty = no filter; otherwise car rows must match selected inventory keys (`available` / `sold`). */
-  const [statusActivitySelectedKeys, setStatusActivitySelectedKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [searchColumns, setSearchColumns] = useState<Set<CarSearchColumnId>>(
     () => defaultCarSearchColumns(),
   );
@@ -315,18 +309,11 @@ export function CarsTable({
     setDraftColumnSearchRight("");
   }, [filterDialogOpen, syncFilterDraftFromCommitted]);
 
-  const dateFilteredCars = useMemo(
-    () => cars.filter((car) => isCreatedWithinActivityRange(car.created_at, activityRange)),
-    [cars, activityRange],
-  );
   const filteredCars = useMemo(() => {
     const q = searchQuery.trim();
     const cols =
       searchColumns.size === 0 ? defaultCarSearchColumns() : searchColumns;
-    return dateFilteredCars.filter((car) => {
-      if (statusActivitySelectedKeys.size > 0 && !statusActivitySelectedKeys.has(car.status)) {
-        return false;
-      }
+    return cars.filter((car) => {
       if (statusFilters.size > 0 && !statusFilters.has(car.status)) return false;
       if (q) {
         const hay = buildCarSearchHaystackForColumns(car, cols);
@@ -334,11 +321,11 @@ export function CarsTable({
       }
       return true;
     });
-  }, [dateFilteredCars, statusActivitySelectedKeys, statusFilters, searchQuery, searchColumns]);
+  }, [cars, statusFilters, searchQuery, searchColumns]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, statusFilters, searchColumns, statusActivitySelectedKeys, activityRange]);
+  }, [searchQuery, statusFilters, searchColumns]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
   const paged = filteredCars.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -360,8 +347,6 @@ export function CarsTable({
     setSearchQuery("");
     setSearchColumns(def);
     setCarColumnOrder(reconcileColumnOrder(CAR_SEARCH_COLUMN_IDS, def, []));
-    setStatusActivitySelectedKeys(new Set());
-    setActivityRange("All time");
   };
 
   const toggleStatusFilter = (status: Car["status"]) => {
@@ -426,18 +411,23 @@ export function CarsTable({
     });
   };
 
-  const statusActivityItems = useMemo(() => {
-    const availableHex = LEAD_STATUS_PALETTE[4];
-    const soldHex = LEAD_STATUS_PALETTE[2];
-    return dateFilteredCars.map((car) => ({
-      id: car.id,
-      label:
-        `${car.brand} ${car.model}`.replace(/\s+/g, " ").trim() ||
-        tx("Unnamed", "Sin nombre"),
-      statusName: car.status === "available" ? "Available" : "Sold",
-      color: car.status === "available" ? availableHex : soldHex,
-    }));
-  }, [dateFilteredCars, tx]);
+  const statusFilterChips = useMemo(
+    () =>
+      (["available", "sold"] as const).map((status) => ({
+        id: status,
+        label: status === "available" ? tx("available", "disponible") : tx("sold", "vendido"),
+        color: status === "available" ? "#3B82F6" : "#10B981",
+        count: cars.filter((car) => car.status === status).length,
+      })),
+    [cars, tx],
+  );
+
+  const toolbarSelectedStatusId =
+    statusFilters.size === 1 ? [...statusFilters][0] : null;
+
+  const selectToolbarStatus = (statusId: string | null) => {
+    setStatusFilters(statusId ? new Set([statusId as Car["status"]]) : new Set());
+  };
 
   const popupCar = showImagePopup ? cars.find((c) => c.id === showImagePopup) : null;
   const popupUrl = popupCar ? thumbnailUrl(popupCar) : null;
@@ -445,9 +435,7 @@ export function CarsTable({
   const hasActiveFilters =
     !allCarColumnsSelected(searchColumns) ||
     statusFilters.size > 0 ||
-    searchQuery.trim().length > 0 ||
-    statusActivitySelectedKeys.size > 0 ||
-    activityRange !== "All time";
+    searchQuery.trim().length > 0;
 
   const visibleColumnIds = carColumnOrder;
 
@@ -556,10 +544,12 @@ export function CarsTable({
   };
 
   return (
-    <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-      <div className="flex shrink-0 items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">{tx("All Cars", "Todos los autos")}</h1>
-        <div className="flex items-center gap-2">
+    <div className="flex h-full min-h-0 max-w-full flex-1 flex-col gap-12 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+      <PageHeader
+        title={tx("All Cars", "Todos los autos")}
+        summary={formatCarsPageSummary(cars, tx)}
+        actions={
+          <>
           <Button variant="outline" size="sm" disabled aria-disabled>
             {tx("Export Cars", "Exportar autos")}
           </Button>
@@ -579,33 +569,28 @@ export function CarsTable({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex min-h-0 flex-1 flex-col gap-0">
-        <div className="shrink-0">
-          <StatusActivityChart
-            entity="car"
-            items={statusActivityItems}
-            range={activityRange}
-            onRangeChange={setActivityRange}
-            selectedKeys={statusActivitySelectedKeys}
-            onSelectedKeysChange={setStatusActivitySelectedKeys}
-            onItemClick={(itemId) => {
-              const car = cars.find((c) => String(c.id) === String(itemId));
-              if (car) beginEditCar(car);
-            }}
-          />
-        </div>
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">
-          <div className="flex w-full min-w-0 flex-col gap-4 px-1 pb-8 pt-2">
-      <TableSearchToolbar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder={tx("Search cars (make, model, year, price…)", "Buscar autos (marca, modelo, año, precio...)")}
+          <div className="flex w-full min-w-0 flex-col gap-0 px-1 pb-8 pt-0">
+      <div className="border-b border-border pb-4">
+      <TableSearchWithStatusFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder={tx(
+          "Search make, model, year, price…",
+          "Buscar marca, modelo, año, precio...",
+        )}
+        chips={statusFilterChips}
+        allCount={cars.length}
+        selectedChipId={toolbarSelectedStatusId}
+        onSelectChip={selectToolbarStatus}
         onOpenFilters={() => setFilterDialogOpen(true)}
         filterActive={hasActiveFilters}
       />
+      </div>
 
       <ManageTableFiltersDialog
         open={filterDialogOpen}
@@ -784,7 +769,7 @@ export function CarsTable({
         </div>
       </ManageTableFiltersDialog>
 
-      <div className={carsDataTableClass}>
+      <div className={cn(carsDataTableClass, "pt-10")}>
         <Table scrollWrapper={false}>
           <TableHeader className={tableHeaderClassName}>
             <TableRow className={tableHeaderRowClassName}>
@@ -1124,7 +1109,6 @@ export function CarsTable({
       </AlertDialog>
           </div>
         </div>
-      </div>
     </div>
   );
 }

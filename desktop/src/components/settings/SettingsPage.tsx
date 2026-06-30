@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PAGE_TITLE_CLASS } from "@/components/layout/pageTitle";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/i18n/LanguageProvider";
@@ -45,7 +46,7 @@ export function SettingsPage() {
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-none">
       <div className="mx-auto w-full max-w-5xl flex-1 px-2 pb-12 pt-10">
         <header className="space-y-1 pb-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className={PAGE_TITLE_CLASS}>
             {tx("Settings", "Configuracion")}
           </h1>
           <p className="text-sm text-muted-foreground">
