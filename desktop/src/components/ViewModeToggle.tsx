@@ -22,7 +22,7 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
     <div
       role="radiogroup"
       aria-label={tx("View mode", "Modo de vista")}
-      className={cn("inline-flex items-center rounded-lg bg-muted/60 p-0.5", className)}
+      className={cn("inline-flex items-center rounded-md bg-muted/60 p-0.5", className)}
     >
       {options.map(({ key, label, icon: Icon }) => {
         const selected = value === key;
@@ -34,13 +34,13 @@ export function ViewModeToggle({ value, onChange, className }: ViewModeTogglePro
             aria-checked={selected}
             onClick={() => onChange(key)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
               selected
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {label}
           </button>
         );

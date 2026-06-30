@@ -137,7 +137,7 @@ export function CommandPalette({
         <DialogOverlay className="bg-[oklch(0.2_0.02_60/0.45)] backdrop-blur-md" />
         <DialogPrimitive.Content
           className={cn(
-            "fixed left-1/2 top-[12%] z-50 w-[calc(100%-2rem)] max-w-[640px] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none",
+            "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-[640px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none origin-center",
             "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           )}
         >
